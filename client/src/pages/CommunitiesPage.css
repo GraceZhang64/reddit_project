@@ -1,0 +1,61 @@
+.communities-page {
+  min-height: 100vh;
+  padding-top: 1.5rem;
+  background: #dae0e6;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+  padding: 0 1.5rem;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.header-content h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  color: #1c1c1c;
+  font-weight: 500;
+}
+
+.header-content p {
+  margin: 0;
+  color: #7c7c7c;
+  font-size: 0.95rem;
+}
+
+.create-button {
+  padding: 0.6rem 1.25rem;
+  background: #ff4500;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.create-button:hover {
+  background: #ff5722;
+}
+
+.create-button:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .create-button {
+    width: 100%;
+  }
+}

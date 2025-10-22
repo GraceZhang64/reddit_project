@@ -1,0 +1,47 @@
+Reddit-like MVP: Detailed Development Specification
+Product Overview
+A minimal community discussion platform focused on Job #1 (find/consume interest-based content) and Job #3 (participate in discussions). This MVP validates the core value proposition with the simplest possible implementation.
+Core Features for MVP
+1. Community Spaces (Subreddits Lite)
+
+Users can create and join topic-based communities
+Each community has a name, description, and basic rules
+Public visibility only (no private communities in MVP)
+
+2. Content Posting
+
+Text posts only (no images, videos, or links initially)
+Title (required, max 300 chars)
+Body (optional, markdown support)
+Assigned to one community
+
+3. Threaded Comments
+
+Nested comment replies (2-3 levels deep max)
+Basic markdown formatting
+Chronological sorting only (no "best" algorithm yet)
+
+4. Simple Voting
+
+Upvote/downvote on posts and comments
+Vote count displayed (simple sum)
+No karma tracking per user in MVP
+
+5. Basic User Accounts
+
+Username, email, password
+Simple profile page showing user's posts/comments
+No avatars, bios, or karma display
+
+6. Feed Views
+
+Home feed: posts from joined communities (chronological)
+Community feed: posts within a specific community
+No algorithm, just time-sorted
+
+Techstack:
+Frontend: Next.JS (TypeScript)
+Backend: Node.js/Express or Python/FastAPI
+Database: PostgreSQL
+Authentication: JWT tokens
+Deployment: Vercel/Railway/Render (for simplicity)

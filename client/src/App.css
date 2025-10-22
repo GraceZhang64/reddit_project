@@ -1,0 +1,166 @@
+.App {
+  min-height: 100vh;
+  background: #dae0e6;
+}
+
+.navbar {
+  background: #fff;
+  border-bottom: 1px solid #edeff1;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.nav-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #ff4500;
+  transition: transform 0.2s;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+}
+
+.logo-icon {
+  font-size: 2rem;
+}
+
+.logo-text {
+  color: #1c1c1c;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.nav-link {
+  color: #1c1c1c;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.nav-link:hover {
+  background: #f6f7f8;
+  color: #ff4500;
+}
+
+.nav-username {
+  color: #1c1c1c;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.login-link {
+  background: #ff4500;
+  color: white !important;
+  border-radius: 24px;
+  padding: 0.5rem 1.5rem;
+}
+
+.login-link:hover {
+  background: #ff5722 !important;
+  color: white !important;
+}
+
+.home {
+  text-align: center;
+  padding: 4rem 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.home h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #ff4500;
+}
+
+.home p {
+  font-size: 1.3rem;
+  color: #7c7c7c;
+  margin-bottom: 2rem;
+}
+
+.home h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  color: #1c1c1c;
+}
+
+.home ul {
+  list-style: none;
+  padding: 0;
+  font-size: 1.1rem;
+  color: #1c1c1c;
+}
+
+.home li {
+  padding: 0.5rem 0;
+}
+
+.cta-button {
+  display: inline-block;
+  margin-top: 2rem;
+  padding: 1rem 2rem;
+  background: #ff4500;
+  color: white;
+  text-decoration: none;
+  border-radius: 24px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+}
+
+.cta-button:hover {
+  background: #ff5722;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 69, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+  .home h1 {
+    font-size: 2rem;
+  }
+
+  .home p {
+    font-size: 1.1rem;
+  }
+
+  .nav-content {
+    padding: 1rem;
+  }
+
+  .logo-text {
+    display: none;
+  }
+}
+

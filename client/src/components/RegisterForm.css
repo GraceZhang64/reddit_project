@@ -1,0 +1,152 @@
+.register-form-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 60px);
+  padding: 2rem 1rem;
+  background: #dae0e6;
+}
+
+.register-form-card {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.register-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  color: #1c1c1c;
+  font-weight: 500;
+}
+
+.register-header p {
+  margin: 0;
+  color: #7c7c7c;
+  font-size: 0.875rem;
+}
+
+.error-message {
+  background: #ffebee;
+  border: 1px solid #ef5350;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  color: #c62828;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-field label {
+  color: #1c1c1c;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.form-field input {
+  width: 100%;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid #edeff1;
+  border-radius: 4px;
+  color: #1c1c1c;
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.form-field input:focus {
+  outline: none;
+  border-color: #ff4500;
+  box-shadow: 0 0 0 1px #ff4500;
+}
+
+.form-field input:disabled {
+  background: #f6f7f8;
+  cursor: not-allowed;
+}
+
+.form-field input::placeholder {
+  color: #7c7c7c;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #ff4500;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+  margin-top: 0.5rem;
+}
+
+.submit-button:hover:not(:disabled) {
+  background: #ff5722;
+}
+
+.submit-button:disabled {
+  background: #edeff1;
+  color: #7c7c7c;
+  cursor: not-allowed;
+}
+
+.form-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  padding-top: 1.5rem;
+  border-top: 1px solid #edeff1;
+}
+
+.form-footer p {
+  margin: 0;
+  color: #7c7c7c;
+  font-size: 0.875rem;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #ff4500;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  text-decoration: none;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .register-form-card {
+    padding: 1.5rem;
+  }
+}
