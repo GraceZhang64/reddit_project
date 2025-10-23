@@ -39,7 +39,7 @@ function App() {
           <div className="nav-content">
             <Link to="/communities" className="logo">
               <span className="logo-icon">🗨️</span>
-              <span className="logo-text">Reddit Clone</span>
+              <span className="logo-text">Reddit</span>
             </Link>
             <div className="nav-links">
               <Link to="/communities" className="nav-link">Communities</Link>
