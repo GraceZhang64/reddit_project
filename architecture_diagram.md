@@ -1,85 +1,113 @@
 # Reddit Project - Architecture Diagram
 
 ```mermaid
-graph TB
-    subgraph "Client Layer"
+graph LR
+    subgraph CLIENT[" "]
+        direction TB
         UI[React Frontend<br/>TypeScript + Vite]
-        Auth[Auth Components<br/>Login/Register]
+        Auth[Auth Components]
         PostView[Post View<br/>with AI Summary]
+        UI --- Auth
+        UI --- PostView
     end
 
-    subgraph "API Gateway Layer"
+    subgraph GATEWAY[" "]
+        direction TB
         API[Express API Server<br/>TypeScript<br/>Port 5000]
         AuthMW[Auth Middleware<br/>JWT Validation]
         RateLimit[Rate Limiter]
+        API --- AuthMW
+        API --- RateLimit
     end
 
-    subgraph "Business Logic Layer"
-        AuthService[Auth Service<br/>Login/Register/Token]
+    subgraph SERVICES[" "]
+        direction TB
+        AuthService[Auth Service]
         PostService[Post Service<br/>CRUD Operations]
-        CommentService[Comment Service<br/>Nested Comments]
-        VoteService[Vote Service<br/>Upvote/Downvote]
+        CommentService[Comment Service]
+        VoteService[Vote Service]
         AIService[AI Summary Service<br/>LLM Integration]
     end
 
-    subgraph "Data Layer"
+    subgraph DATA[" "]
+        direction TB
         ORM[Prisma ORM]
         DB[(PostgreSQL Database<br/>Users/Posts/Comments/Votes)]
+        ORM --- DB
     end
 
-    subgraph "External Services"
+    subgraph EXTERNAL[" "]
         LLM[LLM API<br/>OpenAI/Anthropic<br/>GPT-4/Claude]
     end
 
-    %% User Flow - Main Use Case: View Post with AI Summary
-    UI -->|1. GET /posts/:id| API
-    API -->|2. Validate JWT| AuthMW
-    AuthMW -->|3. Authorized| PostService
-    PostService -->|4. Query Post| ORM
-    ORM -->|5. Fetch Data| DB
-    DB -->|6. Return Post + Comments| ORM
-    ORM -->|7. Data| PostService
-    PostService -->|8. Trigger Summary| AIService
-    AIService -->|9. Generate Prompt| LLM
-    LLM -->|10. AI Summary| AIService
-    AIService -->|11. Cached Summary| PostService
-    PostService -->|12. Combined Response| API
-    API -->|13. JSON Response| UI
-    UI -->|14. Display Post + AI Summary| PostView
+    %% Main Use Case Flow - View Post with AI Summary (Primary Path)
+    UI -->|"1. GET /posts/:id"| API
+    API -->|"2. Validate JWT"| AuthMW
+    AuthMW -->|"3. Authorized"| PostService
+    PostService -->|"4. Query Post"| ORM
+    ORM -->|"5. Fetch Data"| DB
+    DB -->|"6. Return Post + Comments"| ORM
+    ORM -->|"7. Data"| PostService
+    PostService -->|"8. Trigger Summary"| AIService
+    AIService -->|"9. Generate Prompt"| LLM
+    LLM -->|"10. AI Summary"| AIService
+    AIService -->|"11. Cached Summary"| PostService
+    PostService -->|"12. Combined Response"| API
+    API -->|"13. JSON Response"| UI
+    UI -->|"14. Display"| PostView
 
     %% Authentication Flow
-    Auth -->|POST /auth/login| API
+    Auth -->|"POST /auth/login"| API
     API --> AuthService
-    AuthService -->|Validate Credentials| ORM
-    ORM -->|Check User| DB
-    DB -->|User Data| ORM
+    AuthService -->|"Validate"| ORM
+    ORM -->|"Check User"| DB
+    DB -->|"User Data"| ORM
     ORM --> AuthService
-    AuthService -->|Generate JWT| API
-    API -->|Return Token| Auth
+    AuthService -->|"Generate JWT"| API
+    API -->|"Return Token"| Auth
 
     %% Other Service Flows
-    UI -->|POST /posts| API
+    UI -->|"POST /posts"| API
     API --> PostService
     PostService --> ORM
     
-    UI -->|POST /comments| API
+    UI -->|"POST /comments"| API
     API --> CommentService
     CommentService --> ORM
     
-    UI -->|POST /votes| API
+    UI -->|"POST /votes"| API
     API --> VoteService
     VoteService --> ORM
 
     %% Security & Performance
-    API -.->|Rate Limit Check| RateLimit
-    RateLimit -.->|Block/Allow| API
+    API -.->|"Rate Limit"| RateLimit
+    RateLimit -.->|"Allow/Block"| API
 
-    style UI fill:#e1f5ff
-    style API fill:#fff4e1
-    style AIService fill:#ffe1f5
-    style LLM fill:#ffe1e1
-    style DB fill:#e1ffe1
-    style AuthMW fill:#f0e1ff
+    %% Styling - Orange and Blue with White Lines
+    style CLIENT fill:#FF8C00,stroke:#FFFFFF,stroke-width:3px,color:#FFFFFF
+    style GATEWAY fill:#0066FF,stroke:#FFFFFF,stroke-width:3px,color:#FFFFFF
+    style SERVICES fill:#FF8C00,stroke:#FFFFFF,stroke-width:3px,color:#FFFFFF
+    style DATA fill:#0066FF,stroke:#FFFFFF,stroke-width:3px,color:#FFFFFF
+    style EXTERNAL fill:#FF8C00,stroke:#FFFFFF,stroke-width:3px,color:#FFFFFF
+    
+    style UI fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
+    style Auth fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
+    style PostView fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
+    
+    style API fill:#0052CC,stroke:#FFFFFF,stroke-width:2px,color:#FFFFFF
+    style AuthMW fill:#0052CC,stroke:#FFFFFF,stroke-width:2px,color:#FFFFFF
+    style RateLimit fill:#0052CC,stroke:#FFFFFF,stroke-width:2px,color:#FFFFFF
+    
+    style AuthService fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
+    style PostService fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
+    style CommentService fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
+    style VoteService fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
+    style AIService fill:#FF6600,stroke:#FFFFFF,stroke-width:3px,color:#FFFFFF
+    
+    style ORM fill:#0052CC,stroke:#FFFFFF,stroke-width:2px,color:#FFFFFF
+    style DB fill:#0052CC,stroke:#FFFFFF,stroke-width:2px,color:#FFFFFF
+    
+    style LLM fill:#FF6600,stroke:#FFFFFF,stroke-width:3px,color:#FFFFFF
 ```
 
 ## Architecture Overview
