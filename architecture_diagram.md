@@ -4,11 +4,13 @@
 graph LR
     subgraph CLIENT[" "]
         direction TB
-        UI[React Frontend<br/>TypeScript + Vite]
+        UI[Next.js Frontend<br/>TypeScript + App Router]
+        Pages[Pages & Components<br/>Server/Client Components]
         Auth[Auth Components]
         PostView[Post View<br/>with AI Summary]
-        UI --- Auth
-        UI --- PostView
+        UI --- Pages
+        Pages --- Auth
+        Pages --- PostView
     end
 
     subgraph GATEWAY[" "]
@@ -41,7 +43,7 @@ graph LR
     end
 
     %% Main Use Case Flow - View Post with AI Summary (Primary Path)
-    UI -->|"1. GET /posts/:id"| API
+    Pages -->|"1. GET /posts/:id"| API
     API -->|"2. Validate JWT"| AuthMW
     AuthMW -->|"3. Authorized"| PostService
     PostService -->|"4. Query Post"| ORM
@@ -53,8 +55,8 @@ graph LR
     LLM -->|"10. AI Summary"| AIService
     AIService -->|"11. Cached Summary"| PostService
     PostService -->|"12. Combined Response"| API
-    API -->|"13. JSON Response"| UI
-    UI -->|"14. Display"| PostView
+    API -->|"13. JSON Response"| Pages
+    Pages -->|"14. Display"| PostView
 
     %% Authentication Flow
     Auth -->|"POST /auth/login"| API
@@ -67,15 +69,15 @@ graph LR
     API -->|"Return Token"| Auth
 
     %% Other Service Flows
-    UI -->|"POST /posts"| API
+    Pages -->|"POST /posts"| API
     API --> PostService
     PostService --> ORM
     
-    UI -->|"POST /comments"| API
+    Pages -->|"POST /comments"| API
     API --> CommentService
     CommentService --> ORM
     
-    UI -->|"POST /votes"| API
+    Pages -->|"POST /votes"| API
     API --> VoteService
     VoteService --> ORM
 
@@ -91,6 +93,7 @@ graph LR
     style EXTERNAL fill:#FF8C00,stroke:#FFFFFF,stroke-width:3px,color:#FFFFFF
     
     style UI fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
+    style Pages fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
     style Auth fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
     style PostView fill:#FFA500,stroke:#FFFFFF,stroke-width:2px,color:#000000
     
@@ -113,13 +116,13 @@ graph LR
 ## Architecture Overview
 
 ### Scope & External Dependencies
-- **Client**: React SPA running on Vite dev server (port 3000)
+- **Client**: Next.js frontend with App Router, Server/Client Components (port 3000)
 - **API Server**: Express.js REST API (port 5000)
 - **Database**: PostgreSQL with Prisma ORM
 - **LLM Service**: External API (OpenAI/Anthropic) for AI summaries
 
 ### Key Components
-1. **Client Layer**: React UI components with routing
+1. **Client Layer**: Next.js App Router with Server/Client Components, SSR/SSG capabilities
 2. **API Gateway**: Express server with auth middleware and rate limiting
 3. **Business Logic**: Service layer for auth, posts, comments, votes, and AI
 4. **Data Layer**: Prisma ORM + PostgreSQL database
