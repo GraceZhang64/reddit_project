@@ -60,6 +60,9 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
       // Success
       if (onSuccess) {
         onSuccess();
+      } else {
+        // Redirect to home page
+        window.location.href = '/';
       }
     } catch (err) {
       setError('Invalid username or password. Please try again.');

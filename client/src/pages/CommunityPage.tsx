@@ -74,10 +74,19 @@ function CommunityPage() {
   const [posts, setPosts] = useState<Post[]>(
     mockPosts.filter(p => p.communityId === communityId)
   );
-  const [isJoined, setIsJoined] = useState(false);
   const [memberCount, setMemberCount] = useState(community?.memberCount || 0);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [userVotes, setUserVotes] = useState<Record<number, number>>({});
+
+  // Initialize isJoined from localStorage
+  const [isJoined, setIsJoined] = useState(() => {
+    const stored = localStorage.getItem('joinedCommunities');
+    if (stored) {
+      const joined = JSON.parse(stored);
+      return joined.includes(String(communityId));
+    }
+    return false;
+  });
 
   if (!community) {
     return (
@@ -88,8 +97,28 @@ function CommunityPage() {
   }
 
   const handleJoinToggle = () => {
-    setIsJoined(!isJoined);
-    setMemberCount(isJoined ? memberCount - 1 : memberCount + 1);
+    const newIsJoined = !isJoined;
+    setIsJoined(newIsJoined);
+    setMemberCount(newIsJoined ? memberCount + 1 : memberCount - 1);
+
+    // Update localStorage
+    const stored = localStorage.getItem('joinedCommunities');
+    let joinedCommunities: string[] = stored ? JSON.parse(stored) : [];
+    
+    if (newIsJoined) {
+      // Add community
+      if (!joinedCommunities.includes(String(communityId))) {
+        joinedCommunities.push(String(communityId));
+      }
+    } else {
+      // Remove community
+      joinedCommunities = joinedCommunities.filter(id => id !== String(communityId));
+    }
+    
+    localStorage.setItem('joinedCommunities', JSON.stringify(joinedCommunities));
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new Event('joinedCommunitiesChanged'));
   };
 
   const handleVote = (postId: number, value: number) => {

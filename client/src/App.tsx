@@ -1,5 +1,6 @@
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import HomePage from './pages/HomePage';
 import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityPage from './pages/CommunityPage';
 import PostPage from './pages/PostPage';
@@ -35,34 +36,45 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <nav className="navbar">
-          <div className="nav-content">
-            <Link to="/communities" className="logo">
-              <span className="logo-icon">🗨️</span>
-              <span className="logo-text">Reddit</span>
-            </Link>
-            <div className="nav-links">
-              <Link to="/communities" className="nav-link">Communities</Link>
-              {isAuthenticated ? (
-                <>
-                  <span className="nav-username">u/{username}</span>
-                  <button onClick={handleLogout} className="nav-link logout-btn">
-                    Log Out
-                  </button>
-                </>
-              ) : (
-                <Link to="/auth" className="nav-link login-link">Log In</Link>
-              )}
+        {isAuthenticated ? (
+          <nav className="navbar">
+            <div className="nav-content">
+              <Link to="/" className="logo">
+                <span className="logo-icon">🗨️</span>
+                <span className="logo-text">Reddit</span>
+              </Link>
+              <div className="nav-links">
+                <Link to="/" className="nav-link">Home</Link>
+                <Link to="/communities" className="nav-link">Communities</Link>
+              </div>
+              <div className="nav-actions">
+                <span className="username">u/{username}</span>
+                <button onClick={handleLogout} className="logout-btn">
+                  Logout
+                </button>
+              </div>
             </div>
-          </div>
-        </nav>
+          </nav>
+        ) : null}
 
         <Routes>
-          <Route path="/" element={<Navigate to="/communities" replace />} />
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/communities" element={<CommunitiesPage />} />
-          <Route path="/communities/:id" element={<CommunityPage />} />
-          <Route path="/posts/:id" element={<PostPage />} />
+          <Route
+            path="/"
+            element={isAuthenticated ? <HomePage /> : <Navigate to="/auth" />}
+          />
+          <Route
+            path="/communities"
+            element={isAuthenticated ? <CommunitiesPage /> : <Navigate to="/auth" />}
+          />
+          <Route
+            path="/communities/:id"
+            element={isAuthenticated ? <CommunityPage /> : <Navigate to="/auth" />}
+          />
+          <Route
+            path="/posts/:id"
+            element={isAuthenticated ? <PostPage /> : <Navigate to="/auth" />}
+          />
         </Routes>
       </div>
     </Router>

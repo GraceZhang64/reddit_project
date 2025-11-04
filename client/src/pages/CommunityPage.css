@@ -101,6 +101,121 @@
   align-items: start;
 }
 
+.posts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.posts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.posts-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1c1c1c;
+}
+
+.create-post-button {
+  padding: 0.5rem 1.5rem;
+  background: #ff4500;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.create-post-button:hover {
+  background: #ff5722;
+}
+
+.create-post-button:active {
+  transform: scale(0.98);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 5rem;
+}
+
+.sidebar-card {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.sidebar-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1c1c1c;
+}
+
+.sidebar-card p {
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  color: #7c7c7c;
+  line-height: 1.5;
+}
+
+.sidebar-stats {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid #edeff1;
+  border-bottom: 1px solid #edeff1;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat strong {
+  font-size: 1rem;
+  color: #1c1c1c;
+}
+
+.stat span {
+  font-size: 0.75rem;
+  color: #7c7c7c;
+}
+
+.create-post-button-full {
+  width: 100%;
+  padding: 0.5rem 1.5rem;
+  background: #ff4500;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.create-post-button-full:hover {
+  background: #ff5722;
+}
+
 .main-content {
   display: flex;
   flex-direction: column;
@@ -110,6 +225,10 @@
 @media (max-width: 1024px) {
   .community-content {
     grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
   }
 }
 

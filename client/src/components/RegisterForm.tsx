@@ -66,6 +66,9 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       // Success
       if (onSuccess) {
         onSuccess();
+      } else {
+        // Redirect to home page
+        window.location.href = '/';
       }
     } catch (err) {
       setError('Registration failed. Please try again.');
