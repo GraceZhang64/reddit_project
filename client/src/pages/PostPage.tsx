@@ -1,58 +1,88 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
 import { Post, Comment } from '../types';
 import './PostPage.css';
 
-// Mock data
-const mockPost: Post = {
-  id: 1,
-  title: 'What is your favorite programming language?',
-  body: 'I am curious to know what programming languages the community prefers and why. Share your thoughts!\n\nPersonally, I have been enjoying TypeScript lately because of the type safety it provides. It really helps catch bugs early in development and makes refactoring much easier.\n\nWhat about you? What languages do you prefer and why?',
-  author: 'john_doe',
-  communityId: 1,
-  communityName: 'programming',
-  voteCount: 15,
-  commentCount: 5,
-  createdAt: '2025-10-20',
-};
+const API_URL = 'http://localhost:5000/api';
 
-const mockComments: Comment[] = [
-  {
-    id: 1,
-    body: 'I love Python for its simplicity and readability! The vast ecosystem of libraries makes it perfect for almost anything.',
-    author: 'jane_smith',
-    postId: 1,
-    voteCount: 8,
-    createdAt: '2025-10-20T14:30:00',
-  },
-  {
-    id: 2,
-    body: 'TypeScript is amazing! The type safety really helps catch bugs early. I switched from JavaScript last year and never looked back.',
-    author: 'bob_wilson',
-    postId: 1,
-    voteCount: 12,
-    createdAt: '2025-10-20T15:45:00',
-  },
-  {
-    id: 3,
-    body: 'Rust! The performance is incredible and the borrow checker teaches you to write better code.',
-    author: 'alice_dev',
-    postId: 1,
-    voteCount: 6,
-    createdAt: '2025-10-21T09:15:00',
-  },
-];
+interface PostWithSummary extends Post {
+  summary?: string;
+}
 
 function PostPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [post, setPost] = useState<Post>(mockPost);
-  const [comments, setComments] = useState<Comment[]>(mockComments);
+  const [post, setPost] = useState<PostWithSummary | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [userVote, setUserVote] = useState<number>(0);
   const [commentBody, setCommentBody] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+
+  // Fetch post data with AI summary
+  useEffect(() => {
+    const fetchPost = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Try to fetch post with AI summary first
+        let response = await fetch(`${API_URL}/posts/${id}/summary`);
+        
+        // If it fails (e.g., quota exceeded), fall back to post without summary
+        if (!response.ok) {
+          console.log('AI summary failed, fetching post without summary...');
+          response = await fetch(`${API_URL}/posts/${id}`);
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch post');
+          }
+        }
+        
+        const data = await response.json();
+        
+        // Transform backend data to match frontend types
+        const transformedPost: PostWithSummary = {
+          id: data.post.id,
+          title: data.post.title,
+          body: data.post.body,
+          author: data.post.author,
+          communityId: data.post.communityId || 1,
+          communityName: data.post.communityName,
+          voteCount: data.post.voteCount,
+          commentCount: data.post.commentCount,
+          createdAt: data.post.createdAt,
+          summary: data.aiSummary || data.summary,
+        };
+        
+        const transformedComments: Comment[] = data.comments.map((c: any) => ({
+          id: c.id,
+          body: c.body,
+          author: c.author,
+          postId: data.post.id,
+          voteCount: c.voteCount,
+          createdAt: c.createdAt,
+        }));
+        
+        setPost(transformedPost);
+        setComments(transformedComments);
+      } catch (err) {
+        console.error('Error fetching post:', err);
+        setError('Failed to load post. Make sure the backend server is running.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPost();
+  }, [id]);
 
   const handleVote = (value: number) => {
+    if (!post) return;
     const oldVote = userVote;
     const newVote = oldVote === value ? 0 : value;
     const voteDiff = newVote - oldVote;
@@ -63,20 +93,51 @@ function PostPage() {
 
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (commentBody.trim()) {
-      const newComment: Comment = {
-        id: comments.length + 1,
-        body: commentBody.trim(),
-        author: 'current_user',
-        postId: post.id,
-        voteCount: 1,
-        createdAt: new Date().toISOString(),
-      };
-      setComments([newComment, ...comments]);
-      setCommentBody('');
-      setPost({ ...post, commentCount: post.commentCount + 1 });
-    }
+    if (!post || !commentBody.trim()) return;
+    
+    // For now, just add comment locally (would need backend endpoint for real implementation)
+    const newComment: Comment = {
+      id: comments.length + 1,
+      body: commentBody.trim(),
+      author: 'current_user',
+      postId: post.id,
+      voteCount: 1,
+      createdAt: new Date().toISOString(),
+    };
+    setComments([newComment, ...comments]);
+    setCommentBody('');
+    setPost({ ...post, commentCount: post.commentCount + 1 });
   };
+
+  if (loading) {
+    return (
+      <div className="post-page">
+        <div className="post-container">
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <p>Loading post...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !post) {
+    return (
+      <div className="post-page">
+        <div className="post-container">
+          <button className="back-button" onClick={() => navigate(-1)}>
+            ← Back
+          </button>
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#ff4500' }}>
+            <p>{error || 'Post not found'}</p>
+            <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
+              Make sure your backend server is running on port 5000 and you have added your OpenAI API key.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="post-page">
@@ -116,25 +177,44 @@ function PostPage() {
             )}
             
             {/* AI Summary Box */}
-            <div className="ai-summary-box">
-              <div className="ai-summary-header">
-                <span className="ai-icon">✨</span>
-                <span className="ai-label">AI Summary</span>
+            {post.summary ? (
+              <div className="ai-summary-box">
+                <div className="ai-summary-header">
+                  <span className="ai-icon">✨</span>
+                  <span className="ai-label">AI Summary</span>
+                  <span className="ai-badge">Powered by GPT-4o-mini</span>
+                </div>
+                <div className="ai-summary-content">
+                  {post.summary.split('\n').map((line, i) => {
+                    if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
+                      // Render as heading
+                      return <h4 key={i}>{line.replace(/\*\*/g, '')}</h4>;
+                    } else if (line.trim().startsWith('-')) {
+                      // Render as list item
+                      return <li key={i}>{line.substring(1).trim()}</li>;
+                    } else if (line.trim()) {
+                      // Render as paragraph
+                      return <p key={i}>{line}</p>;
+                    }
+                    return null;
+                  })}
+                </div>
               </div>
-              <div className="ai-summary-content">
-                <h4>Key Points:</h4>
-                <ul>
-                  <li>Community discusses various perspectives on {post.title.toLowerCase()}</li>
-                  <li>Users share personal experiences and recommendations</li>
-                  <li>Main debate focuses on best practices and trade-offs</li>
-                  <li>{post.commentCount} people have contributed to the conversation</li>
-                </ul>
-                <h4>Top Viewpoints:</h4>
-                <p>The discussion highlights different approaches, with users emphasizing practical experience 
-                and real-world applications. Common themes include learning resources, common pitfalls, 
-                and success stories.</p>
+            ) : (
+              <div className="ai-summary-box">
+                <div className="ai-summary-header">
+                  <span className="ai-icon">✨</span>
+                  <span className="ai-label">AI Summary</span>
+                </div>
+                <div className="ai-summary-content">
+                  <p style={{ color: '#666', fontStyle: 'italic' }}>
+                    {loadingSummary 
+                      ? 'Generating AI summary...' 
+                      : 'AI summary not available. Make sure your OpenAI API key is configured.'}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
             
             <div className="post-actions">
               <button className="action-button">

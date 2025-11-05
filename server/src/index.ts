@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import postsRouter from './routes/posts';
 
 dotenv.config();
 
@@ -15,6 +16,8 @@ app.use(express.json());
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ message: 'Server is running!' });
 });
+
+app.use('/api/posts', postsRouter);
 
 app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);

@@ -107,7 +107,18 @@
   letter-spacing: 0.5px;
 }
 
-.ai-summary-content h3 {
+.ai-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #878a8c;
+  background: #edeff1;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.ai-summary-content h3,
+.ai-summary-content h4 {
   font-size: 0.875rem;
   color: #1c1c1c;
   margin: 0 0 0.5rem 0;
