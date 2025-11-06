@@ -10,11 +10,12 @@ graph LR
     %% Top Row - Application Tiers (Left to Right)
     subgraph FRONTEND["FRONTEND LAYER"]
         NextJS["Next.js Application<br/>React + TypeScript<br/>Server Components<br/><br/>Vercel Free Tier or VPS<br/>2 vCPU, 4GB RAM"]
+        
     end
 
     subgraph BACKEND["BACKEND API LAYER"]
         API["Next.js API Routes<br/>TypeScript + Node.js<br/><br/>Same server as Frontend"]
-        Auth["Auth Middleware<br/>JWT Validation<br/>Session Check"]
+        Auth["Auth Middleware<br/>Shared Security Layer<br/>JWT Validation<br/>Session Check<br/>User Identity"]
         RateLimit["Rate Limiter<br/>In-Memory Store<br/>Prevent Abuse"]
         
         API --> Auth
@@ -26,6 +27,10 @@ graph LR
         CommentSvc["Comment Service<br/>Nested Threads"]
         VoteSvc["Vote Service<br/>Upvote/Downvote"]
         AISvc["AI Service<br/>Summary Generation<br/>(Core Feature)"]
+
+        Auth -.->|"Protects"| PostSvc
+        Auth -.->|"Protects"| CommentSvc
+        Auth -.->|"Protects"| VoteSvc
     end
 
     %% Bottom Row - Data & External (Left to Right)
