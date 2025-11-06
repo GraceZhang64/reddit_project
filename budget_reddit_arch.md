@@ -3,46 +3,38 @@
 > **Scale**: 50 users | **Focus**: AI-powered discussion summaries | **Infrastructure**: Minimal & Cost-Effective
 
 ```mermaid
-graph TB
+graph LR
     %% User
     User["User<br/>Views Post"]
 
     %% Top Row - Application Tiers (Left to Right)
-    subgraph TOP[" "]
-        direction LR
+    subgraph FRONTEND["FRONTEND LAYER"]
+        NextJS["Next.js Application<br/>React + TypeScript<br/>Server Components<br/><br/>Vercel Free Tier or VPS<br/>2 vCPU, 4GB RAM"]
+    end
+
+    subgraph BACKEND["BACKEND API LAYER"]
+        API["Next.js API Routes<br/>TypeScript + Node.js<br/><br/>Same server as Frontend"]
+        Auth["Auth Middleware<br/>JWT Validation<br/>Session Check"]
+        RateLimit["Rate Limiter<br/>In-Memory Store<br/>Prevent Abuse"]
         
-        subgraph FRONTEND["FRONTEND LAYER"]
-            NextJS["Next.js Application<br/>React + TypeScript<br/>Server Components<br/><br/>Vercel Free Tier or VPS<br/>2 vCPU, 4GB RAM"]
-        end
+        API --> Auth
+        API --> RateLimit
+    end
 
-        subgraph BACKEND["BACKEND API LAYER"]
-            API["Next.js API Routes<br/>TypeScript + Node.js<br/><br/>Same server as Frontend"]
-            Auth["Auth Middleware<br/>JWT Validation<br/>Session Check"]
-            RateLimit["Rate Limiter<br/>In-Memory Store<br/>Prevent Abuse"]
-            
-            API --> Auth
-            API --> RateLimit
-        end
-
-        subgraph SERVICES["BUSINESS LOGIC SERVICES"]
-            PostSvc["Post Service<br/>CRUD + Pagination"]
-            CommentSvc["Comment Service<br/>Nested Threads"]
-            VoteSvc["Vote Service<br/>Upvote/Downvote"]
-            AISvc["AI Service<br/>Summary Generation<br/>(Core Feature)"]
-        end
+    subgraph SERVICES["BUSINESS LOGIC SERVICES"]
+        PostSvc["Post Service<br/>CRUD + Pagination"]
+        CommentSvc["Comment Service<br/>Nested Threads"]
+        VoteSvc["Vote Service<br/>Upvote/Downvote"]
+        AISvc["AI Service<br/>Summary Generation<br/>(Core Feature)"]
     end
 
     %% Bottom Row - Data & External (Left to Right)
-    subgraph BOTTOM[" "]
-        direction LR
-        
-        subgraph DATABASE["DATABASE TIER"]
-            Postgres["PostgreSQL<br/>Single Instance<br/><br/>All Data Storage<br/>AI Summary Cache<br/>Session Storage<br/>Image Storage (base64)<br/><br/>Supabase/Railway"]
-        end
+    subgraph DATABASE["DATABASE TIER"]
+        Postgres["PostgreSQL<br/>Single Instance<br/><br/>All Data Storage<br/>AI Summary Cache<br/>Session Storage<br/>Image Storage (base64)<br/><br/>Supabase/Railway"]
+    end
 
-        subgraph EXTERNAL["EXTERNAL SERVICES"]
-            OpenAI["OpenAI API<br/>GPT-4o-mini<br/><br/>Cost: $10-30/month<br/>Summaries Cached 24hr"]
-        end
+    subgraph EXTERNAL["EXTERNAL SERVICES"]
+        OpenAI["OpenAI API<br/>GPT-4o-mini<br/><br/>Cost: $10-30/month<br/>Summaries Cached 24hr"]
     end
 
     %% ============================================
@@ -55,25 +47,20 @@ graph TB
     API -->|"3. Validate JWT<br/>(from cookie)"| Auth
     Auth -->|"Authorized"| PostSvc
     
-    PostSvc -->|"4. Query Post<br/>SELECT * FROM posts<br/>WHERE id = 123"| Postgres
+    PostSvc -->|"4. Query Post"| Postgres
+    Postgres -->|"5. Post data +<br/>ai_summary"| PostSvc
     
-    Postgres -->|"5. Post data +<br/>ai_summary field"| PostSvc
-    
-    PostSvc -->|"6. Check if summary<br/>exists & fresh"| PostSvc
-    PostSvc -.->|"No summary or stale"| AISvc
-    
-    AISvc -->|"7. Fetch top comments"| Postgres
+    PostSvc -.->|"6. No summary<br/>or stale"| AISvc
+    AISvc -->|"7. Fetch comments"| Postgres
     Postgres -->|"8. Top 10 comments"| AISvc
     
-    AISvc -->|"9. Generate prompt<br/>Call OpenAI"| OpenAI
+    AISvc -->|"9. Generate prompt"| OpenAI
     OpenAI -->|"10. AI Summary"| AISvc
+    AISvc -->|"11. Store summary"| Postgres
     
-    AISvc -->|"11. Store summary<br/>UPDATE posts<br/>SET ai_summary = '...'"| Postgres
-    
-    PostSvc -->|"12. Return combined data<br/>{post, comments,<br/>aiSummary, votes}"| API
-    
+    PostSvc -->|"12. Return data"| API
     API -->|"13. JSON response"| NextJS
-    NextJS -->|"14. Render UI<br/>Post + AI Summary<br/>+ Comments"| User
+    NextJS -->|"14. Render UI"| User
 
     %% Secondary Flows
     VoteSvc -.->|"Write votes"| Postgres
@@ -84,9 +71,6 @@ graph TB
     %% ============================================
     
     style User fill:#2C3E50,stroke:#1A252F,stroke-width:3px,color:#FFF,font-weight:bold
-    
-    style TOP fill:none,stroke:none
-    style BOTTOM fill:none,stroke:none
     
     style FRONTEND fill:#4ECDC4,stroke:#0A9396,stroke-width:3px,color:#FFF
     style NextJS fill:#26A69A,stroke:#00897B,stroke-width:2px,color:#FFF
