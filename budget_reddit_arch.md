@@ -4,8 +4,10 @@
 
 ```mermaid
 graph LR
-    %% User
-    User["User<br/>Views Post"]
+    %% Users
+    UserView["User<br/>Views Post"]
+    UserPost["User<br/>Creates Post"]
+    UserVote["User<br/>Votes/Comments"]
 
     %% Top Row - Application Tiers (Left to Right)
     subgraph FRONTEND["FRONTEND LAYER"]
@@ -38,39 +40,72 @@ graph LR
     end
 
     %% ============================================
-    %% MAIN FLOW: View Post with AI Summary
+    %% USE CASE 1: View Post with AI Summary (BLUE - Solid)
     %% ============================================
     
-    User -->|"1. GET /posts/123"| NextJS
-    NextJS -->|"2. Server-side render<br/>Fetch data"| API
-    
-    API -->|"3. Validate JWT<br/>(from cookie)"| Auth
-    Auth -->|"Authorized"| PostSvc
-    
-    PostSvc -->|"4. Query Post"| Postgres
-    Postgres -->|"5. Post data +<br/>ai_summary"| PostSvc
-    
-    PostSvc -.->|"6. No summary<br/>or stale"| AISvc
-    AISvc -->|"7. Fetch comments"| Postgres
-    Postgres -->|"8. Top 10 comments"| AISvc
-    
-    AISvc -->|"9. Generate prompt"| OpenAI
-    OpenAI -->|"10. AI Summary"| AISvc
-    AISvc -->|"11. Store summary"| Postgres
-    
-    PostSvc -->|"12. Return data"| API
-    API -->|"13. JSON response"| NextJS
-    NextJS -->|"14. Render UI"| User
+    UserView -->|"1. GET /posts/123"| NextJS
+    NextJS -->|"2. Fetch data"| API
+    API -->|"3. Validate JWT"| Auth
+    Auth -->|"4. Authorized"| PostSvc
+    PostSvc -->|"5. Query Post"| Postgres
+    Postgres -->|"6. Post + summary"| PostSvc
+    PostSvc -.->|"7. No summary"| AISvc
+    AISvc -->|"8. Fetch comments"| Postgres
+    Postgres -->|"9. Top comments"| AISvc
+    AISvc -->|"10. Generate"| OpenAI
+    OpenAI -->|"11. Summary"| AISvc
+    AISvc -->|"12. Store"| Postgres
+    PostSvc -->|"13. Return"| API
+    API -->|"14. Response"| NextJS
+    NextJS -->|"15. Render"| UserView
 
-    %% Secondary Flows
-    VoteSvc -.->|"Write votes"| Postgres
-    CommentSvc -.->|"Write comments"| Postgres
+    %% ============================================
+    %% USE CASE 2: Create Post (GREEN - Dashed)
+    %% ============================================
+    
+    UserPost ==>|"A. POST /posts"| NextJS
+    NextJS ==>|"B. Submit form"| API
+    API ==>|"C. Validate"| Auth
+    Auth ==>|"D. Authenticated"| PostSvc
+    PostSvc ==>|"E. Validate input"| RateLimit
+    RateLimit ==>|"F. Rate OK"| PostSvc
+    PostSvc ==>|"G. Create post"| Postgres
+    Postgres ==>|"H. Saved"| PostSvc
+    PostSvc ==>|"I. Return post"| API
+    API ==>|"J. Response"| NextJS
+    NextJS ==>|"K. Show success"| UserPost
+
+    %% ============================================
+    %% USE CASE 3: Vote/Comment (ORANGE - Dotted)
+    %% ============================================
+    
+    UserVote ..->|"X. POST /votes"| NextJS
+    NextJS ..->|"Y. Submit vote"| API
+    API ..->|"Z. Validate"| Auth
+    Auth ..->|"AA. Authenticated"| VoteSvc
+    VoteSvc ..->|"AB. Process vote"| Postgres
+    Postgres ..->|"AC. Updated"| VoteSvc
+    VoteSvc ..->|"AD. Return count"| API
+    API ..->|"AE. Response"| NextJS
+    NextJS ..->|"AF. Update UI"| UserVote
+    
+    UserVote ..->|"BA. POST /comments"| NextJS
+    NextJS ..->|"BB. Submit comment"| API
+    API ..->|"BC. Validate"| Auth
+    Auth ..->|"BD. Authenticated"| CommentSvc
+    CommentSvc ..->|"BE. Create comment"| Postgres
+    Postgres ..->|"BF. Saved"| CommentSvc
+    CommentSvc ..->|"BG. Return comment"| API
+    API ..->|"BH. Response"| NextJS
+    NextJS ..->|"BI. Show comment"| UserVote
 
     %% ============================================
     %% STYLING
     %% ============================================
     
-    style User fill:#2C3E50,stroke:#1A252F,stroke-width:3px,color:#FFF,font-weight:bold
+    style UserView fill:#3498DB,stroke:#2980B9,stroke-width:3px,color:#FFF,font-weight:bold
+    style UserPost fill:#27AE60,stroke:#229954,stroke-width:3px,color:#FFF,font-weight:bold
+    style UserVote fill:#E67E22,stroke:#D35400,stroke-width:3px,color:#FFF,font-weight:bold
     
     style FRONTEND fill:#4ECDC4,stroke:#0A9396,stroke-width:3px,color:#FFF
     style NextJS fill:#26A69A,stroke:#00897B,stroke-width:2px,color:#FFF
@@ -92,6 +127,16 @@ graph LR
     style EXTERNAL fill:#F39C12,stroke:#D68910,stroke-width:3px,color:#FFF
     style OpenAI fill:#F8C471,stroke:#D68910,stroke-width:2px,color:#000,font-weight:bold
 ```
+
+---
+
+## Use Case Flow Legend
+
+| Color/Arrow Style | Use Case | Description |
+|-------------------|----------|-------------|
+| **Blue Solid** (`-->`) | **View Post** | User requests post → Frontend → API → Services → Database → AI Summary → Response |
+| **Green Dashed** (`==>`) | **Create Post** | User submits post → Frontend → API → Auth → Rate Limit → Create → Database → Response |
+| **Orange Dotted** (`..->`) | **Vote/Comment** | User votes/comments → Frontend → API → Auth → Service → Database → Update UI |
 
 ---
 
