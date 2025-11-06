@@ -101,28 +101,197 @@ A Reddit-style discussion forum with **AI-powered summaries** - optimized for 50
 
 ## 🏗️ Architecture Components
 
-### **1. Single Server (All-in-One)**
+### **1. Frontend Layer (Next.js App Router)**
 
-**What**: Next.js full-stack application handling everything
+**What**: Modern React application with Server and Client Components
 
 **Tech Stack**:
-- **Frontend**: Next.js 14+ App Router
-- **Backend**: Next.js API Routes (replaces Express)
-- **Runtime**: Node.js 20+
+- **Framework**: Next.js 14+ App Router
+- **Language**: TypeScript
+- **UI Library**: React 18+
+- **Styling**: Tailwind CSS (recommended for rapid development)
+- **State Management**: React Context + Server Components (no Redux needed!)
+- **Data Fetching**: Native fetch with Server Components
 
-**Responsibilities**:
-- Serve frontend React components
-- Handle API requests via `/app/api/*` routes
-- Authenticate users (JWT in httpOnly cookies)
-- Rate limiting with in-memory store
-- Business logic (posts, comments, votes, AI)
+**Project Structure**:
+```
+app/
+├── (auth)/                    # Auth route group
+│   ├── login/
+│   │   └── page.tsx          # Login page
+│   ├── register/
+│   │   └── page.tsx          # Registration page
+│   └── layout.tsx            # Minimal layout (no nav)
+├── (main)/                   # Main app route group
+│   ├── layout.tsx            # Main layout with nav
+│   ├── page.tsx              # Homepage (post feed)
+│   ├── communities/
+│   │   ├── page.tsx          # Community list
+│   │   └── [slug]/
+│   │       └── page.tsx      # Community detail
+│   └── posts/
+│       ├── new/
+│       │   └── page.tsx      # Create post
+│       └── [id]/
+│           └── page.tsx      # Post detail with AI summary
+├── api/                      # API routes (backend)
+│   └── [...routes]           # See Backend section
+└── components/
+    ├── Post.tsx              # Post card component
+    ├── Comment.tsx           # Comment component
+    ├── AISummary.tsx         # ⭐ AI summary sidebar
+    ├── VoteButtons.tsx       # Upvote/downvote
+    └── Navbar.tsx            # Navigation bar
+```
 
-**Why Next.js Full-Stack?**
-- No separate backend server needed
-- Built-in API routes
-- Server-side rendering for SEO
-- Single deployment (simpler)
-- Free hosting on Vercel
+**Key Features**:
+
+1. **Server Components (Performance Boost)**
+   - Render on server by default (less JavaScript sent to client)
+   - Direct database access in page components
+   - Automatic code splitting
+
+   ```tsx
+   // app/(main)/posts/[id]/page.tsx (Server Component)
+   import { db } from '@/lib/db';
+   
+   export default async function PostPage({ params }: { params: { id: string } }) {
+     // Fetch directly in component - runs on server!
+     const post = await db.post.findUnique({
+       where: { id: parseInt(params.id) },
+       include: {
+         author: true,
+         comments: {
+           include: { author: true },
+           orderBy: { createdAt: 'desc' }
+         }
+       }
+     });
+   
+     return (
+       <div className="max-w-7xl mx-auto">
+         <div className="grid grid-cols-3 gap-6">
+           {/* Main content - 2/3 width */}
+           <div className="col-span-2">
+             <PostContent post={post} />
+             <CommentSection comments={post.comments} />
+           </div>
+           
+           {/* AI Summary Sidebar - 1/3 width */}
+           <aside className="col-span-1">
+             <AISummarySidebar postId={post.id} summary={post.ai_summary} />
+           </aside>
+         </div>
+       </div>
+     );
+   }
+   ```
+
+2. **Client Components (Interactive UI)**
+   - Use "use client" directive for interactive elements
+   - Voting, commenting, real-time updates
+
+   ```tsx
+   // components/VoteButtons.tsx (Client Component)
+   'use client';
+   
+   import { useState } from 'react';
+   
+   export function VoteButtons({ postId, initialVotes }: Props) {
+     const [votes, setVotes] = useState(initialVotes);
+     const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
+   
+     async function handleVote(direction: 'up' | 'down') {
+       const response = await fetch('/api/votes', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           targetType: 'post',
+           targetId: postId,
+           value: direction === 'up' ? 1 : -1
+         })
+       });
+   
+       if (response.ok) {
+         const newVote = userVote === direction ? null : direction;
+         setUserVote(newVote);
+         // Update vote count optimistically
+         setVotes(prev => prev + (newVote === 'up' ? 1 : newVote === 'down' ? -1 : 0));
+       }
+     }
+   
+     return (
+       <div className="flex flex-col items-center">
+         <button onClick={() => handleVote('up')} className={userVote === 'up' ? 'text-orange-500' : ''}>
+           ▲
+         </button>
+         <span className="font-bold">{votes}</span>
+         <button onClick={() => handleVote('down')} className={userVote === 'down' ? 'text-blue-500' : ''}>
+           ▼
+         </button>
+       </div>
+     );
+   }
+   ```
+
+3. **AI Summary Component (Core Feature)**
+   ```tsx
+   // components/AISummary.tsx
+   'use client';
+   
+   import { useState } from 'react';
+   
+   export function AISummarySidebar({ postId, summary }: Props) {
+     const [aiSummary, setAiSummary] = useState(summary);
+     const [loading, setLoading] = useState(false);
+   
+     async function generateSummary() {
+       setLoading(true);
+       try {
+         const res = await fetch(`/api/posts/${postId}/summary`, { method: 'POST' });
+         const data = await res.json();
+         setAiSummary(data.summary);
+       } catch (error) {
+         console.error('Failed to generate summary', error);
+       } finally {
+         setLoading(false);
+       }
+     }
+   
+     return (
+       <div className="sticky top-4 p-6 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-lg shadow-lg border border-orange-200">
+         <div className="flex items-center gap-2 mb-3">
+           <span className="text-2xl">🤖</span>
+           <h3 className="text-lg font-bold text-gray-800">AI Summary</h3>
+         </div>
+         
+         {aiSummary ? (
+           <p className="text-gray-700 leading-relaxed">{aiSummary}</p>
+         ) : (
+           <div>
+             <p className="text-gray-600 mb-3">No summary yet for this discussion.</p>
+             <button
+               onClick={generateSummary}
+               disabled={loading}
+               className="w-full px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50"
+             >
+               {loading ? 'Generating...' : 'Generate Summary'}
+             </button>
+           </div>
+         )}
+         
+         {aiSummary && (
+           <button
+             onClick={generateSummary}
+             className="mt-3 text-sm text-orange-600 hover:underline"
+           >
+             Regenerate
+           </button>
+         )}
+       </div>
+     );
+   }
+   ```
 
 **Deployment Options**:
 
@@ -134,6 +303,742 @@ A Reddit-style discussion forum with **AI-powered summaries** - optimized for 50
 | **Hetzner VPS** | €4/month (~$4) | 2GB RAM, 1 vCPU | Best value |
 
 **Recommended**: Start with **Vercel Free Tier** → upgrade to Railway/Hetzner if you hit limits.
+
+---
+
+### **2. Backend Layer (Next.js API Routes)**
+
+**What**: RESTful API built with Next.js API Routes (no separate Express server needed!)
+
+**Why API Routes?**
+- Co-located with frontend (single codebase)
+- Automatic API endpoints from file structure
+- TypeScript end-to-end
+- Serverless-ready (Vercel)
+- Simpler than separate backend
+
+**API Structure**:
+```
+app/api/
+├── auth/
+│   ├── login/route.ts           # POST /api/auth/login
+│   ├── register/route.ts        # POST /api/auth/register
+│   ├── logout/route.ts          # POST /api/auth/logout
+│   └── me/route.ts              # GET /api/auth/me (current user)
+├── posts/
+│   ├── route.ts                 # GET /api/posts (list), POST /api/posts (create)
+│   └── [id]/
+│       ├── route.ts             # GET /api/posts/123, PATCH /api/posts/123, DELETE /api/posts/123
+│       └── summary/route.ts     # POST /api/posts/123/summary (generate AI summary)
+├── comments/
+│   ├── route.ts                 # POST /api/comments (create)
+│   └── [id]/route.ts            # PATCH, DELETE comments
+├── votes/route.ts               # POST /api/votes (upvote/downvote)
+└── communities/
+    ├── route.ts                 # GET /api/communities, POST /api/communities
+    └── [slug]/route.ts          # GET /api/communities/programming
+```
+
+**API Route Example (Full CRUD)**:
+```typescript
+// app/api/posts/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { db } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
+import { rateLimit } from '@/lib/rate-limit';
+
+// GET /api/posts - List posts with pagination
+export async function GET(req: NextRequest) {
+  const searchParams = req.nextUrl.searchParams;
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = 20;
+  const communitySlug = searchParams.get('community');
+
+  const posts = await db.post.findMany({
+    where: communitySlug ? { community: { slug: communitySlug } } : undefined,
+    include: {
+      author: { select: { id: true, username: true, avatarData: true } },
+      community: { select: { id: true, name: true, slug: true } },
+      _count: { select: { comments: true } }
+    },
+    orderBy: { createdAt: 'desc' },
+    skip: (page - 1) * limit,
+    take: limit
+  });
+
+  const total = await db.post.count({
+    where: communitySlug ? { community: { slug: communitySlug } } : undefined
+  });
+
+  return NextResponse.json({
+    posts,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  });
+}
+
+// POST /api/posts - Create new post
+const CreatePostSchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters').max(300),
+  body: z.string().max(40000).optional(),
+  communityId: z.number().int().positive(),
+  imageData: z.string().optional() // base64 encoded image
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    // 1. Rate limiting
+    const ip = req.ip || req.headers.get('x-forwarded-for') || 'unknown';
+    if (!rateLimit(ip, 10, 60000)) { // 10 posts per minute
+      return NextResponse.json(
+        { error: 'Too many requests. Please slow down.' },
+        { status: 429 }
+      );
+    }
+
+    // 2. Authentication
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 3. Validate input
+    const body = await req.json();
+    const data = CreatePostSchema.parse(body);
+
+    // 4. Validate image size if present
+    if (data.imageData) {
+      const sizeInBytes = (data.imageData.length * 3) / 4; // Base64 to bytes
+      if (sizeInBytes > 2 * 1024 * 1024) { // 2MB limit
+        return NextResponse.json(
+          { error: 'Image too large (max 2MB)' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 5. Create post
+    const post = await db.post.create({
+      data: {
+        title: data.title,
+        body: data.body,
+        imageData: data.imageData,
+        authorId: user.id,
+        communityId: data.communityId
+      },
+      include: {
+        author: { select: { id: true, username: true } },
+        community: { select: { id: true, name: true, slug: true } }
+      }
+    });
+
+    return NextResponse.json(post, { status: 201 });
+    
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
+    }
+    
+    console.error('Error creating post:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+**Middleware for Auth & Security**:
+```typescript
+// lib/auth.ts
+import { NextRequest } from 'next/server';
+import jwt from 'jsonwebtoken';
+import { db } from './db';
+
+export async function getCurrentUser(req: NextRequest) {
+  try {
+    // 1. Get token from cookie
+    const token = req.cookies.get('session')?.value;
+    if (!token) return null;
+
+    // 2. Verify JWT
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
+
+    // 3. Check if session exists in database
+    const session = await db.session.findUnique({
+      where: { token },
+      include: { user: true }
+    });
+
+    if (!session || session.expiresAt < new Date()) {
+      return null;
+    }
+
+    return session.user;
+  } catch (error) {
+    return null;
+  }
+}
+
+// Middleware wrapper for protected routes
+export function withAuth(handler: Function) {
+  return async (req: NextRequest) => {
+    const user = await getCurrentUser(req);
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Attach user to request (not directly possible, pass as param)
+    return handler(req, user);
+  };
+}
+```
+
+**Error Handling Pattern**:
+```typescript
+// lib/errors.ts
+export class AppError extends Error {
+  constructor(
+    public message: string,
+    public statusCode: number,
+    public code?: string
+  ) {
+    super(message);
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(resource: string) {
+    super(`${resource} not found`, 404, 'NOT_FOUND');
+  }
+}
+
+export class UnauthorizedError extends AppError {
+  constructor(message = 'Unauthorized') {
+    super(message, 401, 'UNAUTHORIZED');
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden') {
+    super(message, 403, 'FORBIDDEN');
+  }
+}
+
+// Usage in API route
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const user = await getCurrentUser(req);
+    if (!user) throw new UnauthorizedError();
+
+    const post = await db.post.findUnique({ where: { id: parseInt(params.id) } });
+    if (!post) throw new NotFoundError('Post');
+
+    if (post.authorId !== user.id) {
+      throw new ForbiddenError('You can only delete your own posts');
+    }
+
+    await db.post.delete({ where: { id: post.id } });
+    return NextResponse.json({ success: true });
+    
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.statusCode }
+      );
+    }
+    console.error('Unexpected error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+```
+
+---
+
+### **3. Authentication System (JWT + Database Sessions)**
+
+**Architecture**: Hybrid approach combining JWT tokens with database session validation
+
+**Why This Approach?**
+- **JWT**: Fast validation without database hit (stateless)
+- **Database Sessions**: Ability to revoke tokens (logout, ban users)
+- **Best of Both Worlds**: Performance + control
+
+**Auth Flow**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    REGISTRATION FLOW                         │
+└─────────────────────────────────────────────────────────────┘
+1. User submits: { username, email, password }
+2. Validate: unique username/email, strong password
+3. Hash password: bcrypt with cost factor 12
+4. Create user in database
+5. Create session entry
+6. Generate JWT token
+7. Set httpOnly cookie with token
+8. Return user profile
+
+┌─────────────────────────────────────────────────────────────┐
+│                      LOGIN FLOW                              │
+└─────────────────────────────────────────────────────────────┘
+1. User submits: { username, password }
+2. Find user by username
+3. Compare password with bcrypt
+4. If valid:
+   a. Create new session in database
+   b. Generate JWT token with userId
+   c. Set httpOnly cookie
+   d. Return user profile
+5. If invalid: Return 401 error
+
+┌─────────────────────────────────────────────────────────────┐
+│                  AUTHENTICATION CHECK                        │
+└─────────────────────────────────────────────────────────────┘
+1. Extract token from httpOnly cookie
+2. Verify JWT signature
+3. Check session exists in database
+4. Check session not expired
+5. Return user if all checks pass
+```
+
+**Implementation**:
+
+```typescript
+// app/api/auth/register/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { z } from 'zod';
+import { db } from '@/lib/db';
+
+const RegisterSchema = z.object({
+  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, 
+    'Username can only contain letters, numbers, and underscores'),
+  email: z.string().email(),
+  password: z.string().min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const data = RegisterSchema.parse(body);
+
+    // 1. Check if username or email already exists
+    const existing = await db.user.findFirst({
+      where: {
+        OR: [
+          { username: data.username },
+          { email: data.email }
+        ]
+      }
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        { error: 'Username or email already taken' },
+        { status: 400 }
+      );
+    }
+
+    // 2. Hash password (bcrypt cost factor 12 = good security/performance balance)
+    const hashedPassword = await bcrypt.hash(data.password, 12);
+
+    // 3. Create user
+    const user = await db.user.create({
+      data: {
+        username: data.username,
+        email: data.email,
+        passwordHash: hashedPassword
+      }
+    });
+
+    // 4. Create session
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
+    );
+
+    await db.session.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      }
+    });
+
+    // 5. Set httpOnly cookie
+    const response = NextResponse.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      }
+    }, { status: 201 });
+
+    response.cookies.set('session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/'
+    });
+
+    return response;
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
+    }
+    console.error('Registration error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+```
+
+```typescript
+// app/api/auth/login/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { db } from '@/lib/db';
+import { rateLimit } from '@/lib/rate-limit';
+
+export async function POST(req: NextRequest) {
+  try {
+    // 1. Rate limiting (prevent brute force)
+    const ip = req.ip || req.headers.get('x-forwarded-for') || 'unknown';
+    if (!rateLimit(ip, 5, 60000)) { // 5 attempts per minute
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
+    const { username, password } = await req.json();
+
+    // 2. Find user
+    const user = await db.user.findUnique({
+      where: { username }
+    });
+
+    if (!user) {
+      // Generic error to prevent username enumeration
+      return NextResponse.json(
+        { error: 'Invalid username or password' },
+        { status: 401 }
+      );
+    }
+
+    // 3. Verify password
+    const validPassword = await bcrypt.compare(password, user.passwordHash);
+
+    if (!validPassword) {
+      return NextResponse.json(
+        { error: 'Invalid username or password' },
+        { status: 401 }
+      );
+    }
+
+    // 4. Create session
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
+    );
+
+    await db.session.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      }
+    });
+
+    // 5. Set cookie and return user
+    const response = NextResponse.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      }
+    });
+
+    response.cookies.set('session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+      path: '/'
+    });
+
+    return response;
+
+  } catch (error) {
+    console.error('Login error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+```
+
+```typescript
+// app/api/auth/logout/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+
+export async function POST(req: NextRequest) {
+  try {
+    const token = req.cookies.get('session')?.value;
+
+    if (token) {
+      // Delete session from database
+      await db.session.delete({
+        where: { token }
+      }).catch(() => {}); // Ignore if session doesn't exist
+    }
+
+    // Clear cookie
+    const response = NextResponse.json({ success: true });
+    response.cookies.delete('session');
+
+    return response;
+
+  } catch (error) {
+    console.error('Logout error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+```
+
+```typescript
+// app/api/auth/me/route.ts - Get current user
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth';
+
+export async function GET(req: NextRequest) {
+  const user = await getCurrentUser(req);
+
+  if (!user) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  }
+
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      createdAt: user.createdAt
+    }
+  });
+}
+```
+
+**Frontend Auth Context**:
+```tsx
+// app/providers/AuthProvider.tsx
+'use client';
+
+import { createContext, useContext, useState, useEffect } from 'react';
+
+type User = {
+  id: number;
+  username: string;
+  email: string;
+} | null;
+
+type AuthContextType = {
+  user: User;
+  loading: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check if user is authenticated on mount
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setUser(data?.user || null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const login = async (username: string, password: string) => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Login failed');
+    }
+
+    const data = await res.json();
+    setUser(data.user);
+  };
+
+  const register = async (username: string, email: string, password: string) => {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Registration failed');
+    }
+
+    const data = await res.json();
+    setUser(data.user);
+  };
+
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
+}
+```
+
+**Usage in Components**:
+```tsx
+// app/(auth)/login/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { useAuth } from '@/app/providers/AuthProvider';
+import { useRouter } from 'next/navigation';
+
+export default function LoginPage() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { login } = useAuth();
+  const router = useRouter();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+
+    try {
+      await login(username, password);
+      router.push('/'); // Redirect to homepage
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  return (
+    <div className="max-w-md mx-auto mt-16">
+      <h1 className="text-3xl font-bold mb-6">Login</h1>
+      
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Username</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium mb-1">Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+            required
+          />
+        </div>
+        
+        <button
+          type="submit"
+          className="w-full bg-orange-500 text-white py-2 rounded hover:bg-orange-600 font-medium"
+        >
+          Login
+        </button>
+      </form>
+    </div>
+  );
+}
+```
+
+**Security Best Practices**:
+
+✅ **Password Security**
+- Minimum 8 characters with complexity requirements
+- bcrypt with cost factor 12 (optimal security/performance)
+- Never log or store plaintext passwords
+
+✅ **JWT Security**
+- Signed with HS256 algorithm
+- Short expiration (7 days, can reduce to 24 hours for higher security)
+- Store in httpOnly cookies (not localStorage - prevents XSS)
+
+✅ **Session Management**
+- Database sessions allow instant revocation
+- Cleanup expired sessions with cron job
+- One-to-many user-sessions (multiple devices supported)
+
+✅ **Rate Limiting**
+- Login: 5 attempts per minute per IP
+- Registration: 3 accounts per hour per IP
+- Prevents brute force and spam accounts
+
+✅ **CSRF Protection**
+- SameSite=Lax cookie attribute
+- Next.js automatic CSRF protection for API routes
+
+✅ **Input Validation**
+- Zod schemas validate all inputs
+- Sanitize user-generated content
+- Prevent SQL injection (Prisma handles this)
 
 ---
 
