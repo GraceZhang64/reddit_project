@@ -13,7 +13,7 @@ export interface Post {
   author: string;
   communityId: number;
   communityName: string;
-  voteCount: number;
+  voteCount?: number;
   commentCount: number;
   createdAt: string;
 }
@@ -24,7 +24,8 @@ export interface Comment {
   author: string;
   postId: number;
   parentCommentId?: number;
-  voteCount: number;
+  voteCount?: number;
   createdAt: string;
   replies?: Comment[];
 }
+

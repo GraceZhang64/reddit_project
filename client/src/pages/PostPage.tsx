@@ -1,10 +1,37 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
+import CommentItem from '../components/CommentItem';
 import { Post, Comment } from '../types';
+
+// Helper function to build nested comment tree
+function buildCommentTree(comments: Comment[]): Comment[] {
+  const commentMap = new Map<number, Comment>();
+  const rootComments: Comment[] = [];
+
+  // First pass: create comment objects with replies array
+  comments.forEach(comment => {
+    commentMap.set(comment.id, { ...comment, replies: [] });
+  });
+
+  // Second pass: build tree structure
+  comments.forEach(comment => {
+    const commentObj = commentMap.get(comment.id)!;
+    if (comment.parentCommentId) {
+      const parent = commentMap.get(comment.parentCommentId);
+      if (parent && parent.replies) {
+        parent.replies.push(commentObj);
+      }
+    } else {
+      rootComments.push(commentObj);
+    }
+  });
+
+  return rootComments;
+}
 import './PostPage.css';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://localhost:3001/api';
 
 interface PostWithSummary extends Post {
   summary?: string;
@@ -30,46 +57,49 @@ function PostPage() {
       setError(null);
       
       try {
-        // Try to fetch post with AI summary first
+        // Try to fetch post with AI summary
         let response = await fetch(`${API_URL}/posts/${id}/summary`);
         
-        // If it fails (e.g., quota exceeded), fall back to post without summary
+        // If summary endpoint fails, fall back to regular post endpoint
         if (!response.ok) {
-          console.log('AI summary failed, fetching post without summary...');
+          console.log('AI summary endpoint failed, fetching without summary...');
           response = await fetch(`${API_URL}/posts/${id}`);
-          
-          if (!response.ok) {
-            throw new Error('Failed to fetch post');
-          }
+        }
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch post');
         }
         
         const data = await response.json();
-        
-        // Transform backend data to match frontend types
+
+        // Transform post data
         const transformedPost: PostWithSummary = {
-          id: data.post.id,
-          title: data.post.title,
-          body: data.post.body,
-          author: data.post.author,
-          communityId: data.post.communityId || 1,
-          communityName: data.post.communityName,
-          voteCount: data.post.voteCount,
-          commentCount: data.post.commentCount,
-          createdAt: data.post.createdAt,
-          summary: data.aiSummary || data.summary,
+          id: data.id,
+          title: data.title,
+          body: data.body,
+          author: data.author_id,
+          communityId: data.community_id,
+          communityName: data.community_name || 'General',
+          voteCount: data.vote_count || 0,
+          commentCount: data.comment_count || 0,
+          createdAt: data.created_at,
+          summary: data.ai_summary,
         };
-        
-        const transformedComments: Comment[] = data.comments.map((c: any) => ({
-          id: c.id,
-          body: c.body,
-          author: c.author,
-          postId: data.post.id,
-          voteCount: c.voteCount,
-          createdAt: c.createdAt,
-        }));
+        // Fetch comments from API
+        let commentsData: Comment[] = [];
+        try {
+          const commentsResponse = await fetch(`${API_URL}/comments/posts/${id}`);
+          if (commentsResponse.ok) {
+            commentsData = await commentsResponse.json();
+          } else {
+            console.log('Failed to fetch comments, using mock data');
+          }
+        } catch (err) {
+          console.log('Error fetching comments:', err);
+        }
         
         setPost(transformedPost);
-        setComments(transformedComments);
+        setComments(commentsData);
       } catch (err) {
         console.error('Error fetching post:', err);
         setError('Failed to load post. Make sure the backend server is running.');
@@ -91,22 +121,67 @@ function PostPage() {
     setPost({ ...post, voteCount: post.voteCount + voteDiff });
   };
 
-  const handleCommentSubmit = (e: React.FormEvent) => {
+  const handleReply = async (parentCommentId: number, body: string) => {
+    if (!post) return;
+
+    try {
+      const response = await fetch(`${API_URL}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // TODO: Add auth token here
+        },
+        body: JSON.stringify({
+          postId: post.id,
+          body,
+          parentCommentId,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh comments after reply
+        const commentsResponse = await fetch(`${API_URL}/comments/posts/${id}`);
+        if (commentsResponse.ok) {
+          const updatedComments = await commentsResponse.json();
+          setComments(updatedComments);
+        }
+      }
+    } catch (err) {
+      console.error('Error posting reply:', err);
+    }
+  };
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!post || !commentBody.trim()) return;
     
-    // For now, just add comment locally (would need backend endpoint for real implementation)
-    const newComment: Comment = {
-      id: comments.length + 1,
-      body: commentBody.trim(),
-      author: 'current_user',
-      postId: post.id,
-      voteCount: 1,
-      createdAt: new Date().toISOString(),
-    };
-    setComments([newComment, ...comments]);
-    setCommentBody('');
-    setPost({ ...post, commentCount: post.commentCount + 1 });
+    // Post comment to backend
+    try {
+      const response = await fetch(`${API_URL}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // TODO: Add auth token
+        },
+        body: JSON.stringify({
+          postId: post.id,
+          body: commentBody.trim(),
+          parentCommentId: null, // Top-level comment
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh comments
+        const commentsResponse = await fetch(`${API_URL}/comments/posts/${id}`);
+        if (commentsResponse.ok) {
+          const updatedComments = await commentsResponse.json();
+          setComments(updatedComments);
+          setPost({ ...post, commentCount: post.commentCount + 1 });
+        }
+      }
+    } catch (err) {
+      console.error('Error posting comment:', err);
+    }
   };
 
   if (loading) {
@@ -246,7 +321,7 @@ function PostPage() {
 
           <div className="comments-list">
             {comments.map((comment) => (
-              <CommentCard key={comment.id} comment={comment} />
+              <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
             ))}
           </div>
         </div>
@@ -296,3 +371,20 @@ function CommentCard({ comment }: { comment: Comment }) {
 }
 
 export default PostPage;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
