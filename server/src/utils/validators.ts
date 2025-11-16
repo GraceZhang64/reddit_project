@@ -65,9 +65,9 @@ export function validatePassword(password: string): ValidationResult {
     return { valid: false, error: 'Password must contain at least one number' };
   }
 
-  // Check for at least one special character
-  if (!/[@$!%*?&]/.test(password)) {
-    return { valid: false, error: 'Password must contain at least one special character (@$!%*?&)' };
+  // Check for at least one special character (expanded set)
+  if (!/[@$!%*?&#^()_\-+=[\]{}|;:'",.<>\/\\]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one special character' };
   }
 
   // Check for common weak passwords (case-insensitive)

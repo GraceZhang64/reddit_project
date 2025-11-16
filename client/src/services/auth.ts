@@ -50,7 +50,9 @@ class AuthService {
 
   // Check if authenticated
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    const user = this.getUser();
+    return !!(token && user);
   }
 
   // Store auth data
@@ -167,8 +169,14 @@ class AuthService {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          this.clearAuthData();
-          window.location.href = '/auth';
+          // Only clear auth and redirect if we're not already on auth page
+          const currentPath = window.location.pathname;
+          if (!currentPath.includes('/auth') && !currentPath.includes('/login')) {
+            this.clearAuthData();
+            // Store the attempted URL to redirect after login
+            sessionStorage.setItem('redirectAfterLogin', currentPath);
+            window.location.href = '/auth';
+          }
         }
         return Promise.reject(error);
       }

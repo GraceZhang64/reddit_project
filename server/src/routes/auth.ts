@@ -35,10 +35,28 @@ router.post('/register', async (req: Request, res: Response) => {
       });
     }
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
-    if (!passwordRegex.test(password)) {
+    // Check password complexity
+    if (!/[a-z]/.test(password)) {
       return res.status(400).json({ 
-        error: 'Password must contain uppercase, lowercase, number, and special character' 
+        error: 'Password must contain at least one lowercase letter' 
+      });
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ 
+        error: 'Password must contain at least one uppercase letter' 
+      });
+    }
+
+    if (!/\d/.test(password)) {
+      return res.status(400).json({ 
+        error: 'Password must contain at least one number' 
+      });
+    }
+
+    if (!/[@$!%*?&#^()_\-+=[\]{}|;:'",.<>\/\\]/.test(password)) {
+      return res.status(400).json({ 
+        error: 'Password must contain at least one special character' 
       });
     }
 
