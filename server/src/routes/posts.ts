@@ -95,10 +95,21 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
     // Generate or retrieve AI summary
     const aiService = getAIService();
     let summary = post.ai_summary;
+    const currentCommentCount = post.comment_count || 0;
+    const cachedCommentCount = (post as any).ai_summary_comment_count || 0;
+    const newCommentsCount = currentCommentCount - cachedCommentCount;
 
-    // If no summary exists or it's old (older than 1 day), regenerate
-    if (!summary || !post.ai_summary_generated_at || 
-        new Date().getTime() - new Date(post.ai_summary_generated_at).getTime() > 24 * 60 * 60 * 1000) {
+    // Smart cache invalidation: Regenerate if:
+    // 1. No summary exists
+    // 2. Summary is older than 24 hours
+    // 3. There are 3 or more new comments since last generation
+    const shouldRegenerate = 
+      !summary || 
+      !post.ai_summary_generated_at || 
+      new Date().getTime() - new Date(post.ai_summary_generated_at).getTime() > 24 * 60 * 60 * 1000 ||
+      newCommentsCount >= 3;
+
+    if (shouldRegenerate) {
       try {
         // Prepare post data for AI summary
         const postData: {
@@ -135,10 +146,31 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
           }));
         };
         summary = await aiService.generatePostSummary(postData);
+        
+        // Update the post with the new summary and current comment count
+        const { PrismaClient } = await import('@prisma/client');
+        const prisma = new PrismaClient();
+        try {
+          // Use raw query since Prisma client may not be regenerated yet
+          await prisma.$executeRaw`
+            UPDATE posts 
+            SET ai_summary = ${summary},
+                ai_summary_generated_at = NOW(),
+                ai_summary_comment_count = ${currentCommentCount}
+            WHERE id = ${postId}
+          `;
+          console.log(`✅ AI summary cached for post ${postId} (${currentCommentCount} comments)`);
+        } catch (updateError) {
+          console.error('Failed to cache AI summary:', updateError);
+        } finally {
+          await prisma.$disconnect();
+        }
       } catch (error) {
         console.error('Failed to generate AI summary:', error);
         // Continue without summary rather than failing the whole request
       }
+    } else {
+      console.log(`📦 Using cached AI summary for post ${postId} (age: ${Math.round((new Date().getTime() - new Date(post.ai_summary_generated_at!).getTime()) / 3600000)}h, new comments: ${newCommentsCount})`);
     }
 
     res.json({
