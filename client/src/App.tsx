@@ -6,6 +6,7 @@ import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityPage from './pages/CommunityPage';
 import PostPage from './pages/PostPage';
 import AuthPage from './pages/AuthPage';
+import SettingsPage from './pages/SettingsPage';
 import './App.css';
 
 function App() {
@@ -74,6 +75,7 @@ function App() {
                 <Link to="/communities" className="nav-link">Communities</Link>
               </div>
               <div className="nav-actions">
+                <Link to="/settings" className="nav-link">Settings</Link>
                 <span className="username">u/{username}</span>
                 <button onClick={handleLogout} className="logout-btn">
                   Logout
@@ -100,6 +102,10 @@ function App() {
           <Route
             path="/p/:id"
             element={isAuthenticated ? <PostPage /> : <Navigate to="/auth" />}
+          />
+          <Route
+            path="/settings"
+            element={isAuthenticated ? <SettingsPage /> : <Navigate to="/auth" />}
           />
         </Routes>
       </div>

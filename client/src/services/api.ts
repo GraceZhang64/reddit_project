@@ -249,6 +249,16 @@ export const usersApi = {
   async updateProfile(data: { bio?: string; avatar_url?: string }): Promise<any> {
     const response = await axios.put(`${API_BASE}/users/profile`, data);
     return response.data;
+  },
+
+  async updateUsername(username: string): Promise<{ message: string; user: any }> {
+    const response = await axios.put(`${API_BASE}/users/username`, { username });
+    return response.data;
+  },
+
+  async deleteAccount(confirm: string): Promise<{ message: string }> {
+    const response = await axios.delete(`${API_BASE}/users/me`, { data: { confirm } });
+    return response.data;
   }
 };
 

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth';
+import { getSupabaseClient } from '../config/supabase';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -215,6 +216,87 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
   } catch (error) {
     console.error('Error updating user profile:', error);
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+/**
+ * PUT /api/users/username
+ * Update current user's username (authenticated)
+ */
+router.put('/username', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { username } = req.body as { username?: string };
+    const userId = req.user!.id;
+
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+    if (username.length < 3 || username.length > 20) {
+      return res.status(400).json({ error: 'Username must be 3-20 characters' });
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({ error: 'Only letters, numbers, and underscores allowed' });
+    }
+
+    // Check uniqueness
+    const existing = await prisma.user.findUnique({ where: { username } });
+    if (existing && existing.id !== userId) {
+      return res.status(400).json({ error: 'Username already taken' });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { username, updated_at: new Date() },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        avatar_url: true,
+        bio: true,
+        createdAt: true,
+        updated_at: true
+      }
+    });
+
+    res.json({ message: 'Username updated', user: updated });
+  } catch (error) {
+    console.error('Error updating username:', error);
+    res.status(500).json({ error: 'Failed to update username' });
+  }
+});
+
+/**
+ * DELETE /api/users/me
+ * Delete current user's account (authenticated)
+ */
+router.delete('/me', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { confirm } = req.body as { confirm?: string };
+    const userId = req.user!.id;
+
+    if (confirm !== 'DELETE') {
+      return res.status(400).json({ error: 'Confirmation phrase required' });
+    }
+
+    // Best-effort delete in Supabase Auth as well (may require service key)
+    try {
+      const supabase = getSupabaseClient();
+      // @ts-ignore - admin API may not be available with anon key; ignore failure
+      if (supabase?.auth?.admin?.deleteUser) {
+        // @ts-ignore
+        await supabase.auth.admin.deleteUser(userId);
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // Delete from our DB (cascades to posts, comments, votes)
+    await prisma.user.delete({ where: { id: userId } });
+
+    res.json({ message: 'Account deleted' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 });
 
