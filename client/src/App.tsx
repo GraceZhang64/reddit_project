@@ -14,20 +14,15 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check authentication status
-    const checkAuth = async () => {
+    // Check authentication status from stored data only (no API call)
+    const checkAuth = () => {
       try {
-        if (authService.isAuthenticated()) {
-          const user = authService.getUser();
-          if (user) {
-            setIsAuthenticated(true);
-            setUsername(user.username);
-          } else {
-            // Try to fetch current user from API
-            const currentUser = await authService.getCurrentUser();
-            setIsAuthenticated(true);
-            setUsername(currentUser.username);
-          }
+        const user = authService.getUser();
+        if (user) {
+          setIsAuthenticated(true);
+          setUsername(user.username);
+        } else {
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Auth check failed:', error);

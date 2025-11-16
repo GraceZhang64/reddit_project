@@ -310,18 +310,38 @@ export const postService = {
     const voteCount = await getVoteCount('post', post.id);
     const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
 
-    // Get vote counts for comments
-    const commentsWithVotes = await Promise.all(
-      post.comments.map(async (comment) => {
-        const commentVoteCount = await getVoteCount('comment', comment.id);
-        const commentUserVote = userId ? await getUserVote(userId, 'comment', comment.id) : null;
-        
-        return {
-          ...comment,
-          vote_count: commentVoteCount,
-          user_vote: commentUserVote,
-        };
-      })
+    // Build nested comment structure (same as comments endpoint)
+    const commentsMap = new Map();
+    const topLevelComments: any[] = [];
+
+    // First pass: Get vote data for all comments
+    for (const comment of post.comments) {
+      const commentVoteCount = await getVoteCount('comment', comment.id);
+      const commentUserVote = userId ? await getUserVote(userId, 'comment', comment.id) : null;
+      
+      commentsMap.set(comment.id, {
+        ...comment,
+        vote_count: commentVoteCount,
+        user_vote: commentUserVote,
+        replies: []
+      });
+    }
+
+    // Second pass: Build the tree structure
+    for (const comment of commentsMap.values()) {
+      if (comment.parentCommentId === null) {
+        topLevelComments.push(comment);
+      } else {
+        const parent = commentsMap.get(comment.parentCommentId);
+        if (parent) {
+          parent.replies.push(comment);
+        }
+      }
+    }
+
+    // Sort top-level comments by creation date (newest first)
+    topLevelComments.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     return {
@@ -329,7 +349,7 @@ export const postService = {
       vote_count: voteCount,
       user_vote: userVote,
       comment_count: post.comments.length,
-      comments: commentsWithVotes,
+      comments: topLevelComments,
     };
   },
 
@@ -377,18 +397,38 @@ export const postService = {
     const voteCount = await getVoteCount('post', post.id);
     const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
 
-    // Get vote counts for comments
-    const commentsWithVotes = await Promise.all(
-      post.comments.map(async (comment) => {
-        const commentVoteCount = await getVoteCount('comment', comment.id);
-        const commentUserVote = userId ? await getUserVote(userId, 'comment', comment.id) : null;
-        
-        return {
-          ...comment,
-          vote_count: commentVoteCount,
-          user_vote: commentUserVote,
-        };
-      })
+    // Build nested comment structure (same as comments endpoint)
+    const commentsMap = new Map();
+    const topLevelComments: any[] = [];
+
+    // First pass: Get vote data for all comments
+    for (const comment of post.comments) {
+      const commentVoteCount = await getVoteCount('comment', comment.id);
+      const commentUserVote = userId ? await getUserVote(userId, 'comment', comment.id) : null;
+      
+      commentsMap.set(comment.id, {
+        ...comment,
+        vote_count: commentVoteCount,
+        user_vote: commentUserVote,
+        replies: []
+      });
+    }
+
+    // Second pass: Build the tree structure
+    for (const comment of commentsMap.values()) {
+      if (comment.parentCommentId === null) {
+        topLevelComments.push(comment);
+      } else {
+        const parent = commentsMap.get(comment.parentCommentId);
+        if (parent) {
+          parent.replies.push(comment);
+        }
+      }
+    }
+
+    // Sort top-level comments by creation date (newest first)
+    topLevelComments.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     return {
@@ -396,7 +436,7 @@ export const postService = {
       vote_count: voteCount,
       user_vote: userVote,
       comment_count: post.comments.length,
-      comments: commentsWithVotes,
+      comments: topLevelComments,
     };
   },
 

@@ -76,19 +76,22 @@ function PostPage() {
           summary: data.ai_summary,
         };
         
+        // Recursive function to map comments and their nested replies
+        const mapComment = (c: any): Comment => ({
+          id: c.id,
+          body: c.body,
+          author: c.author?.username || 'Unknown',
+          postId: c.postId || c.post_id,
+          parentCommentId: c.parentCommentId || c.parent_comment_id,
+          voteCount: c.vote_count || 0,
+          createdAt: c.createdAt || c.created_at,
+          replies: (c.replies || []).map(mapComment), // Recursively map replies
+        });
+
         // Map comments from backend format
         let commentsData: Comment[] = [];
         if (data.comments && Array.isArray(data.comments)) {
-          commentsData = data.comments.map((c: any) => ({
-            id: c.id,
-            body: c.body,
-            author: c.author?.username || 'Unknown',
-            postId: c.postId || c.post_id,
-            parentCommentId: c.parentCommentId || c.parent_comment_id,
-            voteCount: c.vote_count || 0,
-            createdAt: c.createdAt || c.created_at,
-            replies: c.replies || [],
-          }));
+          commentsData = data.comments.map(mapComment);
         }
         
         setPost(transformedPost);
@@ -149,9 +152,24 @@ function PostPage() {
         parentCommentId,
       });
 
-      // Refresh comments after reply
+      // Refresh comments after reply to show the new reply
       const result = await commentsApi.getByPost(post.id);
-      setComments(result.comments || []);
+      
+      // Recursive function to map comments with nested replies
+      const mapComment = (c: any): Comment => ({
+        id: c.id,
+        body: c.body,
+        author: c.author?.username || 'Unknown',
+        postId: c.postId || c.post_id,
+        parentCommentId: c.parentCommentId || c.parent_comment_id,
+        voteCount: c.vote_count || 0,
+        createdAt: c.createdAt || c.created_at,
+        replies: (c.replies || []).map(mapComment), // Recursively map replies
+      });
+
+      const mappedComments = (result.comments || []).map(mapComment);
+      setComments(mappedComments);
+      setPost({ ...post, commentCount: post.commentCount + 1 });
     } catch (err: any) {
       console.error('Error posting reply:', err);
       alert(err.response?.data?.error || 'Failed to post reply. Please make sure you are logged in.');
@@ -163,17 +181,32 @@ function PostPage() {
     if (!post || !commentBody.trim()) return;
     
     try {
-      await commentsApi.create({
+      const newComment = await commentsApi.create({
         postId: post.id,
         body: commentBody.trim(),
         parentCommentId: undefined, // Top-level comment
       });
 
-      // Refresh comments
-      const result = await commentsApi.getByPost(post.id);
-      setComments(result.comments || []);
+      // Optimistically add the new comment to the list
+      const transformedComment = {
+        id: newComment.id,
+        body: newComment.body,
+        author: newComment.author?.username || 'You',
+        postId: post.id,
+        parentCommentId: null,
+        voteCount: 0,
+        createdAt: newComment.createdAt || new Date().toISOString(),
+        replies: [],
+      };
+
+      setComments([transformedComment, ...comments]);
       setPost({ ...post, commentCount: post.commentCount + 1 });
       setCommentBody('');
+
+      // Refresh in background to get accurate data
+      commentsApi.getByPost(post.id).then((result) => {
+        setComments(result.comments || []);
+      }).catch(console.error);
     } catch (err: any) {
       console.error('Error posting comment:', err);
       alert(err.response?.data?.error || 'Failed to post comment. Please make sure you are logged in.');
