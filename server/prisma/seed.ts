@@ -1,16 +1,31 @@
 import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Starting database seed...');
 
+  // Clear existing data (optional - comment out if you want to keep existing data)
+  console.log('Clearing existing seed data...');
+  await prisma.vote.deleteMany();
+  await prisma.comment.deleteMany();
+  await prisma.post.deleteMany();
+  await prisma.community.deleteMany();
+  await prisma.user.deleteMany();
+  console.log('Cleared existing data');
+
   // Create users
+  // Note: Password hashing should be handled by auth service, not stored directly
   const user1 = await prisma.user.create({
     data: {
       username: 'john_doe',
       email: 'john@example.com',
-      passwordHash: 'hashed_password_1', // In production, use bcrypt
+      avatar_url: null,
+      bio: 'Software developer passionate about clean code',
     },
   });
 
@@ -18,7 +33,8 @@ async function main() {
     data: {
       username: 'jane_smith',
       email: 'jane@example.com',
-      passwordHash: 'hashed_password_2',
+      avatar_url: null,
+      bio: 'Full-stack developer and tech enthusiast',
     },
   });
 
@@ -26,7 +42,8 @@ async function main() {
     data: {
       username: 'bob_wilson',
       email: 'bob@example.com',
-      passwordHash: 'hashed_password_3',
+      avatar_url: null,
+      bio: 'Gaming and cooking enthusiast',
     },
   });
 
@@ -36,42 +53,34 @@ async function main() {
   const programming = await prisma.community.create({
     data: {
       name: 'programming',
+      slug: 'programming',
       description: 'A community for discussing programming and software development',
-      createdBy: user1.id,
+      creator_id: user1.id,
     },
   });
 
   const gaming = await prisma.community.create({
     data: {
       name: 'gaming',
+      slug: 'gaming',
       description: 'Share your gaming experiences and discuss video games',
-      createdBy: user2.id,
+      creator_id: user2.id,
     },
   });
 
   const cooking = await prisma.community.create({
     data: {
       name: 'cooking',
+      slug: 'cooking',
       description: 'Share recipes, cooking tips, and culinary adventures',
-      createdBy: user3.id,
+      creator_id: user3.id,
     },
   });
 
   console.log('Created 3 communities');
 
-  // Create community memberships
-  await prisma.communityMember.createMany({
-    data: [
-      { userId: user1.id, communityId: programming.id },
-      { userId: user2.id, communityId: programming.id },
-      { userId: user2.id, communityId: gaming.id },
-      { userId: user3.id, communityId: gaming.id },
-      { userId: user3.id, communityId: cooking.id },
-      { userId: user1.id, communityId: cooking.id },
-    ],
-  });
-
-  console.log('Created community memberships');
+  // Note: Community memberships would be handled by a separate model if needed
+  // For now, users can interact with communities without explicit membership
 
   // Create posts
   const post1 = await prisma.post.create({
@@ -80,7 +89,6 @@ async function main() {
       body: 'I am curious to know what programming languages the community prefers and why. Share your thoughts!',
       authorId: user1.id,
       communityId: programming.id,
-      voteCount: 15,
     },
   });
 
@@ -90,7 +98,6 @@ async function main() {
       body: 'TypeScript has been gaining popularity. Here are some resources I found helpful for learning it...',
       authorId: user2.id,
       communityId: programming.id,
-      voteCount: 23,
     },
   });
 
@@ -100,7 +107,6 @@ async function main() {
       body: 'What an incredible game. The boss fights were challenging but rewarding. Anyone else played it?',
       authorId: user2.id,
       communityId: gaming.id,
-      voteCount: 42,
     },
   });
 
@@ -110,7 +116,6 @@ async function main() {
       body: 'Looking for recommendations on indie games released this year. What are your favorites?',
       authorId: user3.id,
       communityId: gaming.id,
-      voteCount: 31,
     },
   });
 
@@ -120,7 +125,6 @@ async function main() {
       body: 'After months of practice, I finally perfected my sourdough recipe. Here is what worked for me...',
       authorId: user3.id,
       communityId: cooking.id,
-      voteCount: 67,
     },
   });
 
@@ -132,7 +136,6 @@ async function main() {
       body: 'I love Python for its simplicity and readability!',
       authorId: user2.id,
       postId: post1.id,
-      voteCount: 8,
     },
   });
 
@@ -141,7 +144,6 @@ async function main() {
       body: 'TypeScript is amazing! The type safety really helps catch bugs early.',
       authorId: user1.id,
       postId: post2.id,
-      voteCount: 12,
     },
   });
 
@@ -150,7 +152,6 @@ async function main() {
       body: 'Elden Ring is a masterpiece! FromSoftware outdid themselves.',
       authorId: user1.id,
       postId: post3.id,
-      voteCount: 5,
     },
   });
 
@@ -161,7 +162,6 @@ async function main() {
       authorId: user3.id,
       postId: post3.id,
       parentCommentId: parentComment.id,
-      voteCount: 3,
     },
   });
 
@@ -170,7 +170,6 @@ async function main() {
       body: 'This looks delicious! How long does the fermentation process take?',
       authorId: user1.id,
       postId: post5.id,
-      voteCount: 4,
     },
   });
 
@@ -179,12 +178,12 @@ async function main() {
   // Create some votes
   await prisma.vote.createMany({
     data: [
-      { userId: user1.id, votableType: 'post', votableId: post3.id, voteValue: 1 },
-      { userId: user1.id, votableType: 'post', votableId: post5.id, voteValue: 1 },
-      { userId: user2.id, votableType: 'post', votableId: post1.id, voteValue: 1 },
-      { userId: user2.id, votableType: 'post', votableId: post4.id, voteValue: 1 },
-      { userId: user3.id, votableType: 'post', votableId: post2.id, voteValue: 1 },
-      { userId: user3.id, votableType: 'post', votableId: post3.id, voteValue: 1 },
+      { userId: user1.id, target_type: 'post', target_id: post3.id, value: 1 },
+      { userId: user1.id, target_type: 'post', target_id: post5.id, value: 1 },
+      { userId: user2.id, target_type: 'post', target_id: post1.id, value: 1 },
+      { userId: user2.id, target_type: 'post', target_id: post4.id, value: 1 },
+      { userId: user3.id, target_type: 'post', target_id: post2.id, value: 1 },
+      { userId: user3.id, target_type: 'post', target_id: post3.id, value: 1 },
     ],
   });
 

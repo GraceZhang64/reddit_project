@@ -42,8 +42,8 @@ async function getUserVote(userId: string | undefined, targetType: 'post' | 'com
   
   const vote = await prisma.vote.findUnique({
     where: {
-      user_id_target_type_target_id: {
-        user_id: userId,
+      userId_target_type_target_id: {
+        userId: userId,
         target_type: targetType,
         target_id: targetId,
       },
@@ -61,7 +61,7 @@ export const postService = {
       prisma.post.findMany({
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        orderBy: { createdAt: 'desc' },
         include: {
           author: {
             select: {
@@ -92,7 +92,7 @@ export const postService = {
           ...post,
           vote_count: voteCount,
           user_vote: userVote,
-          comment_count: await prisma.comments.count({ where: { post_id: post.id } }),
+          comment_count: await prisma.comment.count({ where: { postId: post.id } }),
         };
       })
     );
@@ -118,7 +118,7 @@ export const postService = {
 
     const posts = await prisma.post.findMany({
       where: {
-        created_at: {
+        createdAt: {
           gte: sevenDaysAgo,
         },
       },
@@ -164,7 +164,7 @@ export const postService = {
 
     const total = await prisma.post.count({
       where: {
-        created_at: {
+        createdAt: {
           gte: sevenDaysAgo,
         },
       },
@@ -247,7 +247,7 @@ export const postService = {
           ...post,
           vote_count: voteCount,
           user_vote: userVote,
-          comment_count: await prisma.comments.count({ where: { post_id: post.id } }),
+          comment_count: await prisma.comment.count({ where: { postId: post.id } }),
         };
       })
     );
@@ -297,7 +297,7 @@ export const postService = {
             },
           },
           orderBy: {
-            created_at: 'desc',
+            createdAt: 'desc',
           },
         },
       },
@@ -338,9 +338,9 @@ export const postService = {
       data: {
         title: data.title,
         body: data.body,
-        image_url: data.image_url,
-        author_id: data.author_id,
-        community_id: data.community_id,
+        image_url: data.image_url, // Note: schema uses image_url (snake_case)
+        authorId: data.author_id,
+        communityId: data.community_id,
       },
       include: {
         author: {
@@ -374,7 +374,7 @@ export const postService = {
         ...(data.title && { title: data.title }),
         ...(data.body !== undefined && { body: data.body }),
         ...(data.image_url !== undefined && { image_url: data.image_url }),
-        updated_at: new Date(),
+        updated_at: new Date(), // Note: schema uses updated_at (snake_case)
       },
       include: {
         author: {

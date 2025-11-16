@@ -101,7 +101,17 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
         new Date().getTime() - new Date(post.ai_summary_generated_at).getTime() > 24 * 60 * 60 * 1000) {
       try {
         // Prepare post data for AI summary
-        const postData = {
+        const postData: {
+          title: string;
+          body: string;
+          voteCount: number;
+          comments: Array<{
+            body: string;
+            author: string;
+            voteCount: number;
+            createdAt: Date;
+          }>;
+        } = {
           title: post.title,
           body: post.body || '',
           voteCount: post.vote_count || 0,
@@ -208,7 +218,7 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    if (existingPost.author_id !== req.user!.id) {
+    if (existingPost.authorId !== req.user!.id) {
       return res.status(403).json({ error: 'Not authorized to update this post' });
     }
 
@@ -244,7 +254,7 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    if (existingPost.author_id !== req.user!.id) {
+    if (existingPost.authorId !== req.user!.id) {
       return res.status(403).json({ error: 'Not authorized to delete this post' });
     }
 
