@@ -1,112 +1,102 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-enum VotableType {
-  post
-  comment
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id            Int                @id @default(autoincrement())
-  username      String             @unique
-  email         String             @unique
-  passwordHash  String             @map("password_hash")
-  createdAt     DateTime           @default(now()) @map("created_at")
-  
-  // Relations
-  posts         Post[]
-  comments      Comment[]
-  votes         Vote[]
-  communities   Community[]        @relation("CommunityCreator")
-  memberships   CommunityMember[]
+  id          String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email       String      @unique
+  username    String      @unique
+  avatar_url  String?
+  bio         String?
+  createdAt   DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at  DateTime?   @default(now()) @db.Timestamptz(6)
+  comments    Comment[]
+  communities Community[]
+  posts       Post[]
+  votes       Vote[]
 
+  @@index([email], map: "idx_users_email")
+  @@index([username], map: "idx_users_username")
   @@map("users")
 }
 
 model Community {
-  id          Int                @id @default(autoincrement())
-  name        String             @unique
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
   description String?
-  createdBy   Int                @map("created_by")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  
-  // Relations
-  creator     User               @relation("CommunityCreator", fields: [createdBy], references: [id])
+  creator_id  String?   @db.Uuid
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  users       User?     @relation(fields: [creator_id], references: [id], onUpdate: NoAction)
   posts       Post[]
-  members     CommunityMember[]
 
+  @@index([creator_id], map: "idx_communities_creator")
+  @@index([slug], map: "idx_communities_slug")
   @@map("communities")
 }
 
 model Post {
-  id          Int       @id @default(autoincrement())
-  title       String
-  body        String?
-  authorId    Int       @map("author_id")
-  communityId Int       @map("community_id")
-  voteCount   Int       @default(0) @map("vote_count")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  
-  // Relations
-  author      User      @relation(fields: [authorId], references: [id])
-  community   Community @relation(fields: [communityId], references: [id])
-  comments    Comment[]
+  id                      Int                      @id @default(autoincrement())
+  title                   String
+  body                    String?
+  image_url               String?
+  authorId                String                   @map("author_id") @db.Uuid
+  communityId             Int                      @map("community_id")
+  ai_summary              String?
+  ai_summary_generated_at DateTime?                @db.Timestamptz(6)
+  createdAt               DateTime?                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  search_vector           Unsupported("tsvector")?
+  comments                Comment[]
+  author                  User                     @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  community               Community                @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([authorId], map: "idx_posts_author")
+  @@index([communityId], map: "idx_posts_community")
+  @@index([communityId, createdAt(sort: Desc)], map: "idx_posts_community_created")
+  @@index([createdAt(sort: Desc)], map: "idx_posts_created_at")
+  @@index([search_vector], map: "idx_posts_search", type: Gin)
   @@map("posts")
 }
 
 model Comment {
   id              Int       @id @default(autoincrement())
   body            String
-  authorId        Int       @map("author_id")
+  authorId        String    @map("author_id") @db.Uuid
   postId          Int       @map("post_id")
   parentCommentId Int?      @map("parent_comment_id")
-  voteCount       Int       @default(0) @map("vote_count")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  
-  // Relations
-  author          User      @relation(fields: [authorId], references: [id])
-  post            Post      @relation(fields: [postId], references: [id])
-  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   replies         Comment[] @relation("CommentReplies")
+  post            Post      @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([authorId], map: "idx_comments_author")
+  @@index([parentCommentId], map: "idx_comments_parent")
+  @@index([postId, createdAt(sort: Desc)], map: "idx_comments_post")
   @@map("comments")
 }
 
 model Vote {
-  id           Int          @id @default(autoincrement())
-  userId       Int          @map("user_id")
-  votableType  VotableType  @map("votable_type")
-  votableId    Int          @map("votable_id")
-  voteValue    Int          @map("vote_value") // -1 or 1
-  createdAt    DateTime     @default(now()) @map("created_at")
-  
-  // Relations
-  user         User         @relation(fields: [userId], references: [id])
-
-  @@unique([userId, votableType, votableId])
-  @@map("votes")
-}
-
-model CommunityMember {
   id          Int       @id @default(autoincrement())
-  userId      Int       @map("user_id")
-  communityId Int       @map("community_id")
-  joinedAt    DateTime  @default(now()) @map("joined_at")
-  
-  // Relations
-  user        User      @relation(fields: [userId], references: [id])
-  community   Community @relation(fields: [communityId], references: [id])
+  userId      String    @map("user_id") @db.Uuid
+  target_type String
+  target_id   Int
+  value       Int       @db.SmallInt
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([userId, communityId])
-  @@map("community_members")
+  @@unique([userId, target_type, target_id])
+  @@index([userId, target_type, target_id], map: "idx_votes_lookup")
+  @@index([target_type, target_id], map: "idx_votes_target")
+  @@index([userId], map: "idx_votes_user")
+  @@map("votes")
 }

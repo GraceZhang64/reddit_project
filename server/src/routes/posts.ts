@@ -117,7 +117,7 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
           .order('vote_count', { ascending: false });
         
         if (commentsData && commentsData.length > 0) {
-          postData.comments = commentsData.map(c => ({
+          postData.comments = commentsData.map((c: any) => ({
             body: c.body,
             author: c.author_id, // Using UUID for now
             voteCount: c.vote_count || 0,
