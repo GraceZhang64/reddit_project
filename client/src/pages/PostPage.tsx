@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
 import CommentItem from '../components/CommentItem';
+import SearchBar from '../components/SearchBar';
 import { Post, Comment } from '../types';
 import { commentsApi, postsApi } from '../services/api';
 import './PostPage.css';
@@ -15,6 +16,8 @@ function PostPage() {
   const navigate = useNavigate();
   const [post, setPost] = useState<PostWithSummary | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [userVote, setUserVote] = useState<number>(0);
   const [commentBody, setCommentBody] = useState('');
   const [loading, setLoading] = useState(true);
@@ -107,6 +110,27 @@ function PostPage() {
     
     fetchPost();
   }, [id]);
+
+  // Filter comments based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredComments(comments);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const keywords = query.split(/\s+/).filter(k => k.length > 0);
+
+    const filtered = comments.filter((comment) => {
+      const bodyLower = (comment.body || '').toLowerCase();
+      const authorLower = (comment.author || '').toLowerCase();
+      const searchText = `${bodyLower} ${authorLower}`;
+
+      return keywords.some(keyword => searchText.includes(keyword));
+    });
+
+    setFilteredComments(filtered);
+  }, [searchQuery, comments]);
 
   const handleVote = async (value: number) => {
     if (!post) return;
@@ -315,10 +339,28 @@ function PostPage() {
             </div>
           </form>
 
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search comments by keywords, content, or author..."
+            resultCount={searchQuery ? filteredComments.length : undefined}
+          />
+
           <div className="comments-list">
-            {comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
-            ))}
+            {filteredComments.length > 0 ? (
+              filteredComments.map((comment) => (
+                <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
+              ))
+            ) : searchQuery ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                <p>No comments found matching "{searchQuery}"</p>
+                <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Try different keywords</p>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                <p>No comments yet. Be the first to comment!</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
