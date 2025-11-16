@@ -73,24 +73,29 @@ router.get('/search', optionalAuth, async (req: Request, res: Response) => {
  * Get a specific post by ID
  */
 /**
- * GET /api/posts/:id/summary
+ * GET /api/posts/:idOrSlug/summary
  * Get a specific post with AI-generated summary
  */
-router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:idOrSlug/summary', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const postId = parseInt(req.params.id);
-
-    if (isNaN(postId)) {
-      return res.status(400).json({ error: 'Invalid post ID' });
-    }
-
-    // Get the post first
+    const { idOrSlug } = req.params;
     const userId = req.user?.id;
-    const post = await postService.getPostById(postId, userId);
+    
+    // Try to parse as ID first, otherwise treat as slug
+    const postId = parseInt(idOrSlug);
+    let post;
+    
+    if (!isNaN(postId)) {
+      post = await postService.getPostById(postId, userId);
+    } else {
+      post = await postService.getPostBySlug(idOrSlug, userId);
+    }
 
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
+    
+    const actualPostId = post.id;
 
     // Generate or retrieve AI summary
     const aiService = getAIService();
@@ -134,7 +139,7 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
         const { data: commentsData } = await supabase
           .from('comments')
           .select('body, author_id, vote_count, created_at')
-          .eq('post_id', postId)
+          .eq('post_id', actualPostId)
           .order('vote_count', { ascending: false });
         
         if (commentsData && commentsData.length > 0) {
@@ -157,9 +162,9 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
             SET ai_summary = ${summary},
                 ai_summary_generated_at = NOW(),
                 ai_summary_comment_count = ${currentCommentCount}
-            WHERE id = ${postId}
+            WHERE id = ${actualPostId}
           `;
-          console.log(`✅ AI summary cached for post ${postId} (${currentCommentCount} comments)`);
+          console.log(`✅ AI summary cached for post ${actualPostId} (${currentCommentCount} comments)`);
         } catch (updateError) {
           console.error('Failed to cache AI summary:', updateError);
         } finally {
@@ -170,7 +175,7 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
         // Continue without summary rather than failing the whole request
       }
     } else {
-      console.log(`📦 Using cached AI summary for post ${postId} (age: ${Math.round((new Date().getTime() - new Date(post.ai_summary_generated_at!).getTime()) / 3600000)}h, new comments: ${newCommentsCount})`);
+      console.log(`📦 Using cached AI summary for post ${actualPostId} (age: ${Math.round((new Date().getTime() - new Date(post.ai_summary_generated_at!).getTime()) / 3600000)}h, new comments: ${newCommentsCount})`);
     }
 
     res.json({
@@ -183,16 +188,22 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
   }
 });
 
-router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:idOrSlug', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const postId = parseInt(req.params.id);
-
-    if (isNaN(postId)) {
-      return res.status(400).json({ error: 'Invalid post ID' });
-    }
-
+    const { idOrSlug } = req.params;
     const userId = req.user?.id;
-    const post = await postService.getPostById(postId, userId);
+    
+    // Try to parse as ID first
+    const postId = parseInt(idOrSlug);
+    let post;
+    
+    if (!isNaN(postId)) {
+      // It's a numeric ID
+      post = await postService.getPostById(postId, userId);
+    } else {
+      // It's a slug
+      post = await postService.getPostBySlug(idOrSlug, userId);
+    }
 
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });

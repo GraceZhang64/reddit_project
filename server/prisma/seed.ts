@@ -9,14 +9,15 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Starting database seed...');
 
-  // Clear existing data (optional - comment out if you want to keep existing data)
-  console.log('Clearing existing seed data...');
-  await prisma.vote.deleteMany();
-  await prisma.comment.deleteMany();
-  await prisma.post.deleteMany();
-  await prisma.community.deleteMany();
-  await prisma.user.deleteMany();
-  console.log('Cleared existing data');
+  // Check if data already exists
+  const existingPosts = await prisma.post.count();
+  if (existingPosts > 0) {
+    console.log(`Database already has ${existingPosts} posts. Skipping seed to preserve data.`);
+    console.log('To force re-seed, manually clear the database first.');
+    return;
+  }
+
+  console.log('Database is empty. Creating seed data...');
 
   // Create users
   // Note: Password hashing should be handled by auth service, not stored directly
@@ -82,10 +83,24 @@ async function main() {
   // Note: Community memberships would be handled by a separate model if needed
   // For now, users can interact with communities without explicit membership
 
+  // Helper function to create slug
+  function slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '')
+      .substring(0, 100);
+  }
+
   // Create posts
   const post1 = await prisma.post.create({
     data: {
       title: 'What is your favorite programming language?',
+      slug: slugify('What is your favorite programming language?'),
       body: 'I am curious to know what programming languages the community prefers and why. Share your thoughts!',
       authorId: user1.id,
       communityId: programming.id,
@@ -95,6 +110,7 @@ async function main() {
   const post2 = await prisma.post.create({
     data: {
       title: 'Tips for learning TypeScript',
+      slug: slugify('Tips for learning TypeScript'),
       body: 'TypeScript has been gaining popularity. Here are some resources I found helpful for learning it...',
       authorId: user2.id,
       communityId: programming.id,
@@ -104,6 +120,7 @@ async function main() {
   const post3 = await prisma.post.create({
     data: {
       title: 'Just finished Elden Ring!',
+      slug: slugify('Just finished Elden Ring!'),
       body: 'What an incredible game. The boss fights were challenging but rewarding. Anyone else played it?',
       authorId: user2.id,
       communityId: gaming.id,
@@ -113,6 +130,7 @@ async function main() {
   const post4 = await prisma.post.create({
     data: {
       title: 'Best indie games of 2025',
+      slug: slugify('Best indie games of 2025'),
       body: 'Looking for recommendations on indie games released this year. What are your favorites?',
       authorId: user3.id,
       communityId: gaming.id,
@@ -122,6 +140,7 @@ async function main() {
   const post5 = await prisma.post.create({
     data: {
       title: 'My homemade sourdough bread recipe',
+      slug: slugify('My homemade sourdough bread recipe'),
       body: 'After months of practice, I finally perfected my sourdough recipe. Here is what worked for me...',
       authorId: user3.id,
       communityId: cooking.id,

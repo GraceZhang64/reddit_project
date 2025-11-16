@@ -31,26 +31,39 @@ function PostPage() {
       setLoadingSummary(true);
       
       try {
-        const postId = parseInt(id);
-        if (isNaN(postId)) {
-          throw new Error('Invalid post ID');
-        }
+        // Support both numeric IDs and slugs
+        const postId = parseInt(id!);
+        const isNumericId = !isNaN(postId);
 
         let data;
         try {
-          // Try to fetch post with AI summary
-          data = await postsApi.getWithSummary(postId);
+          // Try to fetch post with AI summary (works with both ID and slug)
+          if (isNumericId) {
+            data = await postsApi.getWithSummary(postId);
+          } else {
+            // Use slug directly
+            const response = await fetch(`/api/posts/${id}/summary`);
+            if (!response.ok) throw new Error('Failed to fetch');
+            data = await response.json();
+          }
           setLoadingSummary(false);
         } catch (summaryErr) {
           console.log('AI summary endpoint failed, fetching without summary...');
           // Fallback to regular post endpoint
-          data = await postsApi.getById(postId);
+          if (isNumericId) {
+            data = await postsApi.getById(postId);
+          } else {
+            const response = await fetch(`/api/posts/${id}`);
+            if (!response.ok) throw new Error('Failed to fetch');
+            data = await response.json();
+          }
           setLoadingSummary(false);
         }
 
         // Transform post data - backend returns nested objects
         const transformedPost: PostWithSummary = {
           id: data.id,
+          slug: data.slug || undefined,
           title: data.title,
           body: data.body || undefined,
           author: data.author?.username || 'Unknown',

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
 import CreatePostForm from '../components/CreatePostForm';
 import { Post, Community } from '../types';
-import { communitiesApi, postsApi, Post as ApiPost } from '../services/api';
+import { communitiesApi, postsApi } from '../services/api';
 import './CommunityPage.css';
 
 function CommunityPage() {
@@ -80,18 +80,18 @@ function CommunityPage() {
       const postsResponse = await communitiesApi.getPosts(slug, 1, 50);
       const apiPosts = postsResponse.posts || [];
       
-      const mappedPosts: Post[] = apiPosts.map((p: ApiPost) => ({
+      const mappedPosts: Post[] = apiPosts.map((p: any) => ({
         id: p.id,
         slug: p.slug || undefined,
         title: p.title,
         body: p.body || undefined,
-        author: p.author.username,
-        communityId: p.community.id,
-        communityName: p.community.name,
-        communitySlug: p.community.slug,
-        voteCount: p.voteCount,
-        commentCount: p.commentCount,
-        createdAt: p.createdAt,
+        author: p.author?.username || 'Unknown',
+        communityId: p.community?.id || 0,
+        communityName: p.community?.name || 'Unknown',
+        communitySlug: p.community?.slug,
+        voteCount: p.voteCount || p.vote_count || 0,
+        commentCount: p.commentCount || p.comment_count || 0,
+        createdAt: p.createdAt || p.created_at,
         aiSummary: p.ai_summary || undefined,
       }));
       

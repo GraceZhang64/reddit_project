@@ -266,6 +266,73 @@ export const postService = {
     };
   },
 
+  async getPostBySlug(slug: string, userId?: string) {
+    const post = await prisma.post.findUnique({
+      where: { slug },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+            bio: true,
+          },
+        },
+        community: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+          },
+        },
+        comments: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                avatar_url: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+    });
+
+    if (!post) {
+      return null;
+    }
+
+    const voteCount = await getVoteCount('post', post.id);
+    const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
+
+    // Get vote counts for comments
+    const commentsWithVotes = await Promise.all(
+      post.comments.map(async (comment) => {
+        const commentVoteCount = await getVoteCount('comment', comment.id);
+        const commentUserVote = userId ? await getUserVote(userId, 'comment', comment.id) : null;
+        
+        return {
+          ...comment,
+          vote_count: commentVoteCount,
+          user_vote: commentUserVote,
+        };
+      })
+    );
+
+    return {
+      ...post,
+      vote_count: voteCount,
+      user_vote: userVote,
+      comment_count: post.comments.length,
+      comments: commentsWithVotes,
+    };
+  },
+
   async getPostById(postId: number, userId?: string) {
     const post = await prisma.post.findUnique({
       where: { id: postId },
@@ -334,9 +401,13 @@ export const postService = {
   },
 
   async createPost(data: CreatePostData) {
+    const { generateUniqueSlug } = await import('../utils/slugify');
+    const slug = generateUniqueSlug(data.title);
+    
     const post = await prisma.post.create({
       data: {
         title: data.title,
+        slug: slug,
         body: data.body,
         image_url: data.image_url, // Note: schema uses image_url (snake_case)
         authorId: data.author_id,
