@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Post } from '../types';
 import VoteButtons from './VoteButtons';
 import './PostCard.css';
+import AISummaryContent from './AISummaryContent';
 
 interface PostCardProps {
   post: Post;
@@ -54,9 +55,9 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
               <span className="ai-icon">✨</span>
               <span className="ai-label">AI Summary</span>
             </div>
-            <p className="ai-summary-text">
-              {post.aiSummary}
-            </p>
+            <div className="ai-summary-content">
+              <AISummaryContent content={post.aiSummary} />
+            </div>
           </div>
         )}
 

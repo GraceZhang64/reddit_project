@@ -127,6 +127,34 @@
   font-weight: 500;
 }
 
+/* Markdown content styling inside AI summary (PostCard) */
+.ai-summary .ai-summary-content h3,
+.ai-summary .ai-summary-content h4 {
+  font-size: 0.9rem;
+  color: var(--blueit-text);
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.ai-summary .ai-summary-content p {
+  margin: 0.25rem 0;
+  color: var(--blueit-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.ai-summary .ai-summary-content ul,
+.ai-summary .ai-summary-content ol {
+  margin: 0.25rem 0 0.75rem 1.25rem;
+  color: var(--blueit-text-secondary);
+}
+
+.ai-summary .ai-summary-content li {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .post-actions {
   display: flex;
   gap: 0.5rem;
