@@ -14,18 +14,18 @@ function HomePage() {
   const [userVotes, setUserVotes] = useState<Record<number, number>>({});
 
   // Map API post to component Post type
-  const mapApiPost = (apiPost: ApiPost): Post => ({
+  const mapApiPost = (apiPost: any): Post => ({
     id: apiPost.id,
     slug: apiPost.slug || undefined,
     title: apiPost.title,
     body: apiPost.body || undefined,
-    author: apiPost.author.username,
-    communityId: apiPost.community.id,
-    communityName: apiPost.community.name,
-    communitySlug: apiPost.community.slug,
-    voteCount: apiPost.voteCount,
-    commentCount: apiPost.commentCount,
-    createdAt: apiPost.createdAt,
+    author: apiPost.author?.username || 'Unknown',
+    communityId: apiPost.community?.id || 0,
+    communityName: apiPost.community?.name || 'Unknown',
+    communitySlug: apiPost.community?.slug,
+    voteCount: apiPost.voteCount || apiPost.vote_count || 0,
+    commentCount: apiPost.commentCount || apiPost.comment_count || 0,
+    createdAt: apiPost.createdAt || apiPost.created_at,
     aiSummary: apiPost.ai_summary || undefined,
   });
 

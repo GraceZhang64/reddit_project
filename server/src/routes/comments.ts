@@ -182,6 +182,17 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       });
     }
 
+    // Verify the author exists in the database
+    const author = await prisma.user.findUnique({
+      where: { id: authorId }
+    });
+
+    if (!author) {
+      return res.status(401).json({ 
+        error: 'User not found. Please log in again.' 
+      });
+    }
+
     // Check if post exists
     const post = await prisma.post.findUnique({
       where: { id: parseInt(postId) }
