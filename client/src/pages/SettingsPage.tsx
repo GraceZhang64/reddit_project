@@ -172,9 +172,79 @@ export default function SettingsPage() {
 
         <section className="card">
           <h2 className="section-title">Account Actions</h2>
+          {/* Change Email */}
+          <div className="row" style={{ alignItems: 'flex-start' }}>
+            <div className="label">Change Email</div>
+            <div className="edit-group">
+              <input
+                className="input"
+                type="email"
+                placeholder={email}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <div className="edit-actions">
+                <button className="btn primary" disabled={saving} onClick={async () => {
+                  setSaving(true); setMessage('');
+                  try {
+                    const res = await authService.updateEmail(email);
+                    setMessage(res.message);
+                  } catch (e: any) {
+                    setMessage(e?.response?.data?.error || 'Failed to update email');
+                  } finally { setSaving(false); }
+                }}>
+                  {saving ? 'Saving...' : 'Save Email'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Change Password */}
+          <div className="row" style={{ alignItems: 'flex-start' }}>
+            <div className="label">Change Password</div>
+            <div className="edit-group">
+              <input
+                className="input"
+                type="password"
+                placeholder="Current password"
+                onChange={(e) => (e.target as HTMLInputElement).dataset.curr = e.target.value}
+              />
+              <input
+                className="input"
+                type="password"
+                placeholder="New password"
+                onChange={(e) => (e.target as HTMLInputElement).dataset.newp = e.target.value}
+              />
+              <input
+                className="input"
+                type="password"
+                placeholder="Confirm new password"
+                onChange={(e) => (e.target as HTMLInputElement).dataset.conf = e.target.value}
+              />
+              <div className="edit-actions">
+                <button className="btn primary" disabled={saving} onClick={async (ev) => {
+                  const group = (ev.currentTarget.closest('.edit-group') as HTMLElement);
+                  const inputs = group.querySelectorAll('input[type="password"]') as NodeListOf<HTMLInputElement>;
+                  const curr = inputs[0].value; const next = inputs[1].value; const conf = inputs[2].value;
+                  setMessage('');
+                  if (next !== conf) { setMessage('Passwords do not match'); return; }
+                  if (next.length < 8 || !/[A-Z]/.test(next) || !/[a-z]/.test(next) || !/[0-9]/.test(next)) { setMessage('Password must be 8+ chars with upper, lower, and number'); return; }
+                  setSaving(true);
+                  try {
+                    const res = await authService.updatePassword(curr, next);
+                    setMessage(res.message);
+                    inputs.forEach(i => i.value = '');
+                  } catch (e: any) {
+                    setMessage(e?.response?.data?.error || 'Failed to update password');
+                  } finally { setSaving(false); }
+                }}>
+                  {saving ? 'Saving...' : 'Save Password'}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="row">
-            <button className="btn" disabled title="Not implemented">Change Password</button>
-            <button className="btn" disabled title="Not implemented">Change Email</button>
             <button className="btn" onClick={async () => { await authService.logout(); window.location.href = '/auth'; }}>Logout</button>
           </div>
         </section>
