@@ -1,6 +1,7 @@
 export interface Community {
   id: number;
   name: string;
+  slug?: string;
   description: string;
   memberCount: number;
   createdAt: string;

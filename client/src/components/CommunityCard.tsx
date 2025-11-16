@@ -8,14 +8,17 @@ interface CommunityCardProps {
 
 function CommunityCard({ community }: CommunityCardProps) {
   const navigate = useNavigate();
+  
+  // Use slug if available, otherwise fallback to lowercase name
+  const communitySlug = community.slug || community.name.toLowerCase();
 
   const handleCardClick = () => {
-    navigate(`/c/${community.name.toLowerCase()}`);
+    navigate(`/c/${communitySlug}`);
   };
 
   const handleViewClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/c/${community.name.toLowerCase()}`);
+    navigate(`/c/${communitySlug}`);
   };
 
   return (

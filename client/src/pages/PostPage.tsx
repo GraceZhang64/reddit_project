@@ -3,9 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
 import CommentItem from '../components/CommentItem';
 import { Post, Comment } from '../types';
+import { commentsApi, postsApi } from '../services/api';
 import './PostPage.css';
-
-const API_URL = '/api';
 
 interface PostWithSummary extends Post {
   summary?: string;
@@ -19,6 +18,7 @@ function PostPage() {
   const [userVote, setUserVote] = useState<number>(0);
   const [commentBody, setCommentBody] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingSummary, setLoadingSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch post data with AI summary
@@ -28,99 +28,120 @@ function PostPage() {
       
       setLoading(true);
       setError(null);
+      setLoadingSummary(true);
       
       try {
-        // Try to fetch post with AI summary
-        let response = await fetch(`${API_URL}/posts/${id}/summary`);
-        
-        // If summary endpoint fails, fall back to regular post endpoint
-        if (!response.ok) {
-          console.log('AI summary endpoint failed, fetching without summary...');
-          response = await fetch(`${API_URL}/posts/${id}`);
+        const postId = parseInt(id);
+        if (isNaN(postId)) {
+          throw new Error('Invalid post ID');
         }
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch post');
-        }
-        
-        const data = await response.json();
 
-        // Transform post data
+        let data;
+        try {
+          // Try to fetch post with AI summary
+          data = await postsApi.getWithSummary(postId);
+          setLoadingSummary(false);
+        } catch (summaryErr) {
+          console.log('AI summary endpoint failed, fetching without summary...');
+          // Fallback to regular post endpoint
+          data = await postsApi.getById(postId);
+          setLoadingSummary(false);
+        }
+
+        // Transform post data - backend returns nested objects
         const transformedPost: PostWithSummary = {
           id: data.id,
           title: data.title,
-          body: data.body,
-          author: data.author_id,
-          communityId: data.community_id,
-          communityName: data.community_name || 'General',
-          voteCount: data.vote_count || 0,
-          commentCount: data.comment_count || 0,
-          createdAt: data.created_at,
+          body: data.body || undefined,
+          author: data.author?.username || 'Unknown',
+          communityId: data.community?.id || 0,
+          communityName: data.community?.name || 'General',
+          communitySlug: data.community?.slug,
+          voteCount: data.voteCount || data.vote_count || 0,
+          commentCount: data.commentCount || data.comment_count || 0,
+          createdAt: data.createdAt || data.created_at,
           summary: data.ai_summary,
         };
-        // Fetch comments from API
+        
+        // Map comments from backend format
         let commentsData: Comment[] = [];
-        try {
-          const commentsResponse = await fetch(`${API_URL}/comments/posts/${id}`);
-          if (commentsResponse.ok) {
-            commentsData = await commentsResponse.json();
-          } else {
-            console.log('Failed to fetch comments, using mock data');
-          }
-        } catch (err) {
-          console.log('Error fetching comments:', err);
+        if (data.comments && Array.isArray(data.comments)) {
+          commentsData = data.comments.map((c: any) => ({
+            id: c.id,
+            body: c.body,
+            author: c.author?.username || 'Unknown',
+            postId: c.postId || c.post_id,
+            parentCommentId: c.parentCommentId || c.parent_comment_id,
+            voteCount: c.vote_count || 0,
+            createdAt: c.createdAt || c.created_at,
+            replies: c.replies || [],
+          }));
         }
         
         setPost(transformedPost);
         setComments(commentsData);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching post:', err);
-        setError('Failed to load post. Make sure the backend server is running.');
+        const errorMsg = err.response?.status === 404 
+          ? 'Post not found. It may have been deleted or the ID is invalid.'
+          : 'Failed to load post. Make sure the backend server is running.';
+        setError(errorMsg);
       } finally {
         setLoading(false);
+        setLoadingSummary(false);
       }
     };
     
     fetchPost();
   }, [id]);
 
-  const handleVote = (value: number) => {
+  const handleVote = async (value: number) => {
     if (!post) return;
     const oldVote = userVote;
     const newVote = oldVote === value ? 0 : value;
     const voteDiff = newVote - oldVote;
     
+    // Optimistic update
     setUserVote(newVote);
     setPost({ ...post, voteCount: post.voteCount + voteDiff });
+
+    try {
+      const { votesApi } = await import('../services/api');
+      
+      if (newVote === 0) {
+        await votesApi.remove('post', post.id);
+      } else {
+        await votesApi.cast({
+          target_type: 'post',
+          target_id: post.id,
+          value: newVote as 1 | -1,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error voting:', err);
+      // Revert on error
+      setUserVote(oldVote);
+      setPost({ ...post, voteCount: post.voteCount - voteDiff });
+      alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
+    }
   };
 
   const handleReply = async (parentCommentId: number, body: string) => {
     if (!post) return;
 
     try {
-      const response = await fetch(`${API_URL}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // TODO: Add auth token here
-        },
-        body: JSON.stringify({
-          postId: post.id,
-          body,
-          parentCommentId,
-        }),
+      await commentsApi.create({
+        postId: post.id,
+        body,
+        parentCommentId,
       });
 
-      if (response.ok) {
-        // Refresh comments after reply
-        const commentsResponse = await fetch(`${API_URL}/comments/posts/${id}`);
-        if (commentsResponse.ok) {
-          const updatedComments = await commentsResponse.json();
-          setComments(updatedComments);
-        }
-      }
-    } catch (err) {
+      // Refresh comments after reply
+      const result = await commentsApi.getByPost(post.id);
+      setComments(result.comments || []);
+    } catch (err: any) {
       console.error('Error posting reply:', err);
+      alert(err.response?.data?.error || 'Failed to post reply. Please make sure you are logged in.');
     }
   };
 
@@ -128,32 +149,21 @@ function PostPage() {
     e.preventDefault();
     if (!post || !commentBody.trim()) return;
     
-    // Post comment to backend
     try {
-      const response = await fetch(`${API_URL}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // TODO: Add auth token
-        },
-        body: JSON.stringify({
-          postId: post.id,
-          body: commentBody.trim(),
-          parentCommentId: null, // Top-level comment
-        }),
+      await commentsApi.create({
+        postId: post.id,
+        body: commentBody.trim(),
+        parentCommentId: undefined, // Top-level comment
       });
 
-      if (response.ok) {
-        // Refresh comments
-        const commentsResponse = await fetch(`${API_URL}/comments/posts/${id}`);
-        if (commentsResponse.ok) {
-          const updatedComments = await commentsResponse.json();
-          setComments(updatedComments);
-          setPost({ ...post, commentCount: post.commentCount + 1 });
-        }
-      }
-    } catch (err) {
+      // Refresh comments
+      const result = await commentsApi.getByPost(post.id);
+      setComments(result.comments || []);
+      setPost({ ...post, commentCount: post.commentCount + 1 });
+      setCommentBody('');
+    } catch (err: any) {
       console.error('Error posting comment:', err);
+      alert(err.response?.data?.error || 'Failed to post comment. Please make sure you are logged in.');
     }
   };
 

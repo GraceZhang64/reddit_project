@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Comment } from '../types';
 import VoteButtons from './VoteButtons';
+import { votesApi } from '../services/api';
 import './CommentItem.css';
 
 interface CommentItemProps {
@@ -14,16 +15,39 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply }: CommentItemP
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState('');
-  const [userVote, setUserVote] = useState(0);
+  const [userVote, setUserVote] = useState(comment.voteCount || 0);
+  const [voteCount, setVoteCount] = useState(comment.voteCount || 0);
 
   const hasReplies = comment.replies && comment.replies.length > 0;
   const shouldShowContinueThread = depth >= maxDepth && hasReplies;
   const canShowReplies = depth < maxDepth && hasReplies;
 
-  const handleVote = (value: number) => {
-    const newVote = userVote === value ? 0 : value;
+  const handleVote = async (value: number) => {
+    const oldVote = userVote;
+    const newVote = oldVote === value ? 0 : value;
+    const voteDiff = newVote - oldVote;
+    
+    // Optimistic update
     setUserVote(newVote);
-    // TODO: Call backend API to register vote
+    setVoteCount(voteCount + voteDiff);
+
+    try {
+      if (newVote === 0) {
+        await votesApi.remove('comment', comment.id);
+      } else {
+        await votesApi.cast({
+          target_type: 'comment',
+          target_id: comment.id,
+          value: newVote as 1 | -1,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error voting on comment:', err);
+      // Revert on error
+      setUserVote(oldVote);
+      setVoteCount(voteCount - voteDiff);
+      alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
+    }
   };
 
   const handleReplySubmit = (e: React.FormEvent) => {
@@ -75,7 +99,7 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply }: CommentItemP
 
             <div className="comment-actions">
               <VoteButtons
-                voteCount={comment.voteCount || 0}
+                voteCount={voteCount}
                 userVote={userVote}
                 onVote={handleVote}
                 size="small"

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import PostFeed from '../components/PostFeed';
-import { Post as ApiPost, postsApi } from '../services/api';
+import { Post as ApiPost, postsApi, votesApi } from '../services/api';
 import { Post } from '../types';
 import './HomePage.css';
 
@@ -11,6 +11,7 @@ function HomePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userVotes, setUserVotes] = useState<Record<number, number>>({});
 
   // Map API post to component Post type
   const mapApiPost = (apiPost: ApiPost): Post => ({
@@ -53,6 +54,44 @@ function HomePage() {
 
   const handleFeedChange = (newFeed: FeedType) => {
     setFeed(newFeed);
+  };
+
+  const handleVote = async (postId: number, value: number) => {
+    const oldVote = userVotes[postId] || 0;
+    const newVote = oldVote === value ? 0 : value;
+    const voteDiff = newVote - oldVote;
+    
+    // Optimistic update
+    setUserVotes({ ...userVotes, [postId]: newVote });
+    setPosts(
+      posts.map((p) =>
+        p.id === postId ? { ...p, voteCount: (p.voteCount || 0) + voteDiff } : p
+      )
+    );
+
+    try {
+      if (newVote === 0) {
+        // Remove vote
+        await votesApi.remove('post', postId);
+      } else {
+        // Cast vote
+        await votesApi.cast({
+          target_type: 'post',
+          target_id: postId,
+          value: newVote as 1 | -1,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error voting:', err);
+      // Revert on error
+      setUserVotes({ ...userVotes, [postId]: oldVote });
+      setPosts(
+        posts.map((p) =>
+          p.id === postId ? { ...p, voteCount: (p.voteCount || 0) - voteDiff } : p
+        )
+      );
+      alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
+    }
   };
 
   return (
@@ -103,7 +142,7 @@ function HomePage() {
               <p>No posts found. Be the first to post!</p>
             </div>
           ) : (
-            <PostFeed posts={posts} />
+            <PostFeed posts={posts} onVote={handleVote} />
           )}
         </div>
 

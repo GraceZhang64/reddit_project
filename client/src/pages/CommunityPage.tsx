@@ -1,102 +1,135 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
 import CreatePostForm from '../components/CreatePostForm';
 import { Post, Community } from '../types';
+import { communitiesApi, postsApi, Post as ApiPost } from '../services/api';
 import './CommunityPage.css';
 
-// Mock data
-const mockCommunities: Community[] = [
-  {
-    id: 1,
-    name: 'programming',
-    description: 'A community for discussing programming and software development',
-    memberCount: 15234,
-    createdAt: '2025-01-15',
-  },
-  {
-    id: 2,
-    name: 'gaming',
-    description: 'Share your gaming experiences and discuss video games',
-    memberCount: 23456,
-    createdAt: '2025-02-10',
-  },
-  {
-    id: 3,
-    name: 'cooking',
-    description: 'Share recipes, cooking tips, and culinary adventures',
-    memberCount: 8901,
-    createdAt: '2025-03-05',
-  },
-];
-
-const mockPosts: Post[] = [
-  {
-    id: 1,
-    title: 'What is your favorite programming language?',
-    body: 'I am curious to know what programming languages the community prefers and why. Share your thoughts!',
-    author: 'john_doe',
-    communityId: 1,
-    communityName: 'programming',
-    voteCount: 15,
-    commentCount: 23,
-    createdAt: '2025-10-20',
-  },
-  {
-    id: 2,
-    title: 'Tips for learning TypeScript',
-    body: 'TypeScript has been gaining popularity. Here are some resources I found helpful for learning it...',
-    author: 'jane_smith',
-    communityId: 1,
-    communityName: 'programming',
-    voteCount: 23,
-    commentCount: 12,
-    createdAt: '2025-10-21',
-  },
-  {
-    id: 3,
-    title: 'Just finished Elden Ring!',
-    body: 'What an incredible game. The boss fights were challenging but rewarding. Anyone else played it?',
-    author: 'jane_smith',
-    communityId: 2,
-    communityName: 'gaming',
-    voteCount: 42,
-    commentCount: 34,
-    createdAt: '2025-10-19',
-  },
-];
-
 function CommunityPage() {
-  const { id } = useParams<{ id: string }>();
-  const communityId = parseInt(id || '1');
+  const { slug } = useParams<{ slug: string }>();
   
-  const community = mockCommunities.find(c => c.id === communityId);
-  const [posts, setPosts] = useState<Post[]>(
-    mockPosts.filter(p => p.communityId === communityId)
-  );
-  const [memberCount, setMemberCount] = useState(community?.memberCount || 0);
+  const [community, setCommunity] = useState<Community | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [memberCount, setMemberCount] = useState(0);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [userVotes, setUserVotes] = useState<Record<number, number>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [communities, setCommunities] = useState<Community[]>([]);
 
   // Initialize isJoined from localStorage
   const [isJoined, setIsJoined] = useState(() => {
+    if (!slug) return false;
     const stored = localStorage.getItem('joinedCommunities');
     if (stored) {
       const joined = JSON.parse(stored);
-      return joined.includes(String(communityId));
+      return joined.includes(slug);
     }
     return false;
   });
 
-  if (!community) {
+  useEffect(() => {
+    if (slug) {
+      fetchCommunityData();
+      fetchAllCommunities();
+    }
+  }, [slug]);
+
+  const fetchAllCommunities = async () => {
+    try {
+      const response = await communitiesApi.getAll(1, 100);
+      const apiCommunities = response.communities || [];
+      const mappedCommunities: Community[] = apiCommunities.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        description: c.description || '',
+        memberCount: c.users?.length || 0,
+        createdAt: c.createdAt || c.created_at,
+      }));
+      setCommunities(mappedCommunities);
+    } catch (err) {
+      console.error('Error fetching communities:', err);
+    }
+  };
+
+  const fetchCommunityData = async () => {
+    if (!slug) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch community details
+      const communityData = await communitiesApi.getBySlug(slug);
+      
+      const mappedCommunity: Community = {
+        id: communityData.id,
+        name: communityData.name,
+        slug: communityData.slug,
+        description: communityData.description || '',
+        memberCount: (communityData as any).users?.length || 0,
+        createdAt: communityData.createdAt || (communityData as any).created_at,
+      };
+      
+      setCommunity(mappedCommunity);
+      setMemberCount(mappedCommunity.memberCount);
+      
+      // Fetch community posts
+      const postsResponse = await communitiesApi.getPosts(slug, 1, 50);
+      const apiPosts = postsResponse.posts || [];
+      
+      const mappedPosts: Post[] = apiPosts.map((p: ApiPost) => ({
+        id: p.id,
+        slug: p.slug || undefined,
+        title: p.title,
+        body: p.body || undefined,
+        author: p.author.username,
+        communityId: p.community.id,
+        communityName: p.community.name,
+        communitySlug: p.community.slug,
+        voteCount: p.voteCount,
+        commentCount: p.commentCount,
+        createdAt: p.createdAt,
+        aiSummary: p.ai_summary || undefined,
+      }));
+      
+      setPosts(mappedPosts);
+    } catch (err) {
+      console.error('Error fetching community:', err);
+      setError('Failed to load community. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
     return (
       <div className="community-page">
-        <div className="error-message">Community not found</div>
+        <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <p>Loading community...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !community) {
+    return (
+      <div className="community-page">
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--blueit-error)' }}>
+          <p>{error || 'Community not found'}</p>
+          <button onClick={fetchCommunityData} style={{ marginTop: '1rem' }}>
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
 
   const handleJoinToggle = () => {
+    if (!slug) return;
+    
     const newIsJoined = !isJoined;
     setIsJoined(newIsJoined);
     setMemberCount(newIsJoined ? memberCount + 1 : memberCount - 1);
@@ -107,12 +140,12 @@ function CommunityPage() {
     
     if (newIsJoined) {
       // Add community
-      if (!joinedCommunities.includes(String(communityId))) {
-        joinedCommunities.push(String(communityId));
+      if (!joinedCommunities.includes(slug)) {
+        joinedCommunities.push(slug);
       }
     } else {
       // Remove community
-      joinedCommunities = joinedCommunities.filter(id => id !== String(communityId));
+      joinedCommunities = joinedCommunities.filter(id => id !== slug);
     }
     
     localStorage.setItem('joinedCommunities', JSON.stringify(joinedCommunities));
@@ -121,33 +154,63 @@ function CommunityPage() {
     window.dispatchEvent(new Event('joinedCommunitiesChanged'));
   };
 
-  const handleVote = (postId: number, value: number) => {
+  const handleVote = async (postId: number, value: number) => {
     const oldVote = userVotes[postId] || 0;
     const newVote = oldVote === value ? 0 : value;
     const voteDiff = newVote - oldVote;
     
+    // Optimistic update
     setUserVotes({ ...userVotes, [postId]: newVote });
     setPosts(
       posts.map((p) =>
-        p.id === postId ? { ...p, voteCount: p.voteCount + voteDiff } : p
+        p.id === postId ? { ...p, voteCount: (p.voteCount || 0) + voteDiff } : p
       )
     );
+
+    try {
+      const { votesApi } = await import('../services/api');
+      
+      if (newVote === 0) {
+        // Remove vote
+        await votesApi.remove('post', postId);
+      } else {
+        // Cast vote
+        await votesApi.cast({
+          target_type: 'post',
+          target_id: postId,
+          value: newVote as 1 | -1,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error voting:', err);
+      // Revert on error
+      setUserVotes({ ...userVotes, [postId]: oldVote });
+      setPosts(
+        posts.map((p) =>
+          p.id === postId ? { ...p, voteCount: (p.voteCount || 0) - voteDiff } : p
+        )
+      );
+      alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
+    }
   };
 
-  const handleCreatePost = (title: string, body: string) => {
-    const newPost: Post = {
-      id: posts.length + 100,
-      title,
-      body,
-      author: 'current_user',
-      communityId: community.id,
-      communityName: community.name,
-      voteCount: 1,
-      commentCount: 0,
-      createdAt: new Date().toISOString(),
-    };
-    setPosts([newPost, ...posts]);
-    setShowCreatePost(false);
+  const handleCreatePost = async (title: string, body: string) => {
+    if (!community) return;
+    
+    try {
+      await postsApi.create({
+        title,
+        body,
+        community_id: community.id,
+      });
+      
+      // Refresh posts
+      await fetchCommunityData();
+      setShowCreatePost(false);
+    } catch (err: any) {
+      console.error('Error creating post:', err);
+      alert(err.response?.data?.error || 'Failed to create post. Please make sure you are logged in.');
+    }
   };
 
   return (
@@ -190,7 +253,7 @@ function CommunityPage() {
           {showCreatePost && (
             <div style={{ marginBottom: '1.5rem' }}>
               <CreatePostForm
-                communities={mockCommunities}
+                communities={communities}
                 onSubmit={handleCreatePost}
                 onCancel={() => setShowCreatePost(false)}
                 defaultCommunityId={community.id}
