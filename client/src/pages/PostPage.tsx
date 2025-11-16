@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
 import CommentItem from '../components/CommentItem';
+import SearchBar from '../components/SearchBar';
 import { Post, Comment } from '../types';
 import { commentsApi, postsApi } from '../services/api';
 import './PostPage.css';
@@ -15,6 +16,8 @@ function PostPage() {
   const navigate = useNavigate();
   const [post, setPost] = useState<PostWithSummary | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [userVote, setUserVote] = useState<number>(0);
   const [commentBody, setCommentBody] = useState('');
   const [loading, setLoading] = useState(true);
@@ -57,11 +60,16 @@ function PostPage() {
           communityId: data.community?.id || 0,
           communityName: data.community?.name || 'General',
           communitySlug: data.community?.slug,
-          voteCount: data.voteCount || data.vote_count || 0,
-          commentCount: data.commentCount || data.comment_count || 0,
-          createdAt: data.createdAt || data.created_at,
+          voteCount: data.voteCount || 0,
+          commentCount: data.commentCount || 0,
+          createdAt: data.createdAt,
           summary: data.ai_summary,
         };
+        
+        // Set user's vote if available
+        if (data.userVote !== undefined && data.userVote !== null) {
+          setUserVote(data.userVote);
+        }
         
         // Map comments from backend format
         let commentsData: Comment[] = [];
@@ -70,16 +78,17 @@ function PostPage() {
             id: c.id,
             body: c.body,
             author: c.author?.username || 'Unknown',
-            postId: c.postId || c.post_id,
-            parentCommentId: c.parentCommentId || c.parent_comment_id,
+            postId: c.postId,
+            parentCommentId: c.parentCommentId,
             voteCount: c.vote_count || 0,
-            createdAt: c.createdAt || c.created_at,
+            createdAt: c.createdAt,
             replies: c.replies || [],
           }));
         }
         
         setPost(transformedPost);
         setComments(commentsData);
+        setFilteredComments(commentsData);
       } catch (err: any) {
         console.error('Error fetching post:', err);
         const errorMsg = err.response?.status === 404 
@@ -94,6 +103,23 @@ function PostPage() {
     
     fetchPost();
   }, [id]);
+
+  // Filter comments based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredComments(comments);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filterCommentsRecursive = (commentList: Comment[]): Comment[] => {
+        return commentList.filter((comment) => {
+          const bodyMatch = comment.body.toLowerCase().includes(query);
+          const authorMatch = comment.author.toLowerCase().includes(query);
+          return bodyMatch || authorMatch;
+        });
+      };
+      setFilteredComments(filterCommentsRecursive(comments));
+    }
+  }, [searchQuery, comments]);
 
   const handleVote = async (value: number) => {
     if (!post) return;
@@ -138,7 +164,9 @@ function PostPage() {
 
       // Refresh comments after reply
       const result = await commentsApi.getByPost(post.id);
-      setComments(result.comments || []);
+      const newComments = result.comments || [];
+      setComments(newComments);
+      setFilteredComments(newComments);
     } catch (err: any) {
       console.error('Error posting reply:', err);
       alert(err.response?.data?.error || 'Failed to post reply. Please make sure you are logged in.');
@@ -158,13 +186,19 @@ function PostPage() {
 
       // Refresh comments
       const result = await commentsApi.getByPost(post.id);
-      setComments(result.comments || []);
+      const newComments = result.comments || [];
+      setComments(newComments);
+      setFilteredComments(newComments);
       setPost({ ...post, commentCount: post.commentCount + 1 });
       setCommentBody('');
     } catch (err: any) {
       console.error('Error posting comment:', err);
       alert(err.response?.data?.error || 'Failed to post comment. Please make sure you are logged in.');
     }
+  };
+
+  const handleCommentSearch = (query: string) => {
+    setSearchQuery(query);
   };
 
   if (loading) {
@@ -302,10 +336,30 @@ function PostPage() {
             </div>
           </form>
 
+          {comments.length > 0 && (
+            <div style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>
+              <SearchBar
+                onSearch={handleCommentSearch}
+                placeholder="Search comments by content or author..."
+                showResultCount={searchQuery.length > 0}
+                resultCount={filteredComments.length}
+              />
+            </div>
+          )}
+
           <div className="comments-list">
-            {comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
-            ))}
+            {filteredComments.length === 0 && searchQuery ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--blueit-text-secondary)' }}>
+                <p>No comments found matching "{searchQuery}"</p>
+                <button onClick={() => setSearchQuery('')} style={{ marginTop: '0.5rem' }}>
+                  Clear search
+                </button>
+              </div>
+            ) : (
+              filteredComments.map((comment) => (
+                <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
+              ))
+            )}
           </div>
         </div>
       </div>

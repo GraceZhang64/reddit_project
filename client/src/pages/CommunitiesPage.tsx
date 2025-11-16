@@ -1,19 +1,37 @@
 import { useState, useEffect } from 'react';
 import CommunityList from '../components/CommunityList';
 import CreateCommunityModal from '../components/CreateCommunityModal';
+import SearchBar from '../components/SearchBar';
 import { Community } from '../types';
-import { communitiesApi, Community as ApiCommunity } from '../services/api';
+import { communitiesApi } from '../services/api';
 import './CommunitiesPage.css';
 
 function CommunitiesPage() {
   const [communities, setCommunities] = useState<Community[]>([]);
+  const [filteredCommunities, setFilteredCommunities] = useState<Community[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchCommunities();
   }, []);
+
+  // Filter communities based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredCommunities(communities);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = communities.filter((community) => {
+        const nameMatch = community.name.toLowerCase().includes(query);
+        const descMatch = community.description?.toLowerCase().includes(query);
+        return nameMatch || descMatch;
+      });
+      setFilteredCommunities(filtered);
+    }
+  }, [searchQuery, communities]);
 
   const fetchCommunities = async () => {
     setIsLoading(true);
@@ -33,12 +51,17 @@ function CommunitiesPage() {
       }));
       
       setCommunities(mappedCommunities);
+      setFilteredCommunities(mappedCommunities);
     } catch (err) {
       console.error('Error fetching communities:', err);
       setError('Failed to load communities. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
   };
 
   const handleCreateCommunity = async (name: string, description: string) => {
@@ -69,6 +92,15 @@ function CommunitiesPage() {
         </button>
       </div>
       
+      <div className="search-section">
+        <SearchBar
+          onSearch={handleSearch}
+          placeholder="Search communities by name or description..."
+          showResultCount={searchQuery.length > 0}
+          resultCount={filteredCommunities.length}
+        />
+      </div>
+      
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--blueit-text-secondary)' }}>
           <p>Loading communities...</p>
@@ -81,7 +113,18 @@ function CommunitiesPage() {
           </button>
         </div>
       ) : (
-        <CommunityList communities={communities} />
+        <>
+          {filteredCommunities.length === 0 && searchQuery ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--blueit-text-secondary)' }}>
+              <p>No communities found matching "{searchQuery}"</p>
+              <button onClick={() => setSearchQuery('')} style={{ marginTop: '1rem' }}>
+                Clear search
+              </button>
+            </div>
+          ) : (
+            <CommunityList communities={filteredCommunities} />
+          )}
+        </>
       )}
       
       <CreateCommunityModal

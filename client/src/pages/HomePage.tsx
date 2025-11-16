@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import PostFeed from '../components/PostFeed';
-import { Post as ApiPost, postsApi, votesApi } from '../services/api';
+import SearchBar from '../components/SearchBar';
+import { Post as ApiPost, postsApi } from '../services/api';
 import { Post } from '../types';
 import './HomePage.css';
 
@@ -11,6 +12,8 @@ function HomePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [userVotes, setUserVotes] = useState<Record<number, number>>({});
 
   // Map API post to component Post type
@@ -31,6 +34,9 @@ function HomePage() {
 
   useEffect(() => {
     const fetchPosts = async () => {
+      // If searching, don't fetch feed posts
+      if (searchQuery) return;
+      
       setIsLoading(true);
       setError(null);
       try {
@@ -50,10 +56,50 @@ function HomePage() {
     };
 
     fetchPosts();
-  }, [feed]);
+  }, [feed, searchQuery]);
 
   const handleFeedChange = (newFeed: FeedType) => {
     setFeed(newFeed);
+    setSearchQuery(''); // Clear search when changing feed
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      // Reload the current feed when search is cleared
+      setIsLoading(true);
+      try {
+        const response = feed === 'hot' 
+          ? await postsApi.getHot(1, 20)
+          : await postsApi.getAll(1, 20);
+        
+        const fetchedPosts = response.posts || [];
+        setPosts(fetchedPosts.map(mapApiPost));
+      } catch (err) {
+        console.error('Error fetching posts:', err);
+        setError('Failed to load posts. Please try again.');
+        setPosts([]);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Perform search
+    setIsSearching(true);
+    setError(null);
+    try {
+      const response = await postsApi.search(query, 1, 50);
+      const fetchedPosts = response.posts || [];
+      setPosts(fetchedPosts.map(mapApiPost));
+    } catch (err) {
+      console.error('Error searching posts:', err);
+      setError('Search failed. Please try again.');
+      setPosts([]);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleVote = async (postId: number, value: number) => {
@@ -102,6 +148,7 @@ function HomePage() {
             <button 
               className={`feed-tab ${feed === 'hot' ? 'active' : ''}`}
               onClick={() => handleFeedChange('hot')}
+              disabled={!!searchQuery}
             >
               <span className="tab-icon">🔥</span>
               <span className="tab-text">Hot</span>
@@ -109,21 +156,33 @@ function HomePage() {
             <button 
               className={`feed-tab ${feed === 'all' ? 'active' : ''}`}
               onClick={() => handleFeedChange('all')}
+              disabled={!!searchQuery}
             >
               <span className="tab-icon">🌐</span>
               <span className="tab-text">All</span>
             </button>
           </div>
 
+          <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <SearchBar
+              onSearch={handleSearch}
+              placeholder="Search posts by keywords, title, or content..."
+              showResultCount={searchQuery.length > 0}
+              resultCount={posts.length}
+            />
+          </div>
+
           <div className="feed-description">
-            {feed === 'hot' ? (
+            {searchQuery ? (
+              <p>Search results for "{searchQuery}"</p>
+            ) : feed === 'hot' ? (
               <p>The most upvoted posts across all communities</p>
             ) : (
               <p>All posts from BlueIt communities</p>
             )}
           </div>
 
-          {isLoading ? (
+          {isLoading || isSearching ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--blueit-text-secondary)' }}>
               <p>Loading posts...</p>
             </div>

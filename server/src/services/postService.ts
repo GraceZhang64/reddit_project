@@ -87,12 +87,20 @@ export const postService = {
       posts.map(async (post) => {
         const voteCount = await getVoteCount('post', post.id);
         const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
+        const commentCount = await prisma.comment.count({ where: { postId: post.id } });
         
         return {
-          ...post,
-          vote_count: voteCount,
-          user_vote: userVote,
-          comment_count: await prisma.comment.count({ where: { postId: post.id } }),
+          id: post.id,
+          slug: post.slug,
+          title: post.title,
+          body: post.body,
+          voteCount: voteCount,
+          commentCount: commentCount,
+          userVote: userVote,
+          author: post.author,
+          community: post.community,
+          createdAt: post.createdAt?.toISOString() || new Date().toISOString(),
+          ai_summary: post.ai_summary,
         };
       })
     );
@@ -151,11 +159,18 @@ export const postService = {
         const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
         
         return {
-          ...post,
-          vote_count: voteCount,
-          comment_count: commentCount,
+          id: post.id,
+          slug: post.slug,
+          title: post.title,
+          body: post.body,
+          voteCount: voteCount,
+          commentCount: commentCount,
+          userVote: userVote,
+          author: post.author,
+          community: post.community,
+          createdAt: post.createdAt?.toISOString() || new Date().toISOString(),
+          ai_summary: post.ai_summary,
           hot_score: hotScore,
-          user_vote: userVote,
         };
       })
     );
@@ -242,12 +257,20 @@ export const postService = {
       orderedPosts.map(async (post: any) => {
         const voteCount = await getVoteCount('post', post.id);
         const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
+        const commentCount = await prisma.comment.count({ where: { postId: post.id } });
         
         return {
-          ...post,
-          vote_count: voteCount,
-          user_vote: userVote,
-          comment_count: await prisma.comment.count({ where: { postId: post.id } }),
+          id: post.id,
+          slug: post.slug,
+          title: post.title,
+          body: post.body,
+          voteCount: voteCount,
+          commentCount: commentCount,
+          userVote: userVote,
+          author: post.author,
+          community: post.community,
+          createdAt: post.createdAt?.toISOString() || new Date().toISOString(),
+          ai_summary: post.ai_summary,
         };
       })
     );
@@ -325,10 +348,17 @@ export const postService = {
     );
 
     return {
-      ...post,
-      vote_count: voteCount,
-      user_vote: userVote,
-      comment_count: post.comments.length,
+      id: post.id,
+      slug: post.slug,
+      title: post.title,
+      body: post.body,
+      voteCount: voteCount,
+      commentCount: post.comments.length,
+      userVote: userVote,
+      author: post.author,
+      community: post.community,
+      createdAt: post.createdAt?.toISOString() || new Date().toISOString(),
+      ai_summary: post.ai_summary,
       comments: commentsWithVotes,
     };
   },
@@ -361,9 +391,17 @@ export const postService = {
     });
 
     return {
-      ...post,
-      vote_count: 0,
-      comment_count: 0,
+      id: post.id,
+      slug: post.slug,
+      title: post.title,
+      body: post.body,
+      voteCount: 0,
+      commentCount: 0,
+      userVote: null,
+      author: post.author,
+      community: post.community,
+      createdAt: post.createdAt?.toISOString() || new Date().toISOString(),
+      ai_summary: post.ai_summary,
     };
   },
 
@@ -395,12 +433,20 @@ export const postService = {
     });
 
     const voteCount = await getVoteCount('post', post.id);
-        const commentCount = await prisma.comment.count({ where: { postId: post.id } });
+    const commentCount = await prisma.comment.count({ where: { postId: post.id } });
 
     return {
-      ...post,
-      vote_count: voteCount,
-      comment_count: commentCount,
+      id: post.id,
+      slug: post.slug,
+      title: post.title,
+      body: post.body,
+      voteCount: voteCount,
+      commentCount: commentCount,
+      userVote: null,
+      author: post.author,
+      community: post.community,
+      createdAt: post.createdAt?.toISOString() || new Date().toISOString(),
+      ai_summary: post.ai_summary,
     };
   },
 

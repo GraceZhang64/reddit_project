@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
 import CreatePostForm from '../components/CreatePostForm';
+import SearchBar from '../components/SearchBar';
 import { Post, Community } from '../types';
 import { communitiesApi, postsApi, Post as ApiPost } from '../services/api';
 import './CommunityPage.css';
@@ -11,6 +12,8 @@ function CommunityPage() {
   
   const [community, setCommunity] = useState<Community | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [memberCount, setMemberCount] = useState(0);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [userVotes, setUserVotes] = useState<Record<number, number>>({});
@@ -35,6 +38,22 @@ function CommunityPage() {
       fetchAllCommunities();
     }
   }, [slug]);
+
+  // Filter posts based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredPosts(posts);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = posts.filter((post) => {
+        const titleMatch = post.title.toLowerCase().includes(query);
+        const bodyMatch = post.body?.toLowerCase().includes(query);
+        const authorMatch = post.author.toLowerCase().includes(query);
+        return titleMatch || bodyMatch || authorMatch;
+      });
+      setFilteredPosts(filtered);
+    }
+  }, [searchQuery, posts]);
 
   const fetchAllCommunities = async () => {
     try {
@@ -96,12 +115,17 @@ function CommunityPage() {
       }));
       
       setPosts(mappedPosts);
+      setFilteredPosts(mappedPosts);
     } catch (err) {
       console.error('Error fetching community:', err);
       setError('Failed to load community. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
   };
 
   if (isLoading) {
@@ -261,10 +285,28 @@ function CommunityPage() {
             </div>
           )}
 
-          <PostFeed 
-            posts={posts} 
-            onVote={handleVote}
-          />
+          <div style={{ marginBottom: '1.5rem' }}>
+            <SearchBar
+              onSearch={handleSearch}
+              placeholder="Search posts by title, content, or author..."
+              showResultCount={searchQuery.length > 0}
+              resultCount={filteredPosts.length}
+            />
+          </div>
+
+          {filteredPosts.length === 0 && searchQuery ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--blueit-text-secondary)' }}>
+              <p>No posts found matching "{searchQuery}"</p>
+              <button onClick={() => setSearchQuery('')} style={{ marginTop: '1rem' }}>
+                Clear search
+              </button>
+            </div>
+          ) : (
+            <PostFeed 
+              posts={filteredPosts} 
+              onVote={handleVote}
+            />
+          )}
         </div>
 
         <div className="sidebar">

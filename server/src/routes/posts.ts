@@ -97,8 +97,7 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
     let summary = post.ai_summary;
 
     // If no summary exists or it's old (older than 1 day), regenerate
-    if (!summary || !post.ai_summary_generated_at || 
-        new Date().getTime() - new Date(post.ai_summary_generated_at).getTime() > 24 * 60 * 60 * 1000) {
+    if (!summary) {
       try {
         // Prepare post data for AI summary
         const postData: {
@@ -114,7 +113,7 @@ router.get('/:id/summary', optionalAuth, async (req: Request, res: Response) => 
         } = {
           title: post.title,
           body: post.body || '',
-          voteCount: post.vote_count || 0,
+          voteCount: post.voteCount || 0,
           comments: [] // Will fetch below
         };
         
@@ -218,7 +217,7 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    if (existingPost.authorId !== req.user!.id) {
+    if (existingPost.author.id !== req.user!.id) {
       return res.status(403).json({ error: 'Not authorized to update this post' });
     }
 
@@ -254,7 +253,7 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    if (existingPost.authorId !== req.user!.id) {
+    if (existingPost.author.id !== req.user!.id) {
       return res.status(403).json({ error: 'Not authorized to delete this post' });
     }
 

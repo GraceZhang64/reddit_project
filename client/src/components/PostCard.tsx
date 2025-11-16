@@ -42,7 +42,7 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
           <span className="separator">•</span>
           <span className="time">{new Date(post.createdAt).toLocaleDateString()}</span>
         </div>
-        <Link to={`/p/${post.slug || post.id}`} className="post-title-link">
+        <Link to={`/p/${post.id}`} className="post-title-link">
           <h2 className="post-title">{post.title}</h2>
         </Link>
         {post.body && <p className="post-body">{post.body}</p>}
@@ -61,7 +61,7 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
         )}
 
         <div className="post-actions">
-          <Link to={`/p/${post.slug || post.id}`} className="action-button">
+          <Link to={`/p/${post.id}`} className="action-button">
             💬 {post.commentCount} Comments
           </Link>
           <button className="action-button">🔗 Share</button>

@@ -9,13 +9,13 @@ datasource db {
 }
 
 model User {
-  id          String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  email       String      @unique
   username    String      @unique
+  email       String      @unique
+  createdAt   DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
   avatar_url  String?
   bio         String?
-  createdAt   DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
   updated_at  DateTime?   @default(now()) @db.Timestamptz(6)
+  id          String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   comments    Comment[]
   communities Community[]
   posts       Post[]
@@ -29,10 +29,10 @@ model User {
 model Community {
   id          Int       @id @default(autoincrement())
   name        String    @unique
-  slug        String    @unique
   description String?
-  creator_id  String?   @db.Uuid
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  creator_id  String?   @db.Uuid
+  slug        String    @unique
   updated_at  DateTime? @default(now()) @db.Timestamptz(6)
   users       User?     @relation(fields: [creator_id], references: [id], onUpdate: NoAction)
   posts       Post[]
@@ -44,17 +44,17 @@ model Community {
 
 model Post {
   id                      Int                      @id @default(autoincrement())
-  slug                    String?                  @unique
   title                   String
   body                    String?
-  image_url               String?
-  authorId                String                   @map("author_id") @db.Uuid
   communityId             Int                      @map("community_id")
+  createdAt               DateTime?                @default(now()) @map("created_at") @db.Timestamptz(6)
   ai_summary              String?
   ai_summary_generated_at DateTime?                @db.Timestamptz(6)
-  createdAt               DateTime?                @default(now()) @map("created_at") @db.Timestamptz(6)
-  updated_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  image_url               String?
   search_vector           Unsupported("tsvector")?
+  slug                    String?                  @unique
+  updated_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  authorId                String                   @map("author_id") @db.Uuid
   comments                Comment[]
   author                  User                     @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   community               Community                @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -71,11 +71,11 @@ model Post {
 model Comment {
   id              Int       @id @default(autoincrement())
   body            String
-  authorId        String    @map("author_id") @db.Uuid
   postId          Int       @map("post_id")
   parentCommentId Int?      @map("parent_comment_id")
   createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+  authorId        String    @map("author_id") @db.Uuid
   author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   replies         Comment[] @relation("CommentReplies")
@@ -89,11 +89,11 @@ model Comment {
 
 model Vote {
   id          Int       @id @default(autoincrement())
-  userId      String    @map("user_id") @db.Uuid
-  target_type String
-  target_id   Int
-  value       Int       @db.SmallInt
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  target_id   Int
+  target_type String
+  value       Int       @db.SmallInt
+  userId      String    @map("user_id") @db.Uuid
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([userId, target_type, target_id])
