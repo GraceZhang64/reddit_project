@@ -44,6 +44,7 @@ model Community {
 
 model Post {
   id                      Int                      @id @default(autoincrement())
+  slug                    String?                  @unique
   title                   String
   body                    String?
   image_url               String?
@@ -63,6 +64,7 @@ model Post {
   @@index([communityId, createdAt(sort: Desc)], map: "idx_posts_community_created")
   @@index([createdAt(sort: Desc)], map: "idx_posts_created_at")
   @@index([search_vector], map: "idx_posts_search", type: Gin)
+  @@index([slug], map: "idx_posts_slug")
   @@map("posts")
 }
 

@@ -1,7 +1,7 @@
 {
-  "name": "reddit-project-server",
+  "name": "blueit-server",
   "version": "1.0.0",
-  "description": "Backend server for Reddit project",
+  "description": "Backend server for BlueIt",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
@@ -11,7 +11,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "test:connection": "npx ts-node src/scripts/test-connection.ts"
+    "test:connection": "npx ts-node src/scripts/test-connection.ts",
+    "test:api": "npx ts-node src/scripts/test-api.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -22,6 +23,7 @@
   "dependencies": {
     "@prisma/client": "^5.7.1",
     "@supabase/supabase-js": "^2.81.1",
+    "axios": "^1.13.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",

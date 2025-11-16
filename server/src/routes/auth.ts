@@ -1,0 +1,230 @@
+import { Router, Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { getSupabaseClient } from '../config/supabase';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+/**
+ * POST /api/auth/register
+ * Register a new user with Supabase Auth and create user profile
+ */
+router.post('/register', async (req: Request, res: Response) => {
+  try {
+    const { email, password, username } = req.body;
+
+    // Validation
+    if (!email || !password || !username) {
+      return res.status(400).json({ 
+        error: 'Email, password, and username are required' 
+      });
+    }
+
+    if (username.length < 3 || username.length > 20) {
+      return res.status(400).json({ 
+        error: 'Username must be between 3 and 20 characters' 
+      });
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({ 
+        error: 'Username can only contain letters, numbers, and underscores' 
+      });
+    }
+
+    // Check if username already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { username }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ 
+        error: 'Username already taken' 
+      });
+    }
+
+    // Register with Supabase Auth
+    const supabase = getSupabaseClient();
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username
+        }
+      }
+    });
+
+    if (authError || !authData.user) {
+      console.error('Supabase registration error:', authError);
+      return res.status(400).json({ 
+        error: authError?.message || 'Registration failed' 
+      });
+    }
+
+    // Create user profile in database
+    try {
+      const user = await prisma.user.create({
+        data: {
+          id: authData.user.id,
+          email,
+          username,
+          avatar_url: null,
+          bio: null
+        }
+      });
+
+      res.status(201).json({
+        message: 'Registration successful',
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username
+        },
+        session: authData.session
+      });
+    } catch (dbError: any) {
+      // Rollback Supabase user if database creation fails
+      console.error('Database user creation error:', dbError);
+      
+      // Try to delete the auth user (cleanup)
+      await supabase.auth.admin.deleteUser(authData.user.id).catch(console.error);
+      
+      return res.status(500).json({ 
+        error: 'Failed to create user profile' 
+      });
+    }
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Login with email and password
+ */
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ 
+        error: 'Email and password are required' 
+      });
+    }
+
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error || !data.user) {
+      return res.status(401).json({ 
+        error: 'Invalid email or password' 
+      });
+    }
+
+    // Get user profile from database
+    const user = await prisma.user.findUnique({
+      where: { id: data.user.id },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        avatar_url: true,
+        bio: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        error: 'User profile not found' 
+      });
+    }
+
+    res.json({
+      message: 'Login successful',
+      user,
+      session: data.session
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ * Logout current user
+ */
+router.post('/logout', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(200).json({ message: 'Logged out' });
+    }
+
+    const supabase = getSupabaseClient();
+    await supabase.auth.signOut();
+
+    res.json({ message: 'Logged out successfully' });
+
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/auth/me
+ * Get current user profile
+ */
+router.get('/me', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const supabase = getSupabaseClient();
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    // Get full user profile from database
+    const userProfile = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        avatar_url: true,
+        bio: true,
+        createdAt: true
+      }
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    res.json({ user: userProfile });
+
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
+

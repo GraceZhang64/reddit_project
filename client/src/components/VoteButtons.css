@@ -2,87 +2,90 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.125rem;
-  padding: 0.5rem 0.25rem;
-  background: #f8f9fa;
-  border-right: 1px solid #edeff1;
-  min-width: 40px;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
+  background: var(--blueit-bg);
+  border-right: 1px solid var(--blueit-border);
+  min-width: 48px;
 }
 
 .vote-btn {
   background: none;
   border: none;
-  color: #878a8c;
+  color: var(--blueit-text-muted);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0.25rem;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   line-height: 1;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 2px;
+  border-radius: 6px;
 }
 
 .vote-btn:hover {
-  background: #e3e5e8;
+  background: var(--blueit-hover);
+  transform: scale(1.1);
 }
 
 .vote-btn.upvote:hover {
-  color: #ff4500;
-  background: #fff5f2;
+  color: var(--blueit-primary);
+  background: rgba(74, 144, 226, 0.1);
 }
 
 .vote-btn.downvote:hover {
-  color: #7193ff;
-  background: #f0f3ff;
+  color: var(--blueit-text-secondary);
+  background: rgba(90, 108, 125, 0.1);
 }
 
 .vote-btn.upvote.active {
-  color: #ff4500;
-  background: #fff5f2;
+  color: var(--blueit-primary);
+  background: rgba(74, 144, 226, 0.15);
+  font-weight: 700;
 }
 
 .vote-btn.downvote.active {
-  color: #7193ff;
-  background: #f0f3ff;
+  color: var(--blueit-text-secondary);
+  background: rgba(90, 108, 125, 0.15);
+  font-weight: 700;
 }
 
 .vote-count {
   font-weight: 700;
-  color: #1c1c1c;
-  font-size: 0.75rem;
-  min-width: 32px;
+  color: var(--blueit-text);
+  font-size: 0.875rem;
+  min-width: 36px;
   text-align: center;
-  transition: color 0.2s;
-  padding: 0.125rem 0;
+  transition: all 0.2s ease;
+  padding: 0.25rem 0;
 }
 
 .vote-count.upvoted {
-  color: #ff4500;
+  color: var(--blueit-primary);
 }
 
 .vote-count.downvoted {
-  color: #7193ff;
+  color: var(--blueit-text-secondary);
 }
-
 
 /* Small size for inline comments */
 .vote-buttons-small {
   flex-direction: row;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
+  padding: 0.5rem;
 }
 
 .vote-buttons-small button {
-  width: 20px;
-  height: 20px;
-  font-size: 12px;
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
 }
 
 .vote-buttons-small .vote-count {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }

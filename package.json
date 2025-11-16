@@ -1,18 +1,23 @@
 {
-  "name": "reddit-project",
+  "name": "blueit",
   "version": "1.0.0",
-  "description": "Full-stack Reddit-like application",
+  "description": "BlueIt - A modern community discussion platform",
+  "private": true,
   "scripts": {
-    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:client": "cd client && npm run dev",
-    "dev:server": "cd server && npm run dev",
-    "build": "cd client && npm run build && cd ../server && npm run build",
-    "start": "cd server && npm start"
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix server && npm run build --prefix client",
+    "start": "npm start --prefix server",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "reddit",
+    "community",
+    "discussion",
+    "forum",
+    "social"
+  ],
+  "author": "BlueIt Team",
+  "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
   }

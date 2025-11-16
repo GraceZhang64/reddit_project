@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { authService } from './services/auth';
 import HomePage from './pages/HomePage';
 import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityPage from './pages/CommunityPage';
@@ -10,28 +11,53 @@ import './App.css';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check authentication status
-    const authStatus = localStorage.getItem('isAuthenticated') || sessionStorage.getItem('isAuthenticated');
-    const userData = localStorage.getItem('user') || sessionStorage.getItem('user');
-    
-    if (authStatus === 'true' && userData) {
-      setIsAuthenticated(true);
-      const user = JSON.parse(userData);
-      setUsername(user.username);
-    }
+    const checkAuth = async () => {
+      try {
+        if (authService.isAuthenticated()) {
+          const user = authService.getUser();
+          if (user) {
+            setIsAuthenticated(true);
+            setUsername(user.username);
+          } else {
+            // Try to fetch current user from API
+            const currentUser = await authService.getCurrentUser();
+            setIsAuthenticated(true);
+            setUsername(currentUser.username);
+          }
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('isAuthenticated');
-    sessionStorage.removeItem('user');
-    sessionStorage.removeItem('isAuthenticated');
-    setIsAuthenticated(false);
-    setUsername('');
-    window.location.href = '/auth';
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      setIsAuthenticated(false);
+      setUsername('');
+      window.location.href = '/auth';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="App" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -40,8 +66,8 @@ function App() {
           <nav className="navbar">
             <div className="nav-content">
               <Link to="/" className="logo">
-                <span className="logo-icon">🗨️</span>
-                <span className="logo-text">Reddit</span>
+                <span className="logo-icon">💙</span>
+                <span className="logo-text">BlueIt</span>
               </Link>
               <div className="nav-links">
                 <Link to="/" className="nav-link">Home</Link>
@@ -68,11 +94,11 @@ function App() {
             element={isAuthenticated ? <CommunitiesPage /> : <Navigate to="/auth" />}
           />
           <Route
-            path="/communities/:id"
+            path="/c/:slug"
             element={isAuthenticated ? <CommunityPage /> : <Navigate to="/auth" />}
           />
           <Route
-            path="/posts/:id"
+            path="/p/:id"
             element={isAuthenticated ? <PostPage /> : <Navigate to="/auth" />}
           />
         </Routes>

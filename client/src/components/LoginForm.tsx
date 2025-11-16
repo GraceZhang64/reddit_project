@@ -1,4 +1,5 @@
 import { useState, FormEvent } from 'react';
+import { authService } from '../services/auth';
 import './LoginForm.css';
 
 interface LoginFormProps {
@@ -7,7 +8,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
-  const [usernameOrEmail, setUsernameOrEmail] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,44 +19,21 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
     setError('');
 
     // Validation
-    if (!usernameOrEmail || !password) {
-      setError('Please enter both username/email and password');
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
+    }
+
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Mock login - replace with actual API call
-      // const response = await axios.post('/api/auth/login', { 
-      //   usernameOrEmail, 
-      //   password,
-      //   rememberMe 
-      // });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock validation - accept any credentials for demo
-      if (password.length < 3) {
-        throw new Error('Invalid credentials');
-      }
-
-      // Store mock user data
-      const userData = {
-        id: Date.now(),
-        username: usernameOrEmail,
-        email: `${usernameOrEmail}@example.com`,
-        createdAt: new Date().toISOString()
-      };
-      
-      if (rememberMe) {
-        localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('isAuthenticated', 'true');
-      } else {
-        sessionStorage.setItem('user', JSON.stringify(userData));
-        sessionStorage.setItem('isAuthenticated', 'true');
-      }
+      // Call real API through auth service
+      await authService.login({ email, password }, rememberMe);
 
       // Success
       if (onSuccess) {
@@ -64,8 +42,8 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
         // Redirect to home page
         window.location.href = '/';
       }
-    } catch (err) {
-      setError('Invalid username or password. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +54,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
       <div className="login-form-card">
         <div className="login-header">
           <h2>Log In</h2>
-          <p>Welcome back to Reddit</p>
+          <p>Welcome back to BlueIt</p>
         </div>
 
         {error && (
@@ -87,15 +65,15 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-field">
-            <label htmlFor="usernameOrEmail">Username or Email</label>
+            <label htmlFor="email">Email</label>
             <input
-              type="text"
-              id="usernameOrEmail"
-              value={usernameOrEmail}
-              onChange={(e) => setUsernameOrEmail(e.target.value)}
-              placeholder="Enter your username or email"
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
               disabled={isLoading}
-              autoComplete="username"
+              autoComplete="email"
             />
           </div>
 

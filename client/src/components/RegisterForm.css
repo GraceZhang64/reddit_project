@@ -1,20 +1,20 @@
 .register-form-container {
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 60px);
-  padding: 2rem 1rem;
-  background: #dae0e6;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--blueit-bg) 0%, #E8F4FF 100%);
+  padding: 2rem;
 }
 
 .register-form-card {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(74, 144, 226, 0.12);
+  padding: 3rem;
   width: 100%;
-  max-width: 400px;
-  padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 450px;
+  border: 1px solid var(--blueit-border);
 }
 
 .register-header {
@@ -23,35 +23,38 @@
 }
 
 .register-header h2 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.5rem;
-  color: #1c1c1c;
-  font-weight: 500;
+  font-size: 2rem;
+  color: var(--blueit-primary);
+  margin-bottom: 0.5rem;
+  font-weight: 700;
 }
 
 .register-header p {
-  margin: 0;
-  color: #7c7c7c;
-  font-size: 0.875rem;
+  color: var(--blueit-text-secondary);
+  font-size: 1rem;
 }
 
 .error-message {
-  background: #ffebee;
-  border: 1px solid #ef5350;
-  border-radius: 4px;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  color: #c62828;
-  font-size: 0.875rem;
+  background-color: #FEE;
+  border: 1px solid var(--blueit-error);
+  color: var(--blueit-error);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.error-message span {
+  font-size: 1.2rem;
 }
 
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .form-field {
@@ -61,92 +64,96 @@
 }
 
 .form-field label {
-  color: #1c1c1c;
-  font-weight: 500;
-  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--blueit-text);
+  font-size: 0.95rem;
 }
 
 .form-field input {
-  width: 100%;
-  padding: 0.75rem;
-  background: #fff;
-  border: 1px solid #edeff1;
-  border-radius: 4px;
-  color: #1c1c1c;
-  font-size: 0.875rem;
-  font-family: inherit;
-  transition: border-color 0.2s;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+  border: 2px solid var(--blueit-border);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background-color: white;
 }
 
 .form-field input:focus {
+  border-color: var(--blueit-primary);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
   outline: none;
-  border-color: #ff4500;
-  box-shadow: 0 0 0 1px #ff4500;
 }
 
 .form-field input:disabled {
-  background: #f6f7f8;
+  background-color: var(--blueit-bg);
   cursor: not-allowed;
-}
-
-.form-field input::placeholder {
-  color: #7c7c7c;
 }
 
 .submit-button {
-  width: 100%;
-  padding: 0.75rem;
-  background: #ff4500;
+  padding: 1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--blueit-primary), var(--blueit-secondary));
   color: white;
   border: none;
-  border-radius: 24px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 700;
-  font-size: 0.875rem;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
   margin-top: 0.5rem;
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
 }
 
 .submit-button:hover:not(:disabled) {
-  background: #ff5722;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(74, 144, 226, 0.3);
 }
 
 .submit-button:disabled {
-  background: #edeff1;
-  color: #7c7c7c;
+  opacity: 0.6;
   cursor: not-allowed;
-}
-
-.form-footer {
-  margin-top: 1.5rem;
-  text-align: center;
-  padding-top: 1.5rem;
-  border-top: 1px solid #edeff1;
-}
-
-.form-footer p {
-  margin: 0;
-  color: #7c7c7c;
-  font-size: 0.875rem;
+  transform: none;
 }
 
 .link-button {
   background: none;
   border: none;
-  color: #ff4500;
-  font-weight: 700;
+  color: var(--blueit-primary);
   cursor: pointer;
+  font-size: 0.95rem;
   padding: 0;
-  font-size: inherit;
-  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
 .link-button:hover {
+  color: var(--blueit-primary-dark);
   text-decoration: underline;
+  transform: none;
+  box-shadow: none;
+}
+
+.form-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--blueit-border);
+}
+
+.form-footer p {
+  color: var(--blueit-text-secondary);
+  font-size: 0.95rem;
+}
+
+.form-footer .link-button {
+  font-size: 0.95rem;
 }
 
 @media (max-width: 480px) {
   .register-form-card {
-    padding: 1.5rem;
+    padding: 2rem 1.5rem;
+  }
+
+  .register-header h2 {
+    font-size: 1.75rem;
   }
 }

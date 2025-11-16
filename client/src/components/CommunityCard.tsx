@@ -10,12 +10,12 @@ function CommunityCard({ community }: CommunityCardProps) {
   const navigate = useNavigate();
 
   const handleCardClick = () => {
-    navigate(`/communities/${community.id}`);
+    navigate(`/c/${community.name.toLowerCase()}`);
   };
 
   const handleViewClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/communities/${community.id}`);
+    navigate(`/c/${community.name.toLowerCase()}`);
   };
 
   return (
@@ -24,7 +24,7 @@ function CommunityCard({ community }: CommunityCardProps) {
         {community.name.charAt(0).toUpperCase()}
       </div>
       <div className="community-info">
-        <h3 className="community-name">r/{community.name}</h3>
+        <h3 className="community-name">c/{community.name}</h3>
         <p className="community-description">{community.description}</p>
         <div className="community-stats">
           <span>{community.memberCount.toLocaleString()} members</span>

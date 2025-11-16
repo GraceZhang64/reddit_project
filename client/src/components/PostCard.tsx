@@ -34,34 +34,34 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
       />
       <div className="post-content">
         <div className="post-meta">
-          <Link to={`/communities/${post.communityId}`} className="community-link">
-            r/{post.communityName}
+          <Link to={`/c/${post.communitySlug || post.communityName.toLowerCase()}`} className="community-link">
+            c/{post.communityName}
           </Link>
           <span className="separator">•</span>
           <span className="author">Posted by u/{post.author}</span>
           <span className="separator">•</span>
           <span className="time">{new Date(post.createdAt).toLocaleDateString()}</span>
         </div>
-        <Link to={`/posts/${post.id}`} className="post-title-link">
+        <Link to={`/p/${post.slug || post.id}`} className="post-title-link">
           <h2 className="post-title">{post.title}</h2>
         </Link>
         {post.body && <p className="post-body">{post.body}</p>}
         
-        {/* AI Summary Box */}
-        <div className="ai-summary">
-          <div className="ai-summary-header">
-            <span className="ai-icon">✨</span>
-            <span className="ai-label">AI Summary</span>
+        {/* AI Summary Box - Only show if available */}
+        {post.aiSummary && (
+          <div className="ai-summary">
+            <div className="ai-summary-header">
+              <span className="ai-icon">✨</span>
+              <span className="ai-label">AI Summary</span>
+            </div>
+            <p className="ai-summary-text">
+              {post.aiSummary}
+            </p>
           </div>
-          <p className="ai-summary-text">
-            This discussion explores {post.title.toLowerCase()}. Key points include community perspectives, 
-            practical experiences, and recommendations from users. Main debate centers around best practices 
-            and personal preferences.
-          </p>
-        </div>
+        )}
 
         <div className="post-actions">
-          <Link to={`/posts/${post.id}`} className="action-button">
+          <Link to={`/p/${post.slug || post.id}`} className="action-button">
             💬 {post.commentCount} Comments
           </Link>
           <button className="action-button">🔗 Share</button>

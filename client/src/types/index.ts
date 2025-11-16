@@ -8,14 +8,17 @@ export interface Community {
 
 export interface Post {
   id: number;
+  slug?: string;
   title: string;
-  body: string;
+  body?: string;
   author: string;
   communityId: number;
   communityName: string;
+  communitySlug?: string;
   voteCount?: number;
   commentCount: number;
   createdAt: string;
+  aiSummary?: string;
 }
 
 export interface Comment {

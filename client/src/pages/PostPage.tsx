@@ -3,35 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
 import CommentItem from '../components/CommentItem';
 import { Post, Comment } from '../types';
-
-// Helper function to build nested comment tree
-function buildCommentTree(comments: Comment[]): Comment[] {
-  const commentMap = new Map<number, Comment>();
-  const rootComments: Comment[] = [];
-
-  // First pass: create comment objects with replies array
-  comments.forEach(comment => {
-    commentMap.set(comment.id, { ...comment, replies: [] });
-  });
-
-  // Second pass: build tree structure
-  comments.forEach(comment => {
-    const commentObj = commentMap.get(comment.id)!;
-    if (comment.parentCommentId) {
-      const parent = commentMap.get(comment.parentCommentId);
-      if (parent && parent.replies) {
-        parent.replies.push(commentObj);
-      }
-    } else {
-      rootComments.push(commentObj);
-    }
-  });
-
-  return rootComments;
-}
 import './PostPage.css';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 interface PostWithSummary extends Post {
   summary?: string;
@@ -46,7 +20,6 @@ function PostPage() {
   const [commentBody, setCommentBody] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
 
   // Fetch post data with AI summary
   useEffect(() => {

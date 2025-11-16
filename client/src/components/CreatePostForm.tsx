@@ -27,21 +27,23 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
     <form className="create-post-form" onSubmit={handleSubmit}>
       <h2>Create a Post</h2>
       
-      <div className="form-group">
-        <label htmlFor="community-select">Choose a community</label>
-        <select
-          id="community-select"
-          value={communityId}
-          onChange={(e) => setCommunityId(Number(e.target.value))}
-          className="community-select"
-        >
-          {communities.map((community) => (
-            <option key={community.id} value={community.id}>
-              r/{community.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {!defaultCommunityId && (
+        <div className="form-group">
+          <label htmlFor="community-select">Choose a community</label>
+          <select
+            id="community-select"
+            value={communityId}
+            onChange={(e) => setCommunityId(Number(e.target.value))}
+            className="community-select"
+          >
+            {communities.map((community) => (
+              <option key={community.id} value={community.id}>
+                c/{community.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="form-group">
         <label htmlFor="post-title">Title</label>

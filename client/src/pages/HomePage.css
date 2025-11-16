@@ -1,7 +1,7 @@
 .home-page {
   min-height: 100vh;
-  background: #dae0e6;
-  padding-top: 1rem;
+  background: var(--blueit-bg);
+  padding-top: 1.5rem;
 }
 
 .home-container {
@@ -21,12 +21,13 @@
 }
 
 .feed-selector {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  background: var(--blueit-card-bg);
+  border: 1px solid var(--blueit-border);
+  border-radius: 12px;
   padding: 0.5rem;
   display: flex;
   gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.06);
 }
 
 .feed-tab {
@@ -35,49 +36,54 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1rem;
+  padding: 0.75rem 1rem;
   background: none;
   border: none;
-  border-radius: 24px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #1c1c1c;
-  transition: all 0.2s;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--blueit-text-secondary);
+  transition: all 0.2s ease;
 }
 
 .feed-tab:hover {
-  background: #f6f7f8;
+  background: var(--blueit-hover);
+  color: var(--blueit-text);
 }
 
 .feed-tab.active {
-  background: #ff4500;
-  color: #fff;
+  background: linear-gradient(135deg, var(--blueit-primary), var(--blueit-secondary));
+  color: white;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
 }
 
 .feed-tab.active:hover {
-  background: #ff5722;
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+  transform: translateY(-1px);
 }
 
 .tab-icon {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
 }
 
 .tab-text {
-  font-size: 0.875rem;
+  font-size: 0.95rem;
 }
 
 .feed-description {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 0.75rem 1rem;
+  background: var(--blueit-card-bg);
+  border: 1px solid var(--blueit-border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.06);
 }
 
 .feed-description p {
   margin: 0;
-  color: #7c7c7c;
-  font-size: 0.875rem;
+  color: var(--blueit-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 /* Sidebar */
@@ -90,10 +96,16 @@
 }
 
 .sidebar-card {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 1rem;
+  background: var(--blueit-card-bg);
+  border: 1px solid var(--blueit-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.06);
+  transition: all 0.2s ease;
+}
+
+.sidebar-card:hover {
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.1);
 }
 
 .sidebar-header {
@@ -109,16 +121,16 @@
 
 .sidebar-header h3 {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: #1c1c1c;
+  color: var(--blueit-primary);
 }
 
 .sidebar-description {
   margin: 0;
-  font-size: 0.875rem;
-  color: #7c7c7c;
-  line-height: 1.5;
+  font-size: 0.95rem;
+  color: var(--blueit-text-secondary);
+  line-height: 1.6;
 }
 
 .stats-grid {
@@ -129,21 +141,28 @@
 
 .stat-item {
   text-align: center;
-  padding: 0.75rem;
-  background: #f6f7f8;
-  border-radius: 4px;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(74, 144, 226, 0.05), rgba(91, 163, 245, 0.05));
+  border: 1px solid rgba(74, 144, 226, 0.15);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.stat-item:hover {
+  background: linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(91, 163, 245, 0.1));
+  transform: translateY(-2px);
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
-  color: #ff4500;
+  color: var(--blueit-primary);
   margin-bottom: 0.25rem;
 }
 
 .stat-label {
-  font-size: 0.75rem;
-  color: #7c7c7c;
+  font-size: 0.8rem;
+  color: var(--blueit-text-secondary);
   font-weight: 600;
 }
 
@@ -165,7 +184,7 @@
 
 @media (max-width: 640px) {
   .home-page {
-    padding-top: 0.5rem;
+    padding-top: 1rem;
   }
 
   .home-container {
@@ -174,12 +193,12 @@
   }
 
   .feed-tab {
-    padding: 0.5rem;
-    font-size: 0.8125rem;
+    padding: 0.625rem;
+    font-size: 0.875rem;
   }
 
   .tab-icon {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 
   .tab-text {
@@ -195,10 +214,10 @@
   }
 
   .stat-value {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
   }
 
   .stat-label {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
   }
 }

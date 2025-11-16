@@ -1,4 +1,5 @@
 import { useState, FormEvent } from 'react';
+import { authService } from '../services/auth';
 import './RegisterForm.css';
 
 interface RegisterFormProps {
@@ -24,13 +25,18 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       return;
     }
 
-    if (username.length < 3) {
-      setError('Username must be at least 3 characters');
+    if (username.length < 3 || username.length > 20) {
+      setError('Username must be between 3 and 20 characters');
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setError('Username can only contain letters, numbers, and underscores');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
@@ -47,21 +53,8 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     setIsLoading(true);
 
     try {
-      // Mock registration - replace with actual API call
-      // const response = await axios.post('/api/auth/register', { username, email, password });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Store mock user data
-      const userData = {
-        id: Date.now(),
-        username,
-        email,
-        createdAt: new Date().toISOString()
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('isAuthenticated', 'true');
+      // Call real API through auth service
+      await authService.register({ username, email, password });
 
       // Success
       if (onSuccess) {
@@ -70,8 +63,8 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
         // Redirect to home page
         window.location.href = '/';
       }
-    } catch (err) {
-      setError('Registration failed. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +75,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       <div className="register-form-card">
         <div className="register-header">
           <h2>Sign Up</h2>
-          <p>Create your Reddit account</p>
+          <p>Create your BlueIt account</p>
         </div>
 
         {error && (
@@ -125,7 +118,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters"
               disabled={isLoading}
               autoComplete="new-password"
             />
