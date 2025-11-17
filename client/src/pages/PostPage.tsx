@@ -204,7 +204,7 @@ function PostPage() {
           <button className="back-button" onClick={() => navigate(-1)}>
             ← Back
           </button>
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#ff4500' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--blueit-primary)' }}>
             <p>{error || 'Post not found'}</p>
             <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
               Make sure your backend server is running on port 5000 and you have added your OpenAI API key.
