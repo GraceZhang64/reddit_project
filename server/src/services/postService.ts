@@ -185,36 +185,27 @@ export const postService = {
     const { page, limit } = params;
     const skip = (page - 1) * limit;
 
-    const supabase = getSupabaseClient();
-    
-    // Use Supabase full-text search
-    const { data: posts, error } = await supabase
-      .from('posts')
-      .select('*')
-      .textSearch('search_vector', query)
-      .order('created_at', { ascending: false })
-      .range(skip, skip + limit - 1);
-
-    if (error) {
-      throw new Error(`Search failed: ${error.message}`);
-    }
-
-    if (!posts) {
-      return {
-        posts: [],
-        pagination: {
-          page,
-          limit,
-          total: 0,
-          totalPages: 0,
-        },
-      };
-    }
-
-    // Get full post data with relations
-    const postIds = posts.map((p: any) => p.id);
-    const fullPosts = await prisma.post.findMany({
-      where: { id: { in: postIds } },
+    // Use Prisma case-insensitive search
+    const posts = await prisma.post.findMany({
+      where: {
+        OR: [
+          {
+            title: {
+              contains: query,
+              mode: 'insensitive'
+            }
+          },
+          {
+            body: {
+              contains: query,
+              mode: 'insensitive'
+            }
+          }
+        ]
+      },
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
       include: {
         author: {
           select: {
@@ -233,13 +224,8 @@ export const postService = {
       },
     });
 
-    // Maintain search result order
-    const orderedPosts = postIds.map((id: number) => 
-      fullPosts.find(p => p.id === id)
-    ).filter(Boolean);
-
     const postsWithVotes = await Promise.all(
-      orderedPosts.map(async (post: any) => {
+      posts.map(async (post) => {
         const voteCount = await getVoteCount('post', post.id);
         const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
         
@@ -252,8 +238,25 @@ export const postService = {
       })
     );
 
-    // Get total count (approximate)
-    const total = await prisma.post.count();
+    // Get total count
+    const total = await prisma.post.count({
+      where: {
+        OR: [
+          {
+            title: {
+              contains: query,
+              mode: 'insensitive'
+            }
+          },
+          {
+            body: {
+              contains: query,
+              mode: 'insensitive'
+            }
+          }
+        ]
+      }
+    });
 
     return {
       posts: postsWithVotes,

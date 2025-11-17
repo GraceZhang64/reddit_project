@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityPage from './pages/CommunityPage';
 import PostPage from './pages/PostPage';
+import SearchPage from './pages/SearchPage';
 import AuthPage from './pages/AuthPage';
 import './App.css';
 
@@ -72,6 +73,7 @@ function App() {
               <div className="nav-links">
                 <Link to="/" className="nav-link">Home</Link>
                 <Link to="/communities" className="nav-link">Communities</Link>
+                <Link to="/search" className="nav-link">🔍 Search</Link>
               </div>
               <div className="nav-actions">
                 <span className="username">u/{username}</span>
@@ -100,6 +102,10 @@ function App() {
           <Route
             path="/p/:id"
             element={isAuthenticated ? <PostPage /> : <Navigate to="/auth" />}
+          />
+          <Route
+            path="/search"
+            element={isAuthenticated ? <SearchPage /> : <Navigate to="/auth" />}
           />
         </Routes>
       </div>

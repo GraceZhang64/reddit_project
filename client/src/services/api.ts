@@ -105,8 +105,18 @@ export const postsApi = {
     return response.data;
   },
 
+  async getByIdOrSlug(idOrSlug: string | number): Promise<Post> {
+    const response = await axios.get<Post>(`${API_BASE}/posts/${idOrSlug}`);
+    return response.data;
+  },
+
   async getWithSummary(id: number): Promise<Post> {
     const response = await axios.get<Post>(`${API_BASE}/posts/${id}/summary`);
+    return response.data;
+  },
+
+  async getWithSummaryByIdOrSlug(idOrSlug: string | number): Promise<Post> {
+    const response = await axios.get<Post>(`${API_BASE}/posts/${idOrSlug}/summary`);
     return response.data;
   },
 
@@ -177,6 +187,13 @@ export const commentsApi = {
 
   async getById(id: number): Promise<Comment> {
     const response = await axios.get<Comment>(`${API_BASE}/comments/${id}`);
+    return response.data;
+  },
+
+  async search(query: string, page = 1, limit = 20): Promise<PaginationResponse<Comment & { post: { id: number; slug?: string; title: string; community: { id: number; name: string; slug: string } } }>> {
+    const response = await axios.get(`${API_BASE}/comments/search`, {
+      params: { q: query, page, limit }
+    });
     return response.data;
   },
 

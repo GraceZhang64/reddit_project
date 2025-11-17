@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
 import SearchBar from '../components/SearchBar';
 import { Post as ApiPost, postsApi, votesApi } from '../services/api';
@@ -6,6 +7,22 @@ import { Post } from '../types';
 import './HomePage.css';
 
 type FeedType = 'all' | 'hot' | 'following';
+
+// Map API post to component Post type - moved outside to avoid recreation
+const mapApiPost = (apiPost: any): Post => ({
+  id: apiPost.id,
+  slug: apiPost.slug || undefined,
+  title: apiPost.title,
+  body: apiPost.body || undefined,
+  author: apiPost.author?.username || 'Unknown',
+  communityId: apiPost.community?.id || 0,
+  communityName: apiPost.community?.name || 'Unknown',
+  communitySlug: apiPost.community?.slug,
+  voteCount: apiPost.voteCount || apiPost.vote_count || 0,
+  commentCount: apiPost.commentCount || apiPost.comment_count || 0,
+  createdAt: apiPost.createdAt || apiPost.created_at,
+  aiSummary: apiPost.ai_summary || undefined,
+});
 
 function HomePage() {
   const [feed, setFeed] = useState<FeedType>('hot');
@@ -16,27 +33,17 @@ function HomePage() {
   const [isSearching, setIsSearching] = useState(false);
   const [userVotes, setUserVotes] = useState<Record<number, number>>({});
 
-  // Map API post to component Post type
-  const mapApiPost = (apiPost: any): Post => ({
-    id: apiPost.id,
-    slug: apiPost.slug || undefined,
-    title: apiPost.title,
-    body: apiPost.body || undefined,
-    author: apiPost.author?.username || 'Unknown',
-    communityId: apiPost.community?.id || 0,
-    communityName: apiPost.community?.name || 'Unknown',
-    communitySlug: apiPost.community?.slug,
-    voteCount: apiPost.voteCount || apiPost.vote_count || 0,
-    commentCount: apiPost.commentCount || apiPost.comment_count || 0,
-    createdAt: apiPost.createdAt || apiPost.created_at,
-    aiSummary: apiPost.ai_summary || undefined,
-  });
-
   useEffect(() => {
     const fetchPosts = async () => {
-      // Don't fetch feed posts when actively searching
-      if (searchQuery) return;
+      console.log('🔍 HomePage useEffect triggered', { feed, searchQuery: searchQuery.trim() });
       
+      // Only fetch if not currently searching
+      if (searchQuery.trim()) {
+        console.log('⏭️ Skipping fetch because searchQuery exists:', searchQuery);
+        return;
+      }
+      
+      console.log('📡 Fetching posts for feed:', feed);
       setIsLoading(true);
       setError(null);
       try {
@@ -44,10 +51,12 @@ function HomePage() {
           ? await postsApi.getHot(1, 20)
           : await postsApi.getAll(1, 20);
         
+        console.log('✅ Posts fetched successfully:', response);
         const fetchedPosts = response.posts || [];
+        console.log('📦 Mapped posts count:', fetchedPosts.length);
         setPosts(fetchedPosts.map(mapApiPost));
       } catch (err) {
-        console.error('Error fetching posts:', err);
+        console.error('❌ Error fetching posts:', err);
         setError('Failed to load posts. Please try again.');
         setPosts([]);
       } finally {
@@ -65,37 +74,27 @@ function HomePage() {
 
   // Keyword search handler using API
   const handleSearch = async (query: string) => {
+    console.log('🔎 handleSearch called with query:', query);
     setSearchQuery(query);
     
     if (!query.trim()) {
-      // Reload the current feed when search is cleared
-      setIsLoading(true);
-      try {
-        const response = feed === 'hot' 
-          ? await postsApi.getHot(1, 20)
-          : await postsApi.getAll(1, 20);
-        
-        const fetchedPosts = response.posts || [];
-        setPosts(fetchedPosts.map(mapApiPost));
-      } catch (err) {
-        console.error('Error fetching posts:', err);
-        setError('Failed to load posts. Please try again.');
-        setPosts([]);
-      } finally {
-        setIsLoading(false);
-      }
+      console.log('🔄 Search cleared, letting useEffect handle reload');
+      // Let the useEffect handle the reload when searchQuery is cleared
       return;
     }
 
     // Perform keyword search via API
+    console.log('🔍 Performing search for:', query);
     setIsSearching(true);
     setError(null);
     try {
       const response = await postsApi.search(query, 1, 50);
+      console.log('✅ Search results:', response);
       const fetchedPosts = response.posts || [];
+      console.log('📦 Search results count:', fetchedPosts.length);
       setPosts(fetchedPosts.map(mapApiPost));
     } catch (err) {
-      console.error('Error searching posts:', err);
+      console.error('❌ Error searching posts:', err);
       setError('Search failed. Please try again.');
       setPosts([]);
     } finally {
@@ -171,6 +170,13 @@ function HomePage() {
               showResultCount={searchQuery.length > 0}
               resultCount={posts.length}
             />
+            {searchQuery && (
+              <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+                <Link to="/search" style={{ fontSize: '0.9rem', color: 'var(--blueit-primary)' }}>
+                  Advanced search (search comments too) →
+                </Link>
+              </div>
+            )}
           </div>
 
           <div className="feed-description">
