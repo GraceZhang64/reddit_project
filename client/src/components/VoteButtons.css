@@ -37,8 +37,8 @@
 }
 
 .vote-btn.downvote:hover {
-  color: var(--blueit-text-secondary);
-  background: rgba(90, 108, 125, 0.1);
+  color: var(--blueit-primary);
+  background: rgba(74, 144, 226, 0.1);
 }
 
 .vote-btn.upvote.active {
@@ -48,8 +48,8 @@
 }
 
 .vote-btn.downvote.active {
-  color: var(--blueit-text-secondary);
-  background: rgba(90, 108, 125, 0.15);
+  color: var(--blueit-primary);
+  background: rgba(74, 144, 226, 0.15);
   font-weight: 700;
 }
 
@@ -68,7 +68,7 @@
 }
 
 .vote-count.downvoted {
-  color: var(--blueit-text-secondary);
+  color: var(--blueit-primary);
 }
 
 /* Small size for inline comments */

@@ -34,7 +34,7 @@ function VoteButtons({ voteCount, onVote, onUpvote, onDownvote, userVote = 0, si
         onClick={handleUpvote}
         aria-label="Upvote"
       >
-        
+        ▲
       </button>
       <span className={`vote-count ${userVote === 1 ? 'upvoted' : userVote === -1 ? 'downvoted' : ''}`}>
         {voteCount}
@@ -44,7 +44,7 @@ function VoteButtons({ voteCount, onVote, onUpvote, onDownvote, userVote = 0, si
         onClick={handleDownvote}
         aria-label="Downvote"
       >
-        
+        ▼
       </button>
     </div>
   );
