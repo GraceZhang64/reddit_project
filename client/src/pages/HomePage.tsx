@@ -144,10 +144,6 @@ function HomePage() {
     <div className="home-page">
       <div className="home-container">
         <div className="feed-content">
-          <div className="home-hero">
-            <img src="/blue%20logo.png" alt="BlueIt" className="home-hero-logo" />
-            <h1 className="home-hero-title">BlueIt</h1>
-          </div>
           <div className="feed-selector">
             <button 
               className={`feed-tab ${feed === 'hot' ? 'active' : ''}`}
@@ -214,17 +210,6 @@ function HomePage() {
           ) : (
             <PostFeed posts={posts} onVote={handleVote} />
           )}
-        </div>
-
-        <div className="home-sidebar">
-          <div className="sidebar-card">
-            <div className="sidebar-header">
-              <h3>Home</h3>
-            </div>
-            <p className="sidebar-description">
-              Your personal BlueIt frontpage. See posts from communities you've joined.
-            </p>
-          </div>
         </div>
       </div>
     </div>

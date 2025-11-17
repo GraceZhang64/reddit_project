@@ -1,7 +1,7 @@
 .communities-page {
   min-height: 100vh;
   padding-top: 1.5rem;
-  background: #dae0e6;
+  background: var(--blueit-bg);
 }
 
 .page-header {
@@ -18,13 +18,13 @@
 .header-content h1 {
   margin: 0 0 0.5rem 0;
   font-size: 1.75rem;
-  color: #1c1c1c;
+  color: var(--blueit-text);
   font-weight: 500;
 }
 
 .header-content p {
   margin: 0;
-  color: #7c7c7c;
+  color: var(--blueit-text-secondary);
   font-size: 0.95rem;
 }
 
@@ -42,7 +42,7 @@
 }
 
 .create-button:hover {
-  background: #ff5722;
+  background: var(--blueit-primary-dark);
 }
 
 .create-button:active {
@@ -53,6 +53,11 @@
   max-width: 1200px;
   margin: 0 auto 2rem;
   padding: 0 1.5rem;
+}
+
+.search-section .search-bar-container {
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 @media (max-width: 768px) {
