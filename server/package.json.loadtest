@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "loadtest": "k6 run k6-load-test.js",
+    "loadtest:baseline": "k6 run --vus 10 --duration 5m k6-load-test.js",
+    "loadtest:stress": "k6 run --vus 50 --duration 10m k6-load-test.js",
+    "loadtest:spike": "k6 run --vus 100 --duration 2m k6-load-test.js",
+    "loadtest:critical": "k6 run --iterations 100 k6-load-test.js"
+  }
+}
+

@@ -1,7 +1,53 @@
 import axios from 'axios';
-import { authService } from './auth';
 
 const API_BASE = '/api';
+
+// Create axios instance with default config
+const axiosInstance = axios.create({
+  baseURL: API_BASE,
+});
+
+// Request interceptor to add auth token to all requests
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token') || 
+                  sessionStorage.getItem('access_token') || 
+                  localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle auth errors globally
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Unauthorized - clear auth data and redirect to login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('username');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('isAuthenticated');
+      sessionStorage.clear();
+      
+      // Redirect to auth page
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/auth?error=session_expired';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Use configured axios instance for all API calls
+const api = axiosInstance;
 
 export interface Post {
   id: number;
@@ -94,91 +140,91 @@ export interface VoteData {
 // Posts API
 export const postsApi = {
   async getAll(page = 1, limit = 20): Promise<PaginationResponse<Post>> {
-    const response = await axios.get<PaginationResponse<Post>>(`${API_BASE}/posts`, {
+    const response = await api.get<PaginationResponse<Post>>('/posts', {
       params: { page, limit }
     });
     return response.data;
   },
 
   async getHot(page = 1, limit = 20): Promise<PaginationResponse<Post>> {
-    const response = await axios.get<PaginationResponse<Post>>(`${API_BASE}/posts/hot`, {
+    const response = await api.get<PaginationResponse<Post>>('/posts/hot', {
       params: { page, limit }
     });
     return response.data;
   },
 
   async getById(id: number): Promise<Post> {
-    const response = await axios.get<Post>(`${API_BASE}/posts/${id}`);
+    const response = await api.get<Post>(`/posts/${id}`);
     return response.data;
   },
 
   async getByIdOrSlug(idOrSlug: string | number): Promise<Post> {
-    const response = await axios.get<Post>(`${API_BASE}/posts/${idOrSlug}`);
+    const response = await api.get<Post>(`/posts/${idOrSlug}`);
     return response.data;
   },
 
   async getWithSummary(id: number): Promise<Post> {
-    const response = await axios.get<Post>(`${API_BASE}/posts/${id}/summary`);
+    const response = await api.get<Post>(`/posts/${id}/summary`);
     return response.data;
   },
 
   async getWithSummaryByIdOrSlug(idOrSlug: string | number): Promise<Post> {
-    const response = await axios.get<Post>(`${API_BASE}/posts/${idOrSlug}/summary`);
+    const response = await api.get<Post>(`/posts/${idOrSlug}/summary`);
     return response.data;
   },
 
   async search(query: string, page = 1, limit = 20): Promise<PaginationResponse<Post>> {
-    const response = await axios.get<PaginationResponse<Post>>(`${API_BASE}/posts/search`, {
+    const response = await api.get<PaginationResponse<Post>>('/posts/search', {
       params: { q: query, page, limit }
     });
     return response.data;
   },
 
   async create(data: CreatePostData): Promise<Post> {
-    const response = await axios.post<Post>(`${API_BASE}/posts`, data);
+    const response = await api.post<Post>('/posts', data);
     return response.data;
   },
 
   async update(id: number, data: Partial<CreatePostData>): Promise<Post> {
-    const response = await axios.put<Post>(`${API_BASE}/posts/${id}`, data);
+    const response = await api.put<Post>(`/posts/${id}`, data);
     return response.data;
   },
 
   async delete(id: number): Promise<void> {
-    await axios.delete(`${API_BASE}/posts/${id}`);
+    await api.delete(`/posts/${id}`);
   }
 };
 
 // Communities API
 export const communitiesApi = {
   async getAll(page = 1, limit = 20): Promise<PaginationResponse<Community>> {
-    const response = await axios.get<PaginationResponse<Community>>(`${API_BASE}/communities`, {
+    const response = await api.get<PaginationResponse<Community>>('/communities', {
       params: { page, limit }
     });
     return response.data;
   },
 
   async getBySlug(slug: string): Promise<Community> {
-    const response = await axios.get<Community>(`${API_BASE}/communities/${slug}`);
+    const response = await api.get<Community>(`/communities/${slug}`);
     return response.data;
   },
 
   async create(data: { name: string; slug: string; description?: string }): Promise<Community> {
-    const response = await axios.post<Community>(`${API_BASE}/communities`, data);
+    const response = await api.post<Community>('/communities', data);
     return response.data;
   },
 
   async update(slug: string, data: { name?: string; description?: string }): Promise<Community> {
-    const response = await axios.put<Community>(`${API_BASE}/communities/${slug}`, data);
+    const response = await api.put<Community>(`/communities/${slug}`, data);
     return response.data;
   },
 
   async delete(slug: string): Promise<void> {
-    await axios.delete(`${API_BASE}/communities/${slug}`);
+    await api.delete(`/communities/${slug}`);
   },
 
   async getPosts(slug: string, page = 1, limit = 20): Promise<PaginationResponse<Post>> {
-    const response = await axios.get<PaginationResponse<Post>>(`${API_BASE}/communities/${slug}/posts`, {
+    const response = await api.get<PaginationResponse<Post>>(`/communities/${slug}/posts`, {
       params: { page, limit }
     });
     return response.data;
@@ -188,58 +234,58 @@ export const communitiesApi = {
 // Comments API
 export const commentsApi = {
   async getByPost(postId: number): Promise<{ comments: Comment[] }> {
-    const response = await axios.get<{ comments: Comment[] }>(`${API_BASE}/comments/post/${postId}`);
+    const response = await api.get<{ comments: Comment[] }>(`/comments/post/${postId}`);
     return response.data;
   },
 
   async getById(id: number): Promise<Comment> {
-    const response = await axios.get<Comment>(`${API_BASE}/comments/${id}`);
+    const response = await api.get<Comment>(`/comments/${id}`);
     return response.data;
   },
 
   async search(query: string, page = 1, limit = 20): Promise<PaginationResponse<Comment & { post: { id: number; slug?: string; title: string; community: { id: number; name: string; slug: string } } }>> {
-    const response = await axios.get(`${API_BASE}/comments/search`, {
+    const response = await api.get(`/comments/search`, {
       params: { q: query, page, limit }
     });
     return response.data;
   },
 
   async create(data: CreateCommentData): Promise<Comment> {
-    const response = await axios.post<Comment>(`${API_BASE}/comments`, data);
+    const response = await api.post<Comment>('/comments', data);
     return response.data;
   },
 
   async update(id: number, body: string): Promise<Comment> {
-    const response = await axios.put<Comment>(`${API_BASE}/comments/${id}`, { body });
+    const response = await api.put<Comment>(`/comments/${id}`, { body });
     return response.data;
   },
 
   async delete(id: number): Promise<void> {
-    await axios.delete(`${API_BASE}/comments/${id}`);
+    await api.delete(`/comments/${id}`);
   }
 };
 
 // Votes API
 export const votesApi = {
   async cast(data: VoteData): Promise<{ vote: any; voteCount: number }> {
-    const response = await axios.post(`${API_BASE}/votes`, data);
+    const response = await api.post('/votes', data);
     return response.data;
   },
 
   async remove(target_type: 'post' | 'comment', target_id: number): Promise<{ success: boolean; voteCount: number }> {
-    const response = await axios.delete(`${API_BASE}/votes`, {
+    const response = await api.delete('/votes', {
       data: { target_type, target_id }
     });
     return response.data;
   },
 
   async getCount(target_type: 'post' | 'comment', target_id: number): Promise<{ voteCount: number }> {
-    const response = await axios.get(`${API_BASE}/votes/${target_type}/${target_id}`);
+    const response = await api.get(`/votes/${target_type}/${target_id}`);
     return response.data;
   },
 
   async getUserVote(target_type: 'post' | 'comment', target_id: number): Promise<{ userVote: number | null }> {
-    const response = await axios.get(`${API_BASE}/votes/user/${target_type}/${target_id}`);
+    const response = await api.get(`/votes/user/${target_type}/${target_id}`);
     return response.data;
   }
 };
@@ -247,42 +293,80 @@ export const votesApi = {
 // Users API
 export const usersApi = {
   async getProfile(username: string): Promise<any> {
-    const response = await axios.get(`${API_BASE}/users/${username}`);
+    const response = await api.get(`/users/${username}`);
     return response.data;
   },
 
   async getPosts(username: string, page = 1, limit = 20): Promise<PaginationResponse<Post>> {
-    const response = await axios.get(`${API_BASE}/users/${username}/posts`, {
+    const response = await api.get(`/users/${username}/posts`, {
       params: { page, limit }
     });
     return response.data;
   },
 
   async getComments(username: string, page = 1, limit = 20): Promise<PaginationResponse<Comment>> {
-    const response = await axios.get(`${API_BASE}/users/${username}/comments`, {
+    const response = await api.get(`/users/${username}/comments`, {
       params: { page, limit }
     });
     return response.data;
   },
 
   async getCommunities(username: string): Promise<{ communities: Community[] }> {
-    const response = await axios.get(`${API_BASE}/users/${username}/communities`);
+    const response = await api.get(`/users/${username}/communities`);
     return response.data;
   },
 
   async updateProfile(data: { bio?: string; avatar_url?: string }): Promise<any> {
-    const response = await axios.put(`${API_BASE}/users/profile`, data);
+    const response = await api.put('/users/profile', data);
     return response.data;
   },
 
   async updateUsername(username: string): Promise<{ message: string; user: any }> {
-    const response = await axios.put(`${API_BASE}/users/username`, { username });
+    const response = await api.put('/users/username', { username });
     return response.data;
   },
 
   async deleteAccount(confirm: string): Promise<{ message: string }> {
-    const response = await axios.delete(`${API_BASE}/users/me`, { data: { confirm } });
+    const response = await api.delete('/users/me', { data: { confirm } });
     return response.data;
   }
 };
 
+// Follows API
+export const followsApi = {
+  async follow(username: string): Promise<{ message: string }> {
+    const response = await api.post(`/follows/${username}`);
+    return response.data;
+  },
+
+  async unfollow(username: string): Promise<{ message: string }> {
+    const response = await api.delete(`/follows/${username}`);
+    return response.data;
+  },
+
+  async checkFollowing(username: string): Promise<{ isFollowing: boolean }> {
+    const response = await api.get(`/follows/check/${username}`);
+    return response.data;
+  },
+
+  async getFollowers(username: string, page = 1, limit = 20): Promise<any> {
+    const response = await api.get(`/follows/followers/${username}`, {
+      params: { page, limit }
+    });
+    return response.data;
+  },
+
+  async getFollowing(username: string, page = 1, limit = 20): Promise<any> {
+    const response = await api.get(`/follows/following/${username}`, {
+      params: { page, limit }
+    });
+    return response.data;
+  },
+
+  async getFollowingFeed(page = 1, limit = 20): Promise<PaginationResponse<Post>> {
+    const response = await api.get('/follows/feed', {
+      params: { page, limit }
+    });
+    return response.data;
+  }
+};

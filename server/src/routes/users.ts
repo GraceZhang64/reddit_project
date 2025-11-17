@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, optionalAuth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { getSupabaseClient } from '../config/supabase';
 
 const router = Router();
@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
  * GET /api/users/:username
  * Get user profile by username
  */
-router.get('/:username', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:username', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
 
@@ -22,6 +22,7 @@ router.get('/:username', optionalAuth, async (req: Request, res: Response) => {
         email: false, // Don't expose email publicly
         avatar_url: true,
         bio: true,
+        karma: true,
         createdAt: true,
         _count: {
           select: {
@@ -48,7 +49,7 @@ router.get('/:username', optionalAuth, async (req: Request, res: Response) => {
  * GET /api/users/:username/posts
  * Get all posts by a user
  */
-router.get('/:username/posts', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:username/posts', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
     const page = parseInt(req.query.page as string) || 1;
@@ -118,7 +119,7 @@ router.get('/:username/posts', optionalAuth, async (req: Request, res: Response)
  * GET /api/users/:username/comments
  * Get all comments by a user
  */
-router.get('/:username/comments', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:username/comments', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
     const page = parseInt(req.query.page as string) || 1;
@@ -304,7 +305,7 @@ router.delete('/me', authenticateToken, async (req: Request, res: Response) => {
  * GET /api/users/:username/communities
  * Get communities created by a user
  */
-router.get('/:username/communities', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:username/communities', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
 

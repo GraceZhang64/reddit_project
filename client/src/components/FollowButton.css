@@ -1,0 +1,60 @@
+.follow-button {
+  padding: 0.5rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid;
+}
+
+.follow-button.not-following {
+  background: var(--blueit-primary);
+  color: white;
+  border-color: var(--blueit-primary);
+}
+
+.follow-button.not-following:hover:not(:disabled) {
+  background: var(--blueit-secondary);
+  border-color: var(--blueit-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+.follow-button.following {
+  background: transparent;
+  color: var(--blueit-text);
+  border-color: var(--blueit-border);
+}
+
+.follow-button.following:hover:not(:disabled) {
+  background: #fee;
+  border-color: #fcc;
+  color: #c33;
+}
+
+.follow-button.following:hover:not(:disabled)::after {
+  content: ' Unfollow';
+  margin-left: -0.5rem;
+}
+
+.follow-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.follow-button.follow-loading {
+  background: var(--blueit-hover);
+  color: var(--blueit-text-secondary);
+  border-color: var(--blueit-border);
+  cursor: wait;
+}
+
+@media (max-width: 768px) {
+  .follow-button {
+    padding: 0.4rem 1.2rem;
+    font-size: 0.85rem;
+  }
+}
+

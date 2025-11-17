@@ -65,6 +65,19 @@
   font-size: 12px;
 }
 
+.comment-author-link {
+  font-weight: 600;
+  color: #1c1c1c;
+  font-size: 12px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.comment-author-link:hover {
+  color: #0079d3;
+  text-decoration: underline;
+}
+
 .comment-meta {
   color: #7c7c7c;
   font-size: 12px;

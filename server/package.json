@@ -15,7 +15,11 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:connection": "npx ts-node src/scripts/test-connection.ts",
-    "test:api": "npx ts-node src/scripts/test-api.ts"
+    "test:api": "npx ts-node src/scripts/test-api.ts",
+    "loadtest": "k6 run tests/load-test-critical-workflow.js",
+    "loadtest:critical": "k6 run --iterations 100 tests/load-test-critical-workflow.js",
+    "loadtest:baseline": "k6 run --vus 10 --duration 5m tests/load-test-critical-workflow.js",
+    "loadtest:stress": "k6 run --vus 50 --duration 10m tests/load-test-critical-workflow.js"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

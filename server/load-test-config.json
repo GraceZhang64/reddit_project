@@ -1,0 +1,40 @@
+{
+  "description": "Load testing configuration for BlueIt application",
+  "critical_workflow": {
+    "name": "Viewing a Post + First 10 Comments",
+    "steps": [
+      "1. User loads a post",
+      "2. Fetches first 10 comments"
+    ],
+    "measurement": "Backend response time (server) excluding front-end rendering",
+    "target_trials": 100,
+    "success_criteria": {
+      "average_latency_ms": "< 500",
+      "p95_latency_ms": "< 1000",
+      "p99_latency_ms": "< 2000",
+      "error_rate": "< 1%",
+      "success_rate": "> 95%"
+    }
+  },
+  "test_scenarios": [
+    {
+      "name": "Baseline Load",
+      "users": 10,
+      "duration": "5m",
+      "description": "Normal load with 10 concurrent users"
+    },
+    {
+      "name": "Stress Test",
+      "users": 50,
+      "duration": "10m",
+      "description": "Stress test with 50 concurrent users"
+    },
+    {
+      "name": "Spike Test",
+      "users": 100,
+      "duration": "2m",
+      "description": "Sudden spike to 100 users"
+    }
+  ]
+}
+

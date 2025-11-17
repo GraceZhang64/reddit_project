@@ -40,7 +40,12 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
             c/{post.communityName}
           </Link>
           <span className="separator">•</span>
-          <span className="author">Posted by u/{post.author}</span>
+          <span className="author">
+            Posted by{' '}
+            <Link to={`/u/${post.author}`} className="author-link">
+              u/{post.author}
+            </Link>
+          </span>
           <span className="separator">•</span>
           <span className="time">{new Date(post.createdAt).toLocaleDateString()}</span>
         </div>

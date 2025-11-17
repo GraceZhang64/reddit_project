@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Comment } from '../types';
 import VoteButtons from './VoteButtons';
 import { votesApi } from '../services/api';
@@ -86,11 +87,14 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply }: CommentItemP
           >
             [{isCollapsed ? '+' : '−'}]
           </button>
-          <span className="comment-author">
+          <Link 
+            to={`/u/${typeof comment.author === 'string' ? comment.author : (comment.author as any)?.username || 'Unknown'}`}
+            className="comment-author-link"
+          >
             {typeof comment.author === 'string' 
               ? comment.author 
               : (comment.author as any)?.username || 'Unknown'}
-          </span>
+          </Link>
           <span className="comment-meta">• {formatTimestamp(comment.createdAt)}</span>
           {isCollapsed && hasReplies && (
             <span className="collapsed-info">({comment.replies!.length} {comment.replies!.length === 1 ? 'reply' : 'replies'})</span>

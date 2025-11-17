@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, optionalAuth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
  * GET /api/communities
  * Get all communities
  */
-router.get('/', optionalAuth, async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -57,7 +57,7 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
  * GET /api/communities/:slug
  * Get a specific community by slug
  */
-router.get('/:slug', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:slug', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
@@ -243,7 +243,7 @@ router.delete('/:slug', authenticateToken, async (req: Request, res: Response) =
  * GET /api/communities/:slug/posts
  * Get all posts in a community
  */
-router.get('/:slug/posts', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:slug/posts', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const page = parseInt(req.query.page as string) || 1;

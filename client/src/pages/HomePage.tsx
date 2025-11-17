@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
 import SearchBar from '../components/SearchBar';
-import { Post as ApiPost, postsApi, votesApi } from '../services/api';
+import { postsApi, votesApi, followsApi } from '../services/api';
 import { Post } from '../types';
 import './HomePage.css';
 
@@ -47,17 +47,41 @@ function HomePage() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = feed === 'hot' 
-          ? await postsApi.getHot(1, 20)
-          : await postsApi.getAll(1, 20);
+        let response;
+        if (feed === 'hot') {
+          response = await postsApi.getHot(1, 20);
+        } else if (feed === 'following') {
+          response = await followsApi.getFollowingFeed(1, 20);
+        } else {
+          response = await postsApi.getAll(1, 20);
+        }
         
         console.log('✅ Posts fetched successfully:', response);
         const fetchedPosts = response.posts || [];
         console.log('📦 Mapped posts count:', fetchedPosts.length);
+        
+        // Check if no posts in following feed
+        if (feed === 'following' && fetchedPosts.length === 0) {
+          console.log('ℹ️ No posts from followed users');
+        }
+        
         setPosts(fetchedPosts.map(mapApiPost));
-      } catch (err) {
+      } catch (err: any) {
         console.error('❌ Error fetching posts:', err);
-        setError('Failed to load posts. Please try again.');
+        console.error('Error details:', {
+          status: err.response?.status,
+          data: err.response?.data,
+          message: err.message
+        });
+        
+        // Better error messages
+        if (err.response?.status === 401) {
+          setError('Authentication required. Please log in again.');
+        } else if (feed === 'following' && err.response?.status === 404) {
+          setError('Follow some users to see their posts here!');
+        } else {
+          setError(err.response?.data?.error || 'Failed to load posts. Please try again.');
+        }
         setPosts([]);
       } finally {
         setIsLoading(false);
@@ -154,6 +178,14 @@ function HomePage() {
               <span className="tab-text">Hot</span>
             </button>
             <button 
+              className={`feed-tab ${feed === 'following' ? 'active' : ''}`}
+              onClick={() => handleFeedChange('following')}
+              disabled={!!searchQuery}
+            >
+              <span className="tab-icon">👥</span>
+              <span className="tab-text">Following</span>
+            </button>
+            <button 
               className={`feed-tab ${feed === 'all' ? 'active' : ''}`}
               onClick={() => handleFeedChange('all')}
               disabled={!!searchQuery}
@@ -184,6 +216,8 @@ function HomePage() {
               <p>Search results for "{searchQuery}"</p>
             ) : feed === 'hot' ? (
               <p>The most upvoted posts across all communities</p>
+            ) : feed === 'following' ? (
+              <p>Posts from users you follow</p>
             ) : (
               <p>All posts from BlueIt communities</p>
             )}
@@ -205,7 +239,25 @@ function HomePage() {
             </div>
           ) : posts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--blueit-text-secondary)' }}>
-              <p>No posts found. Be the first to post!</p>
+              {feed === 'following' ? (
+                <>
+                  <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>👥 No posts from followed users yet</p>
+                  <p style={{ fontSize: '0.9rem' }}>Follow some users to see their posts here!</p>
+                  <Link to="/communities" style={{ 
+                    display: 'inline-block',
+                    marginTop: '1rem',
+                    padding: '0.5rem 1rem',
+                    backgroundColor: 'var(--blueit-primary)',
+                    color: 'white',
+                    borderRadius: '4px',
+                    textDecoration: 'none'
+                  }}>
+                    Explore Communities
+                  </Link>
+                </>
+              ) : (
+                <p>No posts found. Be the first to post!</p>
+              )}
             </div>
           ) : (
             <PostFeed posts={posts} onVote={handleVote} />

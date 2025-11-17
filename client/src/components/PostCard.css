@@ -60,6 +60,18 @@
   font-weight: 500;
 }
 
+.author-link {
+  color: var(--blueit-text-muted) !important;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.author-link:hover {
+  color: var(--blueit-primary) !important;
+  text-decoration: underline;
+}
+
 .post-title-link {
   text-decoration: none;
   color: var(--blueit-text);

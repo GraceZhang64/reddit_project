@@ -524,6 +524,10 @@ export const postService = {
       });
     }
 
+    // Update community member count if this is user's first interaction
+    const { updateCommunityMemberCount } = await import('../utils/communityMemberCount');
+    await updateCommunityMemberCount(data.community_id, data.author_id);
+
     return {
       ...post,
       vote_count: 0,

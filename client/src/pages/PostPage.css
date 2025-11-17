@@ -55,6 +55,18 @@
   color: #666;
 }
 
+.author-link {
+  color: #666 !important;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.author-link:hover {
+  color: #0079d3 !important;
+  text-decoration: underline;
+}
+
 .post-title {
   margin: 0 0 1rem 0;
   font-size: 1.5rem;

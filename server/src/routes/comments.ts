@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, optionalAuth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
  * GET /api/comments/search
  * Search comments by keyword
  */
-router.get('/search', optionalAuth, async (req: Request, res: Response) => {
+router.get('/search', authenticateToken, async (req: Request, res: Response) => {
   try {
     const query = req.query.q as string;
     if (!query) {
@@ -120,7 +120,7 @@ router.get('/search', optionalAuth, async (req: Request, res: Response) => {
  * GET /api/comments/post/:postId
  * Get all comments for a post
  */
-router.get('/post/:postId', optionalAuth, async (req: Request, res: Response) => {
+router.get('/post/:postId', authenticateToken, async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.postId);
 
@@ -232,7 +232,7 @@ router.get('/post/:postId', optionalAuth, async (req: Request, res: Response) =>
  * GET /api/comments/:id
  * Get a specific comment with its replies
  */
-router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const commentId = parseInt(req.params.id);
 
@@ -377,6 +377,10 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
         }
       }
     });
+
+    // Update community member count if this is user's first interaction
+    const { updateCommunityMemberCount } = await import('../utils/communityMemberCount');
+    await updateCommunityMemberCount(post.communityId, authorId);
 
     res.status(201).json({
       ...comment,

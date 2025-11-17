@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { postService } from '../services/postService';
-import { authenticateToken, optionalAuth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { getAIService } from '../services/aiService';
 import { getSupabaseClient } from '../config/supabase';
 
@@ -10,7 +10,7 @@ const router = Router();
  * GET /api/posts
  * Get all posts with pagination
  */
-router.get('/', optionalAuth, async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -29,7 +29,7 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
  * GET /api/posts/hot
  * Get hot/trending posts
  */
-router.get('/hot', optionalAuth, async (req: Request, res: Response) => {
+router.get('/hot', authenticateToken, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -48,7 +48,7 @@ router.get('/hot', optionalAuth, async (req: Request, res: Response) => {
  * GET /api/posts/search
  * Search posts by keyword
  */
-router.get('/search', optionalAuth, async (req: Request, res: Response) => {
+router.get('/search', authenticateToken, async (req: Request, res: Response) => {
   try {
     const query = req.query.q as string;
     if (!query) {
@@ -76,7 +76,7 @@ router.get('/search', optionalAuth, async (req: Request, res: Response) => {
  * GET /api/posts/:idOrSlug/summary
  * Get a specific post with AI-generated summary
  */
-router.get('/:idOrSlug/summary', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:idOrSlug/summary', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { idOrSlug } = req.params;
     const userId = req.user?.id;
@@ -188,7 +188,7 @@ router.get('/:idOrSlug/summary', optionalAuth, async (req: Request, res: Respons
   }
 });
 
-router.get('/:idOrSlug', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:idOrSlug', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { idOrSlug } = req.params;
     const userId = req.user?.id;

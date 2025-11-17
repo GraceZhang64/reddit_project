@@ -9,34 +9,52 @@ datasource db {
 }
 
 model User {
-  id          String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  email       String      @unique
-  username    String      @unique
-  avatar_url  String?
-  bio         String?
-  createdAt   DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updated_at  DateTime?   @default(now()) @db.Timestamptz(6)
-  comments    Comment[]
-  communities Community[]
-  posts       Post[]
-  votes       Vote[]
-  pollVotes   PollVote[]
+  id                String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email             String          @unique
+  username          String          @unique
+  avatar_url        String?
+  bio               String?
+  karma             Int             @default(0)
+  createdAt         DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at        DateTime?       @default(now()) @db.Timestamptz(6)
+  comments          Comment[]
+  communities       Community[]
+  posts             Post[]
+  votes             Vote[]
+  pollVotes         PollVote[]
+  followers         UserFollow[]    @relation("UserFollowers")
+  following         UserFollow[]    @relation("UserFollowing")
+  blockedUsers      UserBlock[]     @relation("BlockedBy")
+  blockedBy         UserBlock[]     @relation("BlockedUser")
+  sentMessages      Message[]       @relation("MessageSender")
+  receivedMessages  Message[]       @relation("MessageRecipient")
+  notifications     Notification[]
+  givenAwards       UserAward[]     @relation("AwardGiver")
+  receivedAwards    UserAward[]     @relation("AwardRecipient")
+  userFlairs        UserFlair[]
+  savedPosts        SavedPost[]
+  multireddits      Multireddit[]
 
   @@index([email], map: "idx_users_email")
   @@index([username], map: "idx_users_username")
+  @@index([karma], map: "idx_users_karma")
   @@map("users")
 }
 
 model Community {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  slug        String    @unique
-  description String?
-  creator_id  String?   @db.Uuid
-  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
-  users       User?     @relation(fields: [creator_id], references: [id], onUpdate: NoAction)
-  posts       Post[]
+  id                    Int           @id @default(autoincrement())
+  name                  String        @unique
+  slug                  String        @unique
+  description           String?
+  creator_id            String?       @db.Uuid
+  memberCount           Int           @default(0) @map("member_count")
+  createdAt             DateTime?     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at            DateTime?     @default(now()) @db.Timestamptz(6)
+  users                 User?         @relation(fields: [creator_id], references: [id], onUpdate: NoAction)
+  posts                 Post[]
+  userFlairs            UserFlair[]
+  postFlairs            PostFlair[]
+  multiredditCommunities MultiredditCommunity[]
 
   @@index([creator_id], map: "idx_communities_creator")
   @@index([slug], map: "idx_communities_slug")
@@ -65,6 +83,7 @@ model Post {
   video_url                 String?
   media_urls                String[]                 @default([])
   crosspost_id              Int?                     @map("crosspost_id")
+  flair_id                  Int?                     @map("flair_id")
   authorId                  String                   @map("author_id") @db.Uuid
   communityId               Int                      @map("community_id")
   ai_summary                String?
@@ -75,8 +94,11 @@ model Post {
   search_vector             Unsupported("tsvector")?
   comments                  Comment[]
   polls                     Poll[]
+  awards                    UserAward[]
+  savedBy                   SavedPost[]
   author                    User                     @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   community                 Community                @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  flair                     PostFlair?               @relation(fields: [flair_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   crosspost                 Post?                    @relation("Crossposts", fields: [crosspost_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   crossposts                Post[]                   @relation("Crossposts")
 
@@ -88,6 +110,7 @@ model Post {
   @@index([slug], map: "idx_posts_slug")
   @@index([post_type], map: "idx_posts_type")
   @@index([crosspost_id], map: "idx_posts_crosspost")
+  @@index([flair_id], map: "idx_posts_flair")
   @@map("posts")
 }
 
@@ -130,17 +153,18 @@ model PollVote {
 }
 
 model Comment {
-  id              Int       @id @default(autoincrement())
+  id              Int         @id @default(autoincrement())
   body            String
-  authorId        String    @map("author_id") @db.Uuid
-  postId          Int       @map("post_id")
-  parentCommentId Int?      @map("parent_comment_id")
-  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
-  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  replies         Comment[] @relation("CommentReplies")
-  post            Post      @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  authorId        String      @map("author_id") @db.Uuid
+  postId          Int         @map("post_id")
+  parentCommentId Int?        @map("parent_comment_id")
+  createdAt       DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at      DateTime?   @default(now()) @db.Timestamptz(6)
+  author          User        @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parentComment   Comment?    @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  replies         Comment[]   @relation("CommentReplies")
+  post            Post        @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  awards          UserAward[]
 
   @@index([authorId], map: "idx_comments_author")
   @@index([parentCommentId], map: "idx_comments_parent")
@@ -162,4 +186,207 @@ model Vote {
   @@index([target_type, target_id], map: "idx_votes_target")
   @@index([userId], map: "idx_votes_user")
   @@map("votes")
+}
+
+// User Following
+model UserFollow {
+  id          Int       @id @default(autoincrement())
+  followerId  String    @map("follower_id") @db.Uuid
+  followingId String    @map("following_id") @db.Uuid
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  follower    User      @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User      @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId], map: "idx_follows_follower")
+  @@index([followingId], map: "idx_follows_following")
+  @@map("user_follows")
+}
+
+// User Blocking
+model UserBlock {
+  id         Int       @id @default(autoincrement())
+  blockerId  String    @map("blocker_id") @db.Uuid
+  blockedId  String    @map("blocked_id") @db.Uuid
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  blocker    User      @relation("BlockedBy", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked    User      @relation("BlockedUser", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId], map: "idx_blocks_blocker")
+  @@index([blockedId], map: "idx_blocks_blocked")
+  @@map("user_blocks")
+}
+
+// Awards System
+enum AwardType {
+  silver
+  gold
+  platinum
+  helpful
+  wholesome
+  rocket
+  heart
+  fire
+  star
+
+  @@map("award_type")
+}
+
+model Award {
+  id          Int         @id @default(autoincrement())
+  type        AwardType
+  name        String
+  description String?
+  icon        String
+  cost        Int         @default(0)
+  userAwards  UserAward[]
+
+  @@map("awards")
+}
+
+model UserAward {
+  id          Int       @id @default(autoincrement())
+  awardId     Int       @map("award_id")
+  giverId     String    @map("giver_id") @db.Uuid
+  recipientId String    @map("recipient_id") @db.Uuid
+  postId      Int?      @map("post_id")
+  commentId   Int?      @map("comment_id")
+  message     String?
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  award       Award     @relation(fields: [awardId], references: [id])
+  giver       User      @relation("AwardGiver", fields: [giverId], references: [id], onDelete: Cascade)
+  recipient   User      @relation("AwardRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  post        Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment     Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "idx_awards_post")
+  @@index([commentId], map: "idx_awards_comment")
+  @@index([recipientId], map: "idx_awards_recipient")
+  @@index([giverId], map: "idx_awards_giver")
+  @@map("user_awards")
+}
+
+// Flairs
+model UserFlair {
+  id          Int       @id @default(autoincrement())
+  userId      String    @map("user_id") @db.Uuid
+  communityId Int       @map("community_id")
+  text        String
+  color       String?
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId])
+  @@index([userId], map: "idx_user_flairs_user")
+  @@index([communityId], map: "idx_user_flairs_community")
+  @@map("user_flairs")
+}
+
+model PostFlair {
+  id          Int       @id @default(autoincrement())
+  communityId Int       @map("community_id")
+  text        String
+  color       String?
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  posts       Post[]
+
+  @@index([communityId], map: "idx_post_flairs_community")
+  @@map("post_flairs")
+}
+
+// Messaging
+model Message {
+  id          Int       @id @default(autoincrement())
+  senderId    String    @map("sender_id") @db.Uuid
+  recipientId String    @map("recipient_id") @db.Uuid
+  subject     String?
+  body        String
+  isRead      Boolean   @default(false) @map("is_read")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  sender      User      @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User      @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, isRead], map: "idx_messages_recipient_unread")
+  @@index([senderId], map: "idx_messages_sender")
+  @@index([createdAt(sort: Desc)], map: "idx_messages_created")
+  @@map("messages")
+}
+
+// Notifications
+enum NotificationType {
+  reply
+  mention
+  upvote
+  award
+  follow
+  message
+
+  @@map("notification_type")
+}
+
+model Notification {
+  id          Int              @id @default(autoincrement())
+  userId      String           @map("user_id") @db.Uuid
+  type        NotificationType
+  actorId     String?          @map("actor_id") @db.Uuid
+  postId      Int?             @map("post_id")
+  commentId   Int?             @map("comment_id")
+  messageId   Int?             @map("message_id")
+  content     String?
+  isRead      Boolean          @default(false) @map("is_read")
+  createdAt   DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead], map: "idx_notifications_user_unread")
+  @@index([createdAt(sort: Desc)], map: "idx_notifications_created")
+  @@map("notifications")
+}
+
+// Saved Posts
+model SavedPost {
+  id        Int       @id @default(autoincrement())
+  userId    String    @map("user_id") @db.Uuid
+  postId    Int       @map("post_id")
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId], map: "idx_saved_posts_user")
+  @@index([postId], map: "idx_saved_posts_post")
+  @@map("saved_posts")
+}
+
+// Multireddits
+model Multireddit {
+  id          Int                    @id @default(autoincrement())
+  userId      String                 @map("user_id") @db.Uuid
+  name        String
+  description String?
+  isPublic    Boolean                @default(true) @map("is_public")
+  createdAt   DateTime?              @default(now()) @map("created_at") @db.Timestamptz(6)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  communities MultiredditCommunity[]
+
+  @@unique([userId, name])
+  @@index([userId], map: "idx_multireddits_user")
+  @@map("multireddits")
+}
+
+model MultiredditCommunity {
+  id            Int         @id @default(autoincrement())
+  multiredditId Int         @map("multireddit_id")
+  communityId   Int         @map("community_id")
+  position      Int         @default(0)
+  createdAt     DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
+  multireddit   Multireddit @relation(fields: [multiredditId], references: [id], onDelete: Cascade)
+  community     Community   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([multiredditId, communityId])
+  @@index([multiredditId], map: "idx_multi_communities_multi")
+  @@index([communityId], map: "idx_multi_communities_community")
+  @@map("multireddit_communities")
 }

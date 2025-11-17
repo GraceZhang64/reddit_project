@@ -9,6 +9,7 @@ import PostPage from './pages/PostPage';
 import SearchPage from './pages/SearchPage';
 import AuthPage from './pages/AuthPage';
 import SettingsPage from './pages/SettingsPage';
+import UserProfilePage from './pages/UserProfilePage';
 import './App.css';
 
 function App() {
@@ -75,7 +76,7 @@ function App() {
               </div>
               <div className="nav-actions">
                 <button onClick={toggleTheme} className="theme-toggle" title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
-                  {theme === 'light' ? '🌙' : '☀️'}
+                  {theme === 'light' ? 'Dark' : 'Light'}
                 </button>
                 <Link to="/settings" className="nav-link">Settings</Link>
                 <span className="username">u/{username}</span>
@@ -112,6 +113,10 @@ function App() {
           <Route
             path="/settings"
             element={isAuthenticated ? <SettingsPage /> : <Navigate to="/auth" />}
+          />
+          <Route
+            path="/u/:username"
+            element={isAuthenticated ? <UserProfilePage /> : <Navigate to="/auth" />}
           />
         </Routes>
       </div>
