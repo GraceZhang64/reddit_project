@@ -11,12 +11,15 @@ interface PostCardProps {
   post: Post;
   onVote?: (postId: number, value: number) => void;
   userVote?: number;
+  initialSaved?: boolean;
+  onSaveToggle?: (postId: number, saved: boolean) => void;
 }
 
-function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
+function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveToggle }: PostCardProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-  const [followChecked, setFollowChecked] = useState(false);
+  const [isSaved, setIsSaved] = useState(initialSaved);
+  const [isSaving, setIsSaving] = useState(false);
   const currentUser = localStorage.getItem('username');
   const isOwnPost = currentUser === post.author;
 
@@ -27,14 +30,16 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
     }
   }, [post.author]);
 
+  useEffect(() => {
+    setIsSaved(initialSaved);
+  }, [initialSaved]);
+
   const checkFollowStatus = async () => {
     try {
       const result = await followsApi.checkFollowing(post.author);
       setIsFollowing(result.isFollowing);
-      setFollowChecked(true);
     } catch (error) {
       console.error('Error checking follow status:', error);
-      setFollowChecked(true);
     }
   };
 
@@ -80,7 +85,7 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
   return (
     <div className="post-card">
       <VoteButtons
-        voteCount={post.voteCount}
+        voteCount={post.voteCount || 0}
         onUpvote={handleUpvote}
         onDownvote={handleDownvote}
         userVote={userVote}
