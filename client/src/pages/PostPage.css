@@ -184,6 +184,20 @@
   color: #1c1c1c;
 }
 
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-button.saved {
+  color: #4a90e2;
+  font-weight: 700;
+}
+
+.save-button.saved:hover {
+  background: rgba(74, 144, 226, 0.1);
+}
+
 /* Comments Section */
 .comments-section {
   background: #fff;

@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Post } from '../types';
 import VoteButtons from './VoteButtons';
 import PostContent from './PostContent';
+import { savedPostsApi } from '../services/api';
 import './PostCard.css';
 import AISummaryContent from './AISummaryContent';
 
@@ -9,9 +11,18 @@ interface PostCardProps {
   post: Post;
   onVote?: (postId: number, value: number) => void;
   userVote?: number;
+  initialSaved?: boolean;
+  onSaveToggle?: (postId: number, saved: boolean) => void;
 }
 
-function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
+function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveToggle }: PostCardProps) {
+  const [isSaved, setIsSaved] = useState(initialSaved);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setIsSaved(initialSaved);
+  }, [initialSaved]);
+
   const handleUpvote = () => {
     if (onVote) {
       // Toggle upvote: if already upvoted, remove vote; otherwise upvote
@@ -23,6 +34,37 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
     if (onVote) {
       // Toggle downvote: if already downvoted, remove vote; otherwise downvote
       onVote(post.id, userVote === -1 ? 0 : -1);
+    }
+  };
+
+  const handleSaveToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      if (isSaved) {
+        await savedPostsApi.unsavePost(post.id);
+        setIsSaved(false);
+        if (onSaveToggle) onSaveToggle(post.id, false);
+      } else {
+        await savedPostsApi.savePost(post.id);
+        setIsSaved(true);
+        if (onSaveToggle) onSaveToggle(post.id, true);
+      }
+    } catch (error: any) {
+      console.error('Error toggling save:', error);
+      // Handle 409 conflict (already saved) as success
+      if (error.response?.status === 409) {
+        setIsSaved(true);
+        if (onSaveToggle) onSaveToggle(post.id, true);
+      } else {
+        alert('Failed to ' + (isSaved ? 'unsave' : 'save') + ' post. Please try again.');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -88,6 +130,14 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
             alert('Link copied to clipboard!');
           }}>
             🔗 Share
+          </button>
+          <button 
+            className={`action-button save-button ${isSaved ? 'saved' : ''}`}
+            onClick={handleSaveToggle}
+            disabled={isSaving}
+            title={isSaved ? 'Unsave post' : 'Save post'}
+          >
+            {isSaving ? '⏳' : isSaved ? '🔖' : '📑'} {isSaved ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>
