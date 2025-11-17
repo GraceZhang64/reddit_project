@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
 import CommentItem from '../components/CommentItem';
+import PostContent from '../components/PostContent';
+import PollWidget from '../components/PollWidget';
 import { Post, Comment } from '../types';
 import { commentsApi, postsApi } from '../services/api';
 import './PostPage.css';
@@ -241,16 +243,21 @@ function PostPage() {
                 <span className="separator">•</span>
                 <span className="time">{new Date(post.createdAt).toLocaleDateString()}</span>
               </div>
-              <h1 className="post-title">{post.title}</h1>
+              <h1 className="post-title">
+                {post.post_type === 'link' && '🔗 '}
+                {post.post_type === 'image' && '🖼️ '}
+                {post.post_type === 'video' && '🎥 '}
+                {post.post_type === 'poll' && '📊 '}
+                {post.post_type === 'crosspost' && '🔄 '}
+                {post.title}
+              </h1>
             </div>
             
-            {post.body && (
-              <div className="post-body-full">
-                {post.body.split('\n').map((paragraph, i) => (
-                  <p key={i}>{paragraph}</p>
-                ))}
-              </div>
-            )}
+            {/* Post Content based on type */}
+            <PostContent post={post} isFullView={true} />
+            
+            {/* Poll Widget for poll posts */}
+            {post.post_type === 'poll' && <PollWidget postId={post.id} />}
             
             {/* AI Summary Box */}
             {post.summary ? (
@@ -284,8 +291,25 @@ function PostPage() {
               <button className="action-button">
                 💬 {post.commentCount} Comments
               </button>
-              <button className="action-button">🔗 Share</button>
-              <button className="action-button">💾 Save</button>
+              <button 
+                className="action-button"
+                onClick={() => {
+                  const url = `${window.location.origin}/p/${post.slug || post.id}`;
+                  navigator.clipboard.writeText(url);
+                  alert('Link copied to clipboard!');
+                }}
+              >
+                🔗 Share
+              </button>
+              <button 
+                className="action-button"
+                onClick={() => {
+                  const crosspostUrl = `/communities?crosspost=${post.id}`;
+                  window.location.href = crosspostUrl;
+                }}
+              >
+                🔄 Crosspost
+              </button>
             </div>
           </div>
         </div>

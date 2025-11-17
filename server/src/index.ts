@@ -7,6 +7,7 @@ import communitiesRouter from './routes/communities';
 import votesRouter from './routes/votes';
 import commentsRouter from './routes/comments';
 import usersRouter from './routes/users';
+import pollsRouter from './routes/polls';
 
 dotenv.config();
 
@@ -59,6 +60,11 @@ app.get('/', (req: Request, res: Response) => {
         count: 'GET /api/votes/:target_type/:target_id',
         userVote: 'GET /api/votes/user/:target_type/:target_id'
       },
+      polls: {
+        get: 'GET /api/polls/post/:postId',
+        vote: 'POST /api/polls/vote',
+        userVote: 'GET /api/polls/:pollId/user-vote'
+      },
       users: {
         profile: 'GET /api/users/:username',
         posts: 'GET /api/users/:username/posts',
@@ -80,6 +86,7 @@ app.use('/api/communities', communitiesRouter);
 app.use('/api/posts', postsRouter);
 app.use('/api/comments', commentsRouter);
 app.use('/api/votes', votesRouter);
+app.use('/api/polls', pollsRouter);
 app.use('/api/users', usersRouter);
 
 app.listen(port, () => {

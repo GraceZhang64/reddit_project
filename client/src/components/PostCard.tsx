@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Post } from '../types';
 import VoteButtons from './VoteButtons';
+import PostContent from './PostContent';
 import './PostCard.css';
 import AISummaryContent from './AISummaryContent';
 
@@ -44,9 +45,18 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
           <span className="time">{new Date(post.createdAt).toLocaleDateString()}</span>
         </div>
         <Link to={`/p/${post.slug || post.id}`} className="post-title-link">
-          <h2 className="post-title">{post.title}</h2>
+          <h2 className="post-title">
+            {post.post_type === 'link' && '🔗 '}
+            {post.post_type === 'image' && '🖼️ '}
+            {post.post_type === 'video' && '🎥 '}
+            {post.post_type === 'poll' && '📊 '}
+            {post.post_type === 'crosspost' && '🔄 '}
+            {post.title}
+          </h2>
         </Link>
-        {post.body && <p className="post-body">{post.body}</p>}
+        
+        {/* Post Content based on type */}
+        <PostContent post={post} isFullView={false} />
         
         {/* AI Summary Box - Only show if available */}
         {post.aiSummary && (
@@ -65,8 +75,15 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
           <Link to={`/p/${post.slug || post.id}`} className="action-button">
             💬 {post.commentCount} Comments
           </Link>
-          <button className="action-button">🔗 Share</button>
-          <button className="action-button">💾 Save</button>
+          <button className="action-button" onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const url = `${window.location.origin}/p/${post.slug || post.id}`;
+            navigator.clipboard.writeText(url);
+            alert('Link copied to clipboard!');
+          }}>
+            🔗 Share
+          </button>
         </div>
       </div>
     </div>

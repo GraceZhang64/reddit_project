@@ -7,10 +7,44 @@
 }
 
 .create-post-form h2 {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
   font-size: 1.25rem;
   color: var(--blueit-primary);
   font-weight: 700;
+}
+
+/* Post Type Tabs */
+.post-type-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--blueit-border);
+  overflow-x: auto;
+}
+
+.post-type-tabs .tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--blueit-text-secondary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.post-type-tabs .tab:hover {
+  background: var(--blueit-hover);
+  color: var(--blueit-primary);
+}
+
+.post-type-tabs .tab.active {
+  color: var(--blueit-primary);
+  border-bottom-color: var(--blueit-primary);
+  background: rgba(74, 144, 226, 0.05);
 }
 
 .form-group {
@@ -118,6 +152,96 @@
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
+}
+
+/* Poll Options */
+.poll-option-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  align-items: center;
+}
+
+.poll-option-input {
+  flex: 1;
+  padding: 0.75rem;
+  background: var(--blueit-card-bg);
+  border: 2px solid var(--blueit-border);
+  border-radius: 8px;
+  color: var(--blueit-text);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.poll-option-input:focus {
+  outline: none;
+  border-color: var(--blueit-primary);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.remove-option-btn {
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: 2px solid var(--blueit-border);
+  border-radius: 8px;
+  color: var(--blueit-text-secondary);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.remove-option-btn:hover {
+  background: #fee;
+  border-color: #fcc;
+  color: #c33;
+}
+
+.add-option-btn {
+  padding: 0.625rem 1rem;
+  background: transparent;
+  border: 2px dashed var(--blueit-border);
+  border-radius: 8px;
+  color: var(--blueit-primary);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.add-option-btn:hover {
+  background: rgba(74, 144, 226, 0.05);
+  border-color: var(--blueit-primary);
+  border-style: solid;
+}
+
+.poll-expires-select {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--blueit-card-bg);
+  border: 2px solid var(--blueit-border);
+  border-radius: 8px;
+  color: var(--blueit-text);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.post-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--blueit-card-bg);
+  border: 2px solid var(--blueit-border);
+  border-radius: 8px;
+  color: var(--blueit-text);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.post-input:focus {
+  outline: none;
+  border-color: var(--blueit-primary);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
 }
 
 @media (max-width: 768px) {

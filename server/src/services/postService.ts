@@ -11,9 +11,16 @@ interface PaginationParams {
 interface CreatePostData {
   title: string;
   body: string | null;
-  image_url: string | null;
+  post_type?: string;
+  link_url?: string | null;
+  image_url?: string | null;
+  video_url?: string | null;
+  media_urls?: string[];
+  crosspost_id?: number | null;
   community_id: number;
   author_id: string;
+  poll_options?: string[] | null;
+  poll_expires_hours?: number | null;
 }
 
 interface UpdatePostData {
@@ -452,7 +459,12 @@ export const postService = {
         title: data.title,
         slug: slug,
         body: data.body,
-        image_url: data.image_url, // Note: schema uses image_url (snake_case)
+        post_type: data.post_type as any || 'text',
+        link_url: data.link_url || null,
+        image_url: data.image_url || null,
+        video_url: data.video_url || null,
+        media_urls: data.media_urls || [],
+        crosspost_id: data.crosspost_id || null,
         authorId: data.author_id,
         communityId: data.community_id,
       },
@@ -471,8 +483,46 @@ export const postService = {
             slug: true,
           },
         },
+        crosspost: data.crosspost_id ? {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            author: {
+              select: {
+                username: true,
+              },
+            },
+            community: {
+              select: {
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        } : false,
       },
     });
+
+    // Create poll if post_type is poll
+    if (data.post_type === 'poll' && data.poll_options && data.poll_options.length >= 2) {
+      const expiresAt = data.poll_expires_hours 
+        ? new Date(Date.now() + data.poll_expires_hours * 60 * 60 * 1000)
+        : null;
+
+      await prisma.poll.create({
+        data: {
+          postId: post.id,
+          expires_at: expiresAt,
+          options: {
+            create: data.poll_options.map((text, index) => ({
+              text,
+              position: index,
+            })),
+          },
+        },
+      });
+    }
 
     return {
       ...post,

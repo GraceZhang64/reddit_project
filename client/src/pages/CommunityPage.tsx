@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
-import CreatePostForm from '../components/CreatePostForm';
+import CreatePostForm, { PostData } from '../components/CreatePostForm';
 import { Post, Community } from '../types';
 import { communitiesApi, postsApi } from '../services/api';
 import './CommunityPage.css';
@@ -194,15 +194,11 @@ function CommunityPage() {
     }
   };
 
-  const handleCreatePost = async (title: string, body: string) => {
+  const handleCreatePost = async (postData: PostData) => {
     if (!community) return;
     
     try {
-      await postsApi.create({
-        title,
-        body,
-        community_id: community.id,
-      });
+      await postsApi.create(postData);
       
       // Refresh posts
       await fetchCommunityData();

@@ -20,6 +20,7 @@ model User {
   communities Community[]
   posts       Post[]
   votes       Vote[]
+  pollVotes   PollVote[]
 
   @@index([email], map: "idx_users_email")
   @@index([username], map: "idx_users_username")
@@ -42,12 +43,28 @@ model Community {
   @@map("communities")
 }
 
+enum PostType {
+  text
+  link
+  image
+  video
+  poll
+  crosspost
+
+  @@map("post_type")
+}
+
 model Post {
   id                        Int                      @id @default(autoincrement())
   slug                      String?                  @unique
   title                     String
   body                      String?
+  post_type                 PostType                 @default(text)
+  link_url                  String?
   image_url                 String?
+  video_url                 String?
+  media_urls                String[]                 @default([])
+  crosspost_id              Int?                     @map("crosspost_id")
   authorId                  String                   @map("author_id") @db.Uuid
   communityId               Int                      @map("community_id")
   ai_summary                String?
@@ -57,8 +74,11 @@ model Post {
   updated_at                DateTime?                @default(now()) @db.Timestamptz(6)
   search_vector             Unsupported("tsvector")?
   comments                  Comment[]
+  polls                     Poll[]
   author                    User                     @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   community                 Community                @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  crosspost                 Post?                    @relation("Crossposts", fields: [crosspost_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  crossposts                Post[]                   @relation("Crossposts")
 
   @@index([authorId], map: "idx_posts_author")
   @@index([communityId], map: "idx_posts_community")
@@ -66,7 +86,47 @@ model Post {
   @@index([createdAt(sort: Desc)], map: "idx_posts_created_at")
   @@index([search_vector], map: "idx_posts_search", type: Gin)
   @@index([slug], map: "idx_posts_slug")
+  @@index([post_type], map: "idx_posts_type")
+  @@index([crosspost_id], map: "idx_posts_crosspost")
   @@map("posts")
+}
+
+model Poll {
+  id           Int          @id @default(autoincrement())
+  postId       Int          @map("post_id")
+  expires_at   DateTime?    @db.Timestamptz(6)
+  createdAt    DateTime?    @default(now()) @map("created_at") @db.Timestamptz(6)
+  post         Post         @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  options      PollOption[]
+
+  @@index([postId], map: "idx_polls_post")
+  @@map("polls")
+}
+
+model PollOption {
+  id        Int        @id @default(autoincrement())
+  pollId    Int        @map("poll_id")
+  text      String
+  position  Int        @default(0)
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  votes     PollVote[]
+
+  @@index([pollId], map: "idx_poll_options_poll")
+  @@map("poll_options")
+}
+
+model PollVote {
+  id           Int        @id @default(autoincrement())
+  userId       String     @map("user_id") @db.Uuid
+  optionId     Int        @map("option_id")
+  createdAt    DateTime?  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  option       PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, optionId])
+  @@index([userId], map: "idx_poll_votes_user")
+  @@index([optionId], map: "idx_poll_votes_option")
+  @@map("poll_votes")
 }
 
 model Comment {

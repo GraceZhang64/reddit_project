@@ -218,30 +218,91 @@ router.get('/:idOrSlug', optionalAuth, async (req: Request, res: Response) => {
 
 /**
  * POST /api/posts
- * Create a new post
+ * Create a new post (supports text, link, image, video, poll, crosspost)
  */
 router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { title, body, image_url, community_id } = req.body;
+    const { 
+      title, 
+      body, 
+      post_type = 'text',
+      link_url, 
+      image_url, 
+      video_url,
+      media_urls,
+      community_id,
+      poll_options,
+      poll_expires_hours,
+      crosspost_id
+    } = req.body;
 
+    // Validation
     if (!title || !community_id) {
       return res.status(400).json({ error: 'Title and community_id are required' });
+    }
+
+    // Validate post type
+    const validTypes = ['text', 'link', 'image', 'video', 'poll', 'crosspost'];
+    if (!validTypes.includes(post_type)) {
+      return res.status(400).json({ error: 'Invalid post_type' });
+    }
+
+    // Type-specific validation
+    if (post_type === 'link' && !link_url) {
+      return res.status(400).json({ error: 'link_url is required for link posts' });
+    }
+    if (post_type === 'image' && !image_url && (!media_urls || media_urls.length === 0)) {
+      return res.status(400).json({ error: 'image_url or media_urls is required for image posts' });
+    }
+    if (post_type === 'video' && !video_url) {
+      return res.status(400).json({ error: 'video_url is required for video posts' });
+    }
+    if (post_type === 'poll' && (!poll_options || poll_options.length < 2)) {
+      return res.status(400).json({ error: 'At least 2 poll options are required for poll posts' });
+    }
+    if (post_type === 'crosspost' && !crosspost_id) {
+      return res.status(400).json({ error: 'crosspost_id is required for crosspost posts' });
+    }
+
+    // URL validation
+    if (link_url && !isValidUrl(link_url)) {
+      return res.status(400).json({ error: 'Invalid link_url format' });
+    }
+    if (video_url && !isValidUrl(video_url)) {
+      return res.status(400).json({ error: 'Invalid video_url format' });
     }
 
     const post = await postService.createPost({
       title,
       body: body || null,
+      post_type,
+      link_url: link_url || null,
       image_url: image_url || null,
+      video_url: video_url || null,
+      media_urls: media_urls || [],
+      crosspost_id: crosspost_id ? parseInt(crosspost_id) : null,
       community_id: parseInt(community_id),
       author_id: req.user!.id,
+      poll_options: poll_options || null,
+      poll_expires_hours: poll_expires_hours || null,
     });
 
     res.status(201).json(post);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating post:', error);
-    res.status(500).json({ error: 'Failed to create post' });
+    res.status(500).json({ error: error.message || 'Failed to create post' });
   }
 });
+
+// URL validation helper
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * PUT /api/posts/:id
