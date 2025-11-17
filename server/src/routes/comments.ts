@@ -6,6 +6,117 @@ const router = Router();
 const prisma = new PrismaClient();
 
 /**
+ * GET /api/comments/search
+ * Search comments by keyword
+ */
+router.get('/search', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const query = req.query.q as string;
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    // Search comments using ILIKE for case-insensitive search
+    const comments = await prisma.comment.findMany({
+      where: {
+        body: {
+          contains: query,
+          mode: 'insensitive'
+        }
+      },
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true
+          }
+        },
+        post: {
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            community: {
+              select: {
+                id: true,
+                name: true,
+                slug: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Get vote counts for each comment
+    const commentsWithVotes = await Promise.all(
+      comments.map(async (comment) => {
+        const voteCount = await prisma.vote.aggregate({
+          where: {
+            target_type: 'comment',
+            target_id: comment.id
+          },
+          _sum: {
+            value: true
+          }
+        });
+
+        let userVote = null;
+        if (req.user) {
+          const vote = await prisma.vote.findUnique({
+            where: {
+              userId_target_type_target_id: {
+                userId: req.user.id,
+                target_type: 'comment',
+                target_id: comment.id
+              }
+            }
+          });
+          userVote = vote ? vote.value : null;
+        }
+
+        return {
+          ...comment,
+          vote_count: voteCount._sum.value || 0,
+          user_vote: userVote
+        };
+      })
+    );
+
+    // Get total count for pagination
+    const total = await prisma.comment.count({
+      where: {
+        body: {
+          contains: query,
+          mode: 'insensitive'
+        }
+      }
+    });
+
+    res.json({
+      comments: commentsWithVotes,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error searching comments:', error);
+    res.status(500).json({ error: 'Failed to search comments' });
+  }
+});
+
+/**
  * GET /api/comments/post/:postId
  * Get all comments for a post
  */

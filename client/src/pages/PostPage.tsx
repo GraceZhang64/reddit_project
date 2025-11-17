@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
 import CommentItem from '../components/CommentItem';
-import SearchBar from '../components/SearchBar';
 import { Post, Comment } from '../types';
 import { commentsApi, postsApi } from '../services/api';
 import './PostPage.css';
@@ -17,8 +16,6 @@ function PostPage() {
   const navigate = useNavigate();
   const [post, setPost] = useState<PostWithSummary | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [userVote, setUserVote] = useState<number>(0);
   const [commentBody, setCommentBody] = useState('');
   const [loading, setLoading] = useState(true);
@@ -35,67 +32,48 @@ function PostPage() {
       setLoadingSummary(true);
       
       try {
-        // Support both numeric IDs and slugs
-        const postId = parseInt(id!);
-        const isNumericId = !isNaN(postId);
-
         let data;
         try {
           // Try to fetch post with AI summary (works with both ID and slug)
-          if (isNumericId) {
-            data = await postsApi.getWithSummary(postId);
-          } else {
-            // Use slug directly
-            const response = await fetch(`/api/posts/${id}/summary`);
-            if (!response.ok) throw new Error('Failed to fetch');
-            data = await response.json();
-          }
+          data = await postsApi.getWithSummaryByIdOrSlug(id!);
           setLoadingSummary(false);
         } catch (summaryErr) {
           console.log('AI summary endpoint failed, fetching without summary...');
           // Fallback to regular post endpoint
-          if (isNumericId) {
-            data = await postsApi.getById(postId);
-          } else {
-            const response = await fetch(`/api/posts/${id}`);
-            if (!response.ok) throw new Error('Failed to fetch');
-            data = await response.json();
-          }
+          data = await postsApi.getByIdOrSlug(id!);
           setLoadingSummary(false);
         }
 
         // Transform post data - backend returns nested objects
+        const apiData = data as any; // Type assertion to handle API response
         const transformedPost: PostWithSummary = {
-          id: data.id,
-          slug: data.slug || undefined,
-          title: data.title,
-          body: data.body || undefined,
-          author: data.author?.username || 'Unknown',
-          communityId: data.community?.id || 0,
-          communityName: data.community?.name || 'General',
-          communitySlug: data.community?.slug,
-          voteCount: data.voteCount || data.vote_count || 0,
-          commentCount: data.commentCount || data.comment_count || 0,
-          createdAt: data.createdAt || data.created_at,
-          summary: data.ai_summary,
+          id: apiData.id,
+          slug: apiData.slug || undefined,
+          title: apiData.title,
+          body: apiData.body || undefined,
+          author: apiData.author?.username || 'Unknown',
+          communityId: apiData.community?.id || apiData.communityId || 0,
+          communityName: apiData.community?.name || apiData.communityName || 'General',
+          communitySlug: apiData.community?.slug || apiData.communitySlug,
+          voteCount: apiData.voteCount || apiData.vote_count || 0,
+          commentCount: apiData.commentCount || apiData.comment_count || 0,
+          createdAt: apiData.createdAt || apiData.created_at,
+          summary: apiData.ai_summary || undefined,
         };
         
-        // Recursive function to map comments and their nested replies
-        const mapComment = (c: any): Comment => ({
-          id: c.id,
-          body: c.body,
-          author: c.author?.username || 'Unknown',
-          postId: c.postId || c.post_id,
-          parentCommentId: c.parentCommentId || c.parent_comment_id,
-          voteCount: c.vote_count || 0,
-          createdAt: c.createdAt || c.created_at,
-          replies: (c.replies || []).map(mapComment), // Recursively map replies
-        });
-
         // Map comments from backend format
         let commentsData: Comment[] = [];
-        if (data.comments && Array.isArray(data.comments)) {
-          commentsData = data.comments.map(mapComment);
+        if (apiData.comments && Array.isArray(apiData.comments)) {
+          commentsData = apiData.comments.map((c: any) => ({
+            id: c.id,
+            body: c.body,
+            author: c.author?.username || 'Unknown',
+            postId: c.postId || c.post_id,
+            parentCommentId: c.parentCommentId || c.parent_comment_id,
+            voteCount: c.vote_count || 0,
+            createdAt: c.createdAt || c.created_at,
+            replies: c.replies || [],
+          }));
         }
         
         setPost(transformedPost);
@@ -115,27 +93,6 @@ function PostPage() {
     fetchPost();
   }, [id]);
 
-  // Filter comments based on search query
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredComments(comments);
-      return;
-    }
-
-    const query = searchQuery.toLowerCase();
-    const keywords = query.split(/\s+/).filter(k => k.length > 0);
-
-    const filtered = comments.filter((comment) => {
-      const bodyLower = (comment.body || '').toLowerCase();
-      const authorLower = (comment.author || '').toLowerCase();
-      const searchText = `${bodyLower} ${authorLower}`;
-
-      return keywords.some(keyword => searchText.includes(keyword));
-    });
-
-    setFilteredComments(filtered);
-  }, [searchQuery, comments]);
-
   const handleVote = async (value: number) => {
     if (!post) return;
     const oldVote = userVote;
@@ -144,7 +101,7 @@ function PostPage() {
     
     // Optimistic update
     setUserVote(newVote);
-    setPost({ ...post, voteCount: post.voteCount + voteDiff });
+    setPost({ ...post, voteCount: (post.voteCount || 0) + voteDiff });
 
     try {
       const { votesApi } = await import('../services/api');
@@ -162,7 +119,7 @@ function PostPage() {
       console.error('Error voting:', err);
       // Revert on error
       setUserVote(oldVote);
-      setPost({ ...post, voteCount: post.voteCount - voteDiff });
+      setPost({ ...post, voteCount: (post.voteCount || 0) - voteDiff });
       alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
     }
   };
@@ -179,22 +136,17 @@ function PostPage() {
 
       // Refresh comments after reply to show the new reply
       const result = await commentsApi.getByPost(post.id);
-      
-      // Recursive function to map comments with nested replies
-      const mapComment = (c: any): Comment => ({
+      const transformedComments = (result.comments || []).map((c: any) => ({
         id: c.id,
         body: c.body,
         author: c.author?.username || 'Unknown',
-        postId: c.postId || c.post_id,
-        parentCommentId: c.parentCommentId || c.parent_comment_id,
+        postId: c.postId,
+        parentCommentId: c.parentCommentId,
         voteCount: c.vote_count || 0,
-        createdAt: c.createdAt || c.created_at,
-        replies: (c.replies || []).map(mapComment), // Recursively map replies
-      });
-
-      const mappedComments = (result.comments || []).map(mapComment);
-      setComments(mappedComments);
-      setPost({ ...post, commentCount: post.commentCount + 1 });
+        createdAt: c.createdAt,
+        replies: c.replies || [],
+      }));
+      setComments(transformedComments);
     } catch (err: any) {
       console.error('Error posting reply:', err);
       alert(err.response?.data?.error || 'Failed to post reply. Please make sure you are logged in.');
@@ -206,32 +158,27 @@ function PostPage() {
     if (!post || !commentBody.trim()) return;
     
     try {
-      const newComment = await commentsApi.create({
+      await commentsApi.create({
         postId: post.id,
         body: commentBody.trim(),
         parentCommentId: undefined, // Top-level comment
       });
 
-      // Optimistically add the new comment to the list
-      const transformedComment = {
-        id: newComment.id,
-        body: newComment.body,
-        author: newComment.author?.username || 'You',
-        postId: post.id,
-        parentCommentId: null,
-        voteCount: 0,
-        createdAt: newComment.createdAt || new Date().toISOString(),
-        replies: [],
-      };
-
-      setComments([transformedComment, ...comments]);
+      // Refresh comments to show the new comment
+      const result = await commentsApi.getByPost(post.id);
+      const transformedComments = (result.comments || []).map((c: any) => ({
+        id: c.id,
+        body: c.body,
+        author: c.author?.username || 'Unknown',
+        postId: c.postId,
+        parentCommentId: c.parentCommentId,
+        voteCount: c.vote_count || 0,
+        createdAt: c.createdAt,
+        replies: c.replies || [],
+      }));
+      setComments(transformedComments);
       setPost({ ...post, commentCount: post.commentCount + 1 });
       setCommentBody('');
-
-      // Refresh in background to get accurate data
-      commentsApi.getByPost(post.id).then((result) => {
-        setComments(result.comments || []);
-      }).catch(console.error);
     } catch (err: any) {
       console.error('Error posting comment:', err);
       alert(err.response?.data?.error || 'Failed to post comment. Please make sure you are logged in.');
@@ -277,7 +224,7 @@ function PostPage() {
 
         <div className="post-detail">
           <VoteButtons
-            voteCount={post.voteCount}
+            voteCount={post.voteCount || 0}
             onUpvote={() => handleVote(1)}
             onDownvote={() => handleVote(-1)}
             userVote={userVote}
@@ -361,69 +308,11 @@ function PostPage() {
             </div>
           </form>
 
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search comments by keywords, content, or author..."
-            resultCount={searchQuery ? filteredComments.length : undefined}
-          />
-
           <div className="comments-list">
-            {filteredComments.length > 0 ? (
-              filteredComments.map((comment) => (
-                <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
-              ))
-            ) : searchQuery ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                <p>No comments found matching "{searchQuery}"</p>
-                <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Try different keywords</p>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                <p>No comments yet. Be the first to comment!</p>
-              </div>
-            )}
+            {comments.map((comment) => (
+              <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
+            ))}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CommentCard({ comment }: { comment: Comment }) {
-  const [userVote, setUserVote] = useState(0);
-  const [voteCount, setVoteCount] = useState(comment.voteCount);
-
-  const handleVote = (value: number) => {
-    const oldVote = userVote;
-    const newVote = oldVote === value ? 0 : value;
-    const voteDiff = newVote - oldVote;
-    
-    setUserVote(newVote);
-    setVoteCount(voteCount + voteDiff);
-  };
-
-  return (
-    <div className="comment-card">
-      <VoteButtons
-        voteCount={voteCount}
-        onUpvote={() => handleVote(1)}
-        onDownvote={() => handleVote(-1)}
-        userVote={userVote}
-      />
-      <div className="comment-content">
-        <div className="comment-header">
-          <span className="comment-author">u/{comment.author}</span>
-          <span className="separator">•</span>
-          <span className="comment-time">
-            {new Date(comment.createdAt).toLocaleString()}
-          </span>
-        </div>
-        <p className="comment-body">{comment.body}</p>
-        <div className="comment-actions-bar">
-          <button className="comment-action">Reply</button>
-          <button className="comment-action">Share</button>
-          <button className="comment-action">Report</button>
         </div>
       </div>
     </div>
