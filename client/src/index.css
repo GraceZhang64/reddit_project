@@ -1,5 +1,5 @@
 :root {
-  /* BlueIt Color Palette */
+  /* BlueIt Color Palette - Light Mode */
   --blueit-primary: #4A90E2;
   --blueit-primary-dark: #357ABD;
   --blueit-primary-light: #6BA3E8;
@@ -12,10 +12,46 @@
   --blueit-text-secondary: #5A6C7D;
   --blueit-text-muted: #8A9BA8;
   --blueit-hover: #EAF3FF;
-  --blueit-error: #E74C3C;
+  /* Replaced red error color with blue variant per request */
+  --blueit-error: #357ABD;
   --blueit-success: #27AE60;
   --blueit-warning: #F39C12;
   
+  /* Additional variables */
+  --blueit-background: #F8FBFF;
+  --blueit-card-background: #FFFFFF;
+  --blueit-text-primary: #2C3E50;
+  --blueit-input-bg: #FFFFFF;
+  --blueit-shadow: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+  /* BlueIt Color Palette - Dark Mode */
+  --blueit-primary: #5BA3F5;
+  --blueit-primary-dark: #4A90E2;
+  --blueit-primary-light: #7FB3FF;
+  --blueit-secondary: #4A90E2;
+  --blueit-accent: #6BA3E8;
+  --blueit-bg: #0F1419;
+  --blueit-card-bg: #16191E;
+  --blueit-border: #2F3336;
+  --blueit-text: #E7E9EA;
+  --blueit-text-secondary: #A8B3BD;
+  --blueit-text-muted: #6E767D;
+  --blueit-hover: #1C2025;
+  --blueit-error: #5BA3F5;
+  --blueit-success: #27AE60;
+  --blueit-warning: #F39C12;
+  
+  /* Additional variables */
+  --blueit-background: #0F1419;
+  --blueit-card-background: #16191E;
+  --blueit-text-primary: #E7E9EA;
+  --blueit-input-bg: #1C2025;
+  --blueit-shadow: rgba(255, 255, 255, 0.05);
+}
+
+html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -120,7 +156,7 @@ input, textarea, select {
   border: 2px solid var(--blueit-border);
   border-radius: 8px;
   padding: 0.6em 1em;
-  background-color: white;
+  background-color: var(--blueit-input-bg);
   color: var(--blueit-text);
   transition: all 0.2s ease;
 }

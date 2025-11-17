@@ -63,19 +63,22 @@ function PostPage() {
           summary: apiData.ai_summary || undefined,
         };
         
-        // Map comments from backend format
+        // Recursive mapper for comments (handles nested replies)
+        const mapApiComment = (c: any): Comment => ({
+          id: c.id,
+          body: c.body,
+          author: c.author?.username || 'Unknown',
+          postId: c.postId || c.post_id,
+          parentCommentId: c.parentCommentId || c.parent_comment_id,
+          voteCount: c.vote_count || 0,
+          createdAt: c.createdAt || c.created_at,
+          replies: Array.isArray(c.replies) ? c.replies.map(mapApiComment) : [],
+        });
+
+        // Map comments from backend format (with nested replies)
         let commentsData: Comment[] = [];
         if (apiData.comments && Array.isArray(apiData.comments)) {
-          commentsData = apiData.comments.map((c: any) => ({
-            id: c.id,
-            body: c.body,
-            author: c.author?.username || 'Unknown',
-            postId: c.postId || c.post_id,
-            parentCommentId: c.parentCommentId || c.parent_comment_id,
-            voteCount: c.vote_count || 0,
-            createdAt: c.createdAt || c.created_at,
-            replies: c.replies || [],
-          }));
+          commentsData = apiData.comments.map(mapApiComment);
         }
         
         setPost(transformedPost);
@@ -138,7 +141,7 @@ function PostPage() {
 
       // Refresh comments after reply to show the new reply
       const result = await commentsApi.getByPost(post.id);
-      const transformedComments = (result.comments || []).map((c: any) => ({
+      const mapApiComment = (c: any): Comment => ({
         id: c.id,
         body: c.body,
         author: c.author?.username || 'Unknown',
@@ -146,9 +149,9 @@ function PostPage() {
         parentCommentId: c.parentCommentId,
         voteCount: c.vote_count || 0,
         createdAt: c.createdAt,
-        replies: c.replies || [],
-      }));
-      setComments(transformedComments);
+        replies: Array.isArray(c.replies) ? c.replies.map(mapApiComment) : [],
+      });
+      setComments((result.comments || []).map(mapApiComment));
     } catch (err: any) {
       console.error('Error posting reply:', err);
       alert(err.response?.data?.error || 'Failed to post reply. Please make sure you are logged in.');
@@ -168,7 +171,7 @@ function PostPage() {
 
       // Refresh comments to show the new comment
       const result = await commentsApi.getByPost(post.id);
-      const transformedComments = (result.comments || []).map((c: any) => ({
+      const mapApiComment = (c: any): Comment => ({
         id: c.id,
         body: c.body,
         author: c.author?.username || 'Unknown',
@@ -176,9 +179,9 @@ function PostPage() {
         parentCommentId: c.parentCommentId,
         voteCount: c.vote_count || 0,
         createdAt: c.createdAt,
-        replies: c.replies || [],
-      }));
-      setComments(transformedComments);
+        replies: Array.isArray(c.replies) ? c.replies.map(mapApiComment) : [],
+      });
+      setComments((result.comments || []).map(mapApiComment));
       setPost({ ...post, commentCount: post.commentCount + 1 });
       setCommentBody('');
     } catch (err: any) {
@@ -206,7 +209,7 @@ function PostPage() {
           <button className="back-button" onClick={() => navigate(-1)}>
             ← Back
           </button>
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#ff4500' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--blueit-primary)' }}>
             <p>{error || 'Post not found'}</p>
             <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
               Make sure your backend server is running on port 5000 and you have added your OpenAI API key.

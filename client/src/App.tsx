@@ -1,15 +1,18 @@
 import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { authService } from './services/auth';
+import { useTheme } from './context/ThemeContext';
 import HomePage from './pages/HomePage';
 import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityPage from './pages/CommunityPage';
 import PostPage from './pages/PostPage';
 import SearchPage from './pages/SearchPage';
 import AuthPage from './pages/AuthPage';
+import SettingsPage from './pages/SettingsPage';
 import './App.css';
 
 function App() {
+  const { theme, toggleTheme } = useTheme();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +74,10 @@ function App() {
                 <Link to="/search" className="nav-link">🔍 Search</Link>
               </div>
               <div className="nav-actions">
+                <button onClick={toggleTheme} className="theme-toggle" title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
+                  {theme === 'light' ? '🌙' : '☀️'}
+                </button>
+                <Link to="/settings" className="nav-link">Settings</Link>
                 <span className="username">u/{username}</span>
                 <button onClick={handleLogout} className="logout-btn">
                   Logout
@@ -101,6 +108,10 @@ function App() {
           <Route
             path="/search"
             element={isAuthenticated ? <SearchPage /> : <Navigate to="/auth" />}
+          />
+          <Route
+            path="/settings"
+            element={isAuthenticated ? <SettingsPage /> : <Navigate to="/auth" />}
           />
         </Routes>
       </div>

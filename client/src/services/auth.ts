@@ -182,6 +182,25 @@ class AuthService {
       }
     );
   }
+
+  // Update email (server-driven)
+  async updateEmail(newEmail: string): Promise<{ message: string; user: Partial<User> }> {
+    const response = await axios.post<{ message: string; user: Partial<User> }>(`${API_URL}/update-email`, { newEmail });
+    // Update cached user
+    const stored = this.getUser();
+    if (stored) {
+      const updated = { ...stored, email: response.data.user.email as string };
+      const storage = localStorage.getItem('access_token') ? localStorage : sessionStorage;
+      storage.setItem('user', JSON.stringify(updated));
+    }
+    return response.data;
+  }
+
+  // Update password (server-driven)
+  async updatePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    const response = await axios.post<{ message: string }>(`${API_URL}/update-password`, { currentPassword, newPassword });
+    return response.data;
+  }
 }
 
 export const authService = new AuthService();

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { getSupabaseClient } from '../config/supabase';
+import { getSupabaseClient, getSupabaseAdminClient } from '../config/supabase';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -268,4 +269,98 @@ router.get('/me', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+/**
+ * POST /api/auth/update-email
+ * Update current user's email (requires SUPABASE_SERVICE_ROLE_KEY)
+ */
+router.post('/update-email', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { newEmail } = req.body as { newEmail?: string };
+    const userId = req.user!.id;
+
+    if (!newEmail || !/^\S+@\S+\.\S+$/.test(newEmail)) {
+      return res.status(400).json({ error: 'Valid newEmail is required' });
+    }
+
+    // Validate uniqueness in local DB to provide clearer error
+    const prisma = new PrismaClient();
+    const existing = await prisma.user.findUnique({ where: { email: newEmail } });
+    if (existing && existing.id !== userId) {
+      return res.status(400).json({ error: 'Email already in use' });
+    }
+
+    // Admin client required
+    let admin;
+    try {
+      admin = getSupabaseAdminClient();
+    } catch (e: any) {
+      return res.status(500).json({ error: 'Server not configured for credential updates' });
+    }
+
+    const { error } = await admin.auth.admin.updateUserById(userId, { email: newEmail });
+    if (error) {
+      return res.status(400).json({ error: error.message || 'Failed to update email' });
+    }
+
+    // Reflect in our DB
+    const updated = await prisma.user.update({ where: { id: userId }, data: { email: newEmail } });
+
+    res.json({ message: 'Email updated', user: { id: updated.id, email: updated.email } });
+  } catch (error) {
+    console.error('Update email error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/auth/update-password
+ * Update current user's password (requires SUPABASE_SERVICE_ROLE_KEY)
+ */
+router.post('/update-password', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+    const userId = req.user!.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'currentPassword and newPassword are required' });
+    }
+
+    // Basic strength check
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ error: 'Password must be 8+ chars with upper, lower, and number' });
+    }
+
+    const prisma = new PrismaClient();
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password by attempting sign-in
+    const supabase = getSupabaseClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword });
+    if (signInError) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Update via admin
+    let admin;
+    try {
+      admin = getSupabaseAdminClient();
+    } catch (e: any) {
+      return res.status(500).json({ error: 'Server not configured for credential updates' });
+    }
+
+    const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword });
+    if (error) {
+      return res.status(400).json({ error: error.message || 'Failed to update password' });
+    }
+
+    res.json({ message: 'Password updated' });
+  } catch (error) {
+    console.error('Update password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
