@@ -12,7 +12,8 @@
   --blueit-text-secondary: #5A6C7D;
   --blueit-text-muted: #8A9BA8;
   --blueit-hover: #EAF3FF;
-  --blueit-error: #E74C3C;
+  /* Replaced red error color with blue variant per request */
+  --blueit-error: #357ABD;
   --blueit-success: #27AE60;
   --blueit-warning: #F39C12;
   

@@ -31,7 +31,7 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: #ff4500;
+  background: var(--blueit-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,7 +71,7 @@
 }
 
 .join-toggle-button.not-joined {
-  background: #ff4500;
+  background: var(--blueit-primary);
   color: white;
 }
 
@@ -86,8 +86,8 @@
 }
 
 .join-toggle-button.joined:hover {
-  border-color: #ff4500;
-  color: #ff4500;
+  border-color: var(--blueit-primary);
+  color: var(--blueit-primary);
   background: #fff;
 }
 
@@ -126,7 +126,7 @@
 
 .create-post-button {
   padding: 0.5rem 1.5rem;
-  background: #ff4500;
+  background: var(--blueit-primary);
   color: white;
   border: none;
   border-radius: 24px;
@@ -202,7 +202,7 @@
 .create-post-button-full {
   width: 100%;
   padding: 0.5rem 1.5rem;
-  background: #ff4500;
+  background: var(--blueit-primary);
   color: white;
   border: none;
   border-radius: 24px;
