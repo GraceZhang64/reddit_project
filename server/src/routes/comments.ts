@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * GET /api/comments/search
@@ -137,9 +136,13 @@ router.get('/post/:postId', authenticateToken, async (req: Request, res: Respons
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    // Get ALL comments for the post (both top-level and replies)
-    const allComments = await prisma.comment.findMany({
-      where: { postId },
+    // Get top-level comments first (limit to 10 for performance)
+    const topLevelCommentsQuery = await prisma.comment.findMany({
+      where: { 
+        postId,
+        parentCommentId: null
+      },
+      take: 10,
       orderBy: { createdAt: 'desc' },
       include: {
         author: {
@@ -152,37 +155,66 @@ router.get('/post/:postId', authenticateToken, async (req: Request, res: Respons
       }
     });
 
-    // Helper function to get vote data for a comment
-    const getCommentVoteData = async (commentId: number) => {
-      const voteCount = await prisma.vote.aggregate({
+    // Get all comment IDs (top-level + their replies)
+    const topLevelCommentIds = topLevelCommentsQuery.map(c => c.id);
+    
+    // Get all replies for these top-level comments
+    const replies = await prisma.comment.findMany({
+      where: {
+        postId,
+        parentCommentId: { in: topLevelCommentIds }
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true
+          }
+        }
+      }
+    });
+
+    const allComments = [...topLevelCommentsQuery, ...replies];
+    const commentIds = allComments.map(c => c.id);
+
+    // Batch fetch all vote counts in a single query (only if there are comments)
+    const voteCounts = commentIds.length > 0 ? await prisma.vote.groupBy({
+      by: ['target_id'],
+      where: {
+        target_type: 'comment',
+        target_id: { in: commentIds }
+      },
+      _sum: {
+        value: true
+      }
+    }) : [];
+
+    // Create a map of commentId -> voteCount
+    const voteCountMap = new Map<number, number>();
+    voteCounts.forEach(vc => {
+      voteCountMap.set(vc.target_id, vc._sum.value || 0);
+    });
+
+    // Batch fetch all user votes in a single query (only if there are comments)
+    let userVoteMap = new Map<number, number | null>();
+    if (req.user && commentIds.length > 0) {
+      const userVotes = await prisma.vote.findMany({
         where: {
+          userId: req.user.id,
           target_type: 'comment',
-          target_id: commentId
+          target_id: { in: commentIds }
         },
-        _sum: {
+        select: {
+          target_id: true,
           value: true
         }
       });
-
-      let userVote = null;
-      if (req.user) {
-        const vote = await prisma.vote.findUnique({
-          where: {
-            userId_target_type_target_id: {
-              userId: req.user.id,
-              target_type: 'comment',
-              target_id: commentId
-            }
-          }
-        });
-        userVote = vote ? vote.value : null;
-      }
-
-      return {
-        vote_count: voteCount._sum.value || 0,
-        user_vote: userVote
-      };
-    };
+      userVotes.forEach(vote => {
+        userVoteMap.set(vote.target_id, vote.value);
+      });
+    }
 
     // Build nested comment structure
     const commentsMap = new Map();
@@ -190,10 +222,10 @@ router.get('/post/:postId', authenticateToken, async (req: Request, res: Respons
 
     // First pass: Create a map of all comments with their vote data
     for (const comment of allComments) {
-      const voteData = await getCommentVoteData(comment.id);
       commentsMap.set(comment.id, {
         ...comment,
-        ...voteData,
+        vote_count: voteCountMap.get(comment.id) || 0,
+        user_vote: userVoteMap.get(comment.id) || null,
         post_id: comment.postId,
         parent_comment_id: comment.parentCommentId,
         created_at: comment.createdAt,

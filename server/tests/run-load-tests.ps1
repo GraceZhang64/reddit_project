@@ -18,8 +18,8 @@ try {
 
 # Check for required environment variables
 if (-not $env:BASE_URL) {
-    Write-Host "⚠️  BASE_URL not set, using default: http://localhost:3001" -ForegroundColor Yellow
-    $env:BASE_URL = "http://localhost:3001"
+    Write-Host "⚠️  BASE_URL not set, using default: http://localhost:5000" -ForegroundColor Yellow
+    $env:BASE_URL = "http://localhost:5000"
 }
 
 if (-not $env:AUTH_TOKEN) {

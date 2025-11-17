@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { getSupabaseClient } from '../config/supabase';
-
-const prisma = new PrismaClient();
 
 interface PaginationParams {
   page: number;
@@ -383,20 +381,6 @@ export const postService = {
             description: true,
           },
         },
-        comments: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                username: true,
-                avatar_url: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
       },
     });
 
@@ -404,22 +388,105 @@ export const postService = {
       return null;
     }
 
-    const voteCount = await getVoteCount('post', post.id);
-    const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
+    // Get top-level comments first (limit to 10 for performance)
+    const topLevelCommentsQuery = await prisma.comment.findMany({
+      where: { 
+        postId,
+        parentCommentId: null
+      },
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
+      },
+    });
 
-    // Build nested comment structure (same as comments endpoint)
+    // Get all comment IDs (top-level + their replies)
+    const topLevelCommentIds = topLevelCommentsQuery.map(c => c.id);
+    
+    // Get all replies for these top-level comments
+    const replies = await prisma.comment.findMany({
+      where: {
+        postId,
+        parentCommentId: { in: topLevelCommentIds }
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
+      },
+    });
+
+    const allComments = [...topLevelCommentsQuery, ...replies];
+    const commentIds = allComments.map(c => c.id);
+
+    // Parallelize: Fetch post vote data and comment vote data simultaneously
+    const [postVoteData, commentVoteCounts, userVotes] = await Promise.all([
+      // Post vote count and user vote
+      Promise.all([
+        getVoteCount('post', post.id),
+        userId ? getUserVote(userId, 'post', post.id) : Promise.resolve(null)
+      ]),
+      // Comment vote counts (batch)
+      commentIds.length > 0 ? prisma.vote.groupBy({
+        by: ['target_id'],
+        where: {
+          target_type: 'comment',
+          target_id: { in: commentIds }
+        },
+        _sum: {
+          value: true
+        }
+      }) : Promise.resolve([]),
+      // User votes for comments (batch)
+      userId && commentIds.length > 0 ? prisma.vote.findMany({
+        where: {
+          userId: userId,
+          target_type: 'comment',
+          target_id: { in: commentIds }
+        },
+        select: {
+          target_id: true,
+          value: true
+        }
+      }) : Promise.resolve([])
+    ]);
+
+    const [voteCount, userVote] = postVoteData;
+
+    // Create a map of commentId -> voteCount
+    const voteCountMap = new Map<number, number>();
+    commentVoteCounts.forEach(vc => {
+      voteCountMap.set(vc.target_id, vc._sum.value || 0);
+    });
+
+    // Create a map of commentId -> userVote
+    const userVoteMap = new Map<number, number | null>();
+    userVotes.forEach(vote => {
+      userVoteMap.set(vote.target_id, vote.value);
+    });
+
+    // Build nested comment structure
     const commentsMap = new Map();
     const topLevelComments: any[] = [];
 
-    // First pass: Get vote data for all comments
-    for (const comment of post.comments) {
-      const commentVoteCount = await getVoteCount('comment', comment.id);
-      const commentUserVote = userId ? await getUserVote(userId, 'comment', comment.id) : null;
-      
+    // First pass: Create a map of all comments with their vote data
+    for (const comment of allComments) {
       commentsMap.set(comment.id, {
         ...comment,
-        vote_count: commentVoteCount,
-        user_vote: commentUserVote,
+        vote_count: voteCountMap.get(comment.id) || 0,
+        user_vote: userVoteMap.get(comment.id) || null,
         replies: []
       });
     }
@@ -441,11 +508,16 @@ export const postService = {
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
+    // Get total comment count for the post
+    const totalCommentCount = await prisma.comment.count({
+      where: { postId }
+    });
+
     return {
       ...post,
       vote_count: voteCount,
       user_vote: userVote,
-      comment_count: post.comments.length,
+      comment_count: totalCommentCount,
       comments: topLevelComments,
     };
   },

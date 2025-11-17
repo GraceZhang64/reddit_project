@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { getSupabaseClient, getSupabaseAdminClient } from '../config/supabase';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * POST /api/auth/register
@@ -284,7 +283,6 @@ router.post('/update-email', authenticateToken, async (req: Request, res: Respon
     }
 
     // Validate uniqueness in local DB to provide clearer error
-    const prisma = new PrismaClient();
     const existing = await prisma.user.findUnique({ where: { email: newEmail } });
     if (existing && existing.id !== userId) {
       return res.status(400).json({ error: 'Email already in use' });
@@ -331,7 +329,6 @@ router.post('/update-password', authenticateToken, async (req: Request, res: Res
       return res.status(400).json({ error: 'Password must be 8+ chars with upper, lower, and number' });
     }
 
-    const prisma = new PrismaClient();
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

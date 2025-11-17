@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middleware/auth';
 import { getSupabaseClient } from '../config/supabase';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * GET /api/users/:username

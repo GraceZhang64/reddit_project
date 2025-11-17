@@ -30,7 +30,7 @@ sudo apt-get install k6
 
 2. **Set Environment Variables:**
    ```bash
-   export BASE_URL=http://localhost:3001
+   export BASE_URL=http://localhost:5000
    export AUTH_TOKEN=your_token_here
    ```
 

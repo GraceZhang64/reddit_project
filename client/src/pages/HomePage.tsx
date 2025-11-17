@@ -256,7 +256,7 @@ function HomePage() {
                   </Link>
                 </>
               ) : (
-                <p>No posts found. Be the first to post!</p>
+              <p>No posts found. Be the first to post!</p>
               )}
             </div>
           ) : (

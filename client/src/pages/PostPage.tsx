@@ -24,27 +24,17 @@ function PostPage() {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch post data with AI summary
+  // Fetch post data (loads immediately, AI summary loads async)
   useEffect(() => {
     const fetchPost = async () => {
       if (!id) return;
       
       setLoading(true);
       setError(null);
-      setLoadingSummary(true);
       
       try {
-        let data;
-        try {
-          // Try to fetch post with AI summary (works with both ID and slug)
-          data = await postsApi.getWithSummaryByIdOrSlug(id!);
-          setLoadingSummary(false);
-        } catch (summaryErr) {
-          console.log('AI summary endpoint failed, fetching without summary...');
-          // Fallback to regular post endpoint
-          data = await postsApi.getByIdOrSlug(id!);
-          setLoadingSummary(false);
-        }
+        // Fetch post immediately (doesn't wait for AI summary)
+        const data = await postsApi.getByIdOrSlug(id!);
 
         // Transform post data - backend returns nested objects
         const apiData = data as any; // Type assertion to handle API response
@@ -83,20 +73,63 @@ function PostPage() {
         
         setPost(transformedPost);
         setComments(commentsData);
+        
+        // If no AI summary exists, set loading state and poll for it
+        if (!apiData.ai_summary) {
+          setLoadingSummary(true);
+          pollForAISummary(id!);
+        } else {
+          setLoadingSummary(false);
+        }
       } catch (err: any) {
         console.error('Error fetching post:', err);
         const errorMsg = err.response?.status === 404 
           ? 'Post not found. It may have been deleted or the ID is invalid.'
           : 'Failed to load post. Make sure the backend server is running.';
         setError(errorMsg);
+        setLoadingSummary(false);
       } finally {
         setLoading(false);
+      }
+    };
+
+    fetchPost();
+  }, [id]);
+
+  // Poll for AI summary when it's being generated
+  const pollForAISummary = async (postId: string) => {
+    let attempts = 0;
+    const maxAttempts = 30; // Poll for up to 30 seconds (30 attempts * 1 second)
+    
+    const poll = async () => {
+      try {
+        const data = await postsApi.getByIdOrSlug(postId);
+        const apiData = data as any;
+        
+        if (apiData.ai_summary) {
+          // Summary is ready, update the post
+          setPost(prev => prev ? { ...prev, summary: apiData.ai_summary } : null);
+          setLoadingSummary(false);
+          return;
+        }
+        
+        attempts++;
+        if (attempts < maxAttempts) {
+          // Poll again after 1 second
+          setTimeout(poll, 1000);
+        } else {
+          // Give up after max attempts
+          setLoadingSummary(false);
+        }
+      } catch (err) {
+        console.error('Error polling for AI summary:', err);
         setLoadingSummary(false);
       }
     };
     
-    fetchPost();
-  }, [id]);
+    // Start polling after 2 seconds (give AI service time to generate)
+    setTimeout(poll, 2000);
+  };
 
   const handleVote = async (value: number) => {
     if (!post) return;
@@ -267,33 +300,25 @@ function PostPage() {
             {/* Poll Widget for poll posts */}
             {post.post_type === 'poll' && <PollWidget postId={post.id} />}
             
-            {/* AI Summary Box */}
-            {post.summary ? (
-              <div className="ai-summary-box">
-                <div className="ai-summary-header">
-                  <span className="ai-icon">✨</span>
-                  <span className="ai-label">AI Summary</span>
-                  <span className="ai-badge">Powered by GPT-4o-mini</span>
-                </div>
-                <div className="ai-summary-content">
-                  <AISummaryContent content={post.summary} />
-                </div>
+            {/* AI Summary Box - Always shown */}
+            <div className="ai-summary-box">
+              <div className="ai-summary-header">
+                <span className="ai-icon">✨</span>
+                <span className="ai-label">AI Summary</span>
+                {post.summary && <span className="ai-badge">Powered by GPT-4o-mini</span>}
               </div>
-            ) : (
-              <div className="ai-summary-box">
-                <div className="ai-summary-header">
-                  <span className="ai-icon">✨</span>
-                  <span className="ai-label">AI Summary</span>
-                </div>
-                <div className="ai-summary-content">
+              <div className="ai-summary-content">
+                {post.summary ? (
+                  <AISummaryContent content={post.summary} />
+                ) : (
                   <p style={{ color: '#666', fontStyle: 'italic' }}>
                     {loadingSummary 
-                      ? 'Generating AI summary...' 
+                      ? 'Loading AI summary...' 
                       : 'AI summary not available. Make sure your OpenAI API key is configured.'}
                   </p>
-                </div>
+                )}
               </div>
-            )}
+            </div>
             
             <div className="post-actions">
               <button className="action-button">

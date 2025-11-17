@@ -3,6 +3,7 @@ import { postService } from '../services/postService';
 import { authenticateToken } from '../middleware/auth';
 import { getAIService } from '../services/aiService';
 import { getSupabaseClient } from '../config/supabase';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
@@ -153,8 +154,7 @@ router.get('/:idOrSlug/summary', authenticateToken, async (req: Request, res: Re
         summary = await aiService.generatePostSummary(postData);
         
         // Update the post with the new summary and current comment count
-        const { PrismaClient } = await import('@prisma/client');
-        const prisma = new PrismaClient();
+        const { prisma } = await import('../lib/prisma');
         try {
           // Use raw query since Prisma client may not be regenerated yet
           await prisma.$executeRaw`
@@ -209,12 +209,89 @@ router.get('/:idOrSlug', authenticateToken, async (req: Request, res: Response) 
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    res.json(post);
+    // Include ai_summary if it exists in the database (don't wait for generation)
+    const actualPostId = post.id;
+    const postWithSummary = await prisma.post.findUnique({
+      where: { id: actualPostId },
+      select: { ai_summary: true }
+    });
+
+    // Trigger async AI summary generation if it doesn't exist (fire and forget)
+    if (!postWithSummary?.ai_summary) {
+      // Don't await - let it generate in background
+      generateAISummaryAsync(actualPostId, post).catch(err => {
+        console.error('Background AI summary generation failed:', err);
+      });
+    }
+
+    res.json({
+      ...post,
+      ai_summary: postWithSummary?.ai_summary || null
+    });
   } catch (error) {
     console.error('Error fetching post:', error);
     res.status(500).json({ error: 'Failed to fetch post' });
   }
 });
+
+// Async function to generate AI summary in background
+async function generateAISummaryAsync(postId: number, post: any) {
+  try {
+    const aiService = getAIService();
+    const currentCommentCount = post.comment_count || 0;
+    
+    // Prepare post data for AI summary
+    const postData: {
+      title: string;
+      body: string;
+      voteCount: number;
+      comments: Array<{
+        body: string;
+        author: string;
+        voteCount: number;
+        createdAt: Date;
+      }>;
+    } = {
+      title: post.title,
+      body: post.body || '',
+      voteCount: post.vote_count || 0,
+      comments: []
+    };
+    
+    // Fetch comments for the post
+    const supabase = getSupabaseClient();
+    const { data: commentsData } = await supabase
+      .from('comments')
+      .select('body, author_id, vote_count, created_at')
+      .eq('post_id', postId)
+      .order('vote_count', { ascending: false })
+      .limit(10); // Limit to top 10 comments for summary
+    
+    if (commentsData && commentsData.length > 0) {
+      postData.comments = commentsData.map((c: any) => ({
+        body: c.body,
+        author: c.author_id,
+        voteCount: c.vote_count || 0,
+        createdAt: new Date(c.created_at)
+      }));
+    }
+    
+    const summary = await aiService.generatePostSummary(postData);
+    
+    // Update the post with the new summary
+    await prisma.$executeRaw`
+      UPDATE posts 
+      SET ai_summary = ${summary},
+          ai_summary_generated_at = NOW(),
+          ai_summary_comment_count = ${currentCommentCount}
+      WHERE id = ${postId}
+    `;
+    console.log(`✅ AI summary generated and cached for post ${postId}`);
+  } catch (error) {
+    console.error('Background AI summary generation failed:', error);
+    // Don't throw - this is fire and forget
+  }
+}
 
 /**
  * POST /api/posts

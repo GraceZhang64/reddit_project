@@ -52,7 +52,7 @@ npm run loadtest:critical
 ### Linux/macOS
 ```bash
 # Set environment variables
-export BASE_URL=http://localhost:3001
+   export BASE_URL=http://localhost:5000
 export AUTH_TOKEN=your_token_here
 
 # Run the critical workflow test (100 trials)
