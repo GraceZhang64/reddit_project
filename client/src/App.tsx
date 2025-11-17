@@ -61,7 +61,7 @@ function App() {
           <nav className="navbar">
             <div className="nav-content">
               <Link to="/" className="logo">
-                <span className="logo-icon">💙</span>
+                <img src="/blue%20logo.png" alt="BlueIt" className="logo-icon" />
                 <span className="logo-text">BlueIt</span>
               </Link>
               <div className="nav-links">
