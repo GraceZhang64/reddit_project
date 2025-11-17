@@ -26,8 +26,8 @@ router.get('/post/:postId', optionalAuth, async (req: Request, res: Response) =>
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    // Get all comments for the post
-    const comments = await prisma.comment.findMany({
+    // Get ALL comments for the post (both top-level and replies)
+    const allComments = await prisma.comment.findMany({
       where: { postId },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -37,51 +37,79 @@ router.get('/post/:postId', optionalAuth, async (req: Request, res: Response) =>
             username: true,
             avatar_url: true
           }
-        },
-        _count: {
-          select: {
-            replies: true
-          }
         }
       }
     });
 
-    // Get vote counts for each comment
-    const commentsWithVotes = await Promise.all(
-      comments.map(async (comment) => {
-        const voteCount = await prisma.vote.aggregate({
+    // Helper function to get vote data for a comment
+    const getCommentVoteData = async (commentId: number) => {
+      const voteCount = await prisma.vote.aggregate({
+        where: {
+          target_type: 'comment',
+          target_id: commentId
+        },
+        _sum: {
+          value: true
+        }
+      });
+
+      let userVote = null;
+      if (req.user) {
+        const vote = await prisma.vote.findUnique({
           where: {
-            target_type: 'comment',
-            target_id: comment.id
-          },
-          _sum: {
-            value: true
+            userId_target_type_target_id: {
+              userId: req.user.id,
+              target_type: 'comment',
+              target_id: commentId
+            }
           }
         });
+        userVote = vote ? vote.value : null;
+      }
 
-        let userVote = null;
-        if (req.user) {
-          const vote = await prisma.vote.findUnique({
-            where: {
-              userId_target_type_target_id: {
-                userId: req.user.id,
-                target_type: 'comment',
-                target_id: comment.id
-              }
-            }
-          });
-          userVote = vote ? vote.value : null;
+      return {
+        vote_count: voteCount._sum.value || 0,
+        user_vote: userVote
+      };
+    };
+
+    // Build nested comment structure
+    const commentsMap = new Map();
+    const topLevelComments: any[] = [];
+
+    // First pass: Create a map of all comments with their vote data
+    for (const comment of allComments) {
+      const voteData = await getCommentVoteData(comment.id);
+      commentsMap.set(comment.id, {
+        ...comment,
+        ...voteData,
+        post_id: comment.postId,
+        parent_comment_id: comment.parentCommentId,
+        created_at: comment.createdAt,
+        replies: []
+      });
+    }
+
+    // Second pass: Build the tree structure
+    for (const comment of commentsMap.values()) {
+      if (comment.parentCommentId === null) {
+        // Top-level comment
+        topLevelComments.push(comment);
+      } else {
+        // Reply - add to parent's replies array
+        const parent = commentsMap.get(comment.parentCommentId);
+        if (parent) {
+          parent.replies.push(comment);
         }
+      }
+    }
 
-        return {
-          ...comment,
-          vote_count: voteCount._sum.value || 0,
-          user_vote: userVote
-        };
-      })
+    // Sort top-level comments by creation date (newest first)
+    topLevelComments.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    res.json({ comments: commentsWithVotes });
+    res.json({ comments: topLevelComments });
 
   } catch (error) {
     console.error('Error fetching comments:', error);
@@ -241,7 +269,10 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
 
     res.status(201).json({
       ...comment,
+      post_id: comment.postId,
+      parent_comment_id: comment.parentCommentId,
       vote_count: 0,
+      created_at: comment.createdAt,
       user_vote: null
     });
 
