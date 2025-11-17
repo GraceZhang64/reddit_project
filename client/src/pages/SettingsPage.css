@@ -1,0 +1,109 @@
+.settings-page {
+  min-height: 100vh;
+  background: #f6f7f8;
+  padding: 1.5rem 0;
+}
+
+.settings-page .container {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.page-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+}
+
+.banner {
+  background: #e6f4ff;
+  border: 1px solid #b3e0ff;
+  color: #09589c;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #edeff1;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.card.danger {
+  border-color: #ffe0e0;
+  background: #fff7f7;
+}
+
+.section-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.1rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.label {
+  color: #7c7c7c;
+  min-width: 120px;
+}
+
+.value-group { display: flex; align-items: center; gap: 0.75rem; }
+.value { font-weight: 600; }
+
+.stats {
+  justify-content: flex-start;
+  gap: 2rem;
+}
+
+.stat { text-align: center; }
+.stat-value { font-weight: 700; font-size: 1.1rem; }
+.stat-label { color: #7c7c7c; font-size: 0.8rem; }
+
+.edit-group { flex: 1; }
+.edit-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+
+.input {
+  width: 100%;
+  max-width: 360px;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #dfe1e5;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.input:focus { outline: none; border-color: #4a90e2; box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.15); }
+.input-error { border-color: #ff5a5f; }
+.error-text { color: #d93025; font-size: 0.85rem; margin-top: 0.375rem; }
+
+.btn {
+  background: #f6f7f8;
+  border: 1px solid #edeff1;
+  color: #1c1c1c;
+  padding: 0.5rem 0.875rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn.primary { background: #4a90e2; color: #fff; border-color: #4a90e2; }
+.btn.primary:hover { background: #3c7cc2; }
+
+.danger .warning { color: #a00000; margin: 0.25rem 0 0.75rem 0; }
+.danger-btn { background: #ffeded; border: 1px solid #ffb3b3; color: #a00000; }
+.danger-btn:hover { background: #ffdede; }
+
+.delete-group { display: flex; align-items: center; gap: 0.75rem; }
+
+@media (max-width: 640px) {
+  .row { flex-direction: column; align-items: flex-start; }
+  .delete-group { flex-direction: column; align-items: flex-start; }
+  .label { min-width: 0; }
+}
