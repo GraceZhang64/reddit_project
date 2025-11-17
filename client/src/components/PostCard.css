@@ -225,3 +225,17 @@
   color: var(--blueit-primary);
   transform: translateY(-1px);
 }
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-button.saved {
+  color: var(--blueit-primary);
+  font-weight: 700;
+}
+
+.save-button.saved:hover {
+  background: rgba(74, 144, 226, 0.1);
+}

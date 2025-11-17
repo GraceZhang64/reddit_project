@@ -9,6 +9,7 @@ import commentsRouter from './routes/comments';
 import usersRouter from './routes/users';
 import pollsRouter from './routes/polls';
 import followsRouter from './routes/follows';
+import savedPostsRouter from './routes/savedPosts';
 
 dotenv.config();
 
@@ -80,6 +81,13 @@ app.get('/', (req: Request, res: Response) => {
         followers: 'GET /api/follows/followers/:username',
         following: 'GET /api/follows/following/:username',
         feed: 'GET /api/follows/feed'
+      },
+      savedPosts: {
+        list: 'GET /api/saved-posts',
+        save: 'POST /api/saved-posts/:postId',
+        unsave: 'DELETE /api/saved-posts/:postId',
+        check: 'GET /api/saved-posts/check/:postId',
+        checkMultiple: 'POST /api/saved-posts/check-multiple'
       }
     }
   });
@@ -98,6 +106,7 @@ app.use('/api/votes', votesRouter);
 app.use('/api/polls', pollsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/follows', followsRouter);
+app.use('/api/saved-posts', savedPostsRouter);
 
 app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);

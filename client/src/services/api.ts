@@ -366,3 +366,33 @@ export const followsApi = {
     return response.data;
   }
 };
+
+// Saved Posts API
+export const savedPostsApi = {
+  async getSavedPosts(page = 1, limit = 20): Promise<PaginationResponse<Post>> {
+    const response = await api.get('/saved-posts', {
+      params: { page, limit }
+    });
+    return response.data;
+  },
+
+  async savePost(postId: number): Promise<{ message: string; saved: boolean; savedAt: string }> {
+    const response = await api.post(`/saved-posts/${postId}`);
+    return response.data;
+  },
+
+  async unsavePost(postId: number): Promise<{ message: string; saved: boolean }> {
+    const response = await api.delete(`/saved-posts/${postId}`);
+    return response.data;
+  },
+
+  async checkIfSaved(postId: number): Promise<{ saved: boolean; savedAt: string | null }> {
+    const response = await api.get(`/saved-posts/check/${postId}`);
+    return response.data;
+  },
+
+  async checkMultipleSaved(postIds: number[]): Promise<Record<number, boolean>> {
+    const response = await api.post('/saved-posts/check-multiple', { postIds });
+    return response.data;
+  }
+};
