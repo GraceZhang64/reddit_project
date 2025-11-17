@@ -4,7 +4,7 @@ import { Post } from '../types';
 import VoteButtons from './VoteButtons';
 import PostContent from './PostContent';
 import AISummaryContent from './AISummaryContent';
-import { followsApi } from '../services/api';
+import { followsApi, savedPostsApi } from '../services/api';
 import './PostCard.css';
 
 interface PostCardProps {
@@ -82,6 +82,37 @@ function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveTogg
     }
   };
 
+  const handleSaveToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      if (isSaved) {
+        await savedPostsApi.unsavePost(post.id);
+        setIsSaved(false);
+        if (onSaveToggle) onSaveToggle(post.id, false);
+      } else {
+        await savedPostsApi.savePost(post.id);
+        setIsSaved(true);
+        if (onSaveToggle) onSaveToggle(post.id, true);
+      }
+    } catch (error: any) {
+      console.error('Error toggling save:', error);
+      // Handle 409 conflict (already saved) as success
+      if (error.response?.status === 409) {
+        setIsSaved(true);
+        if (onSaveToggle) onSaveToggle(post.id, true);
+      } else {
+        alert('Failed to ' + (isSaved ? 'unsave' : 'save') + ' post. Please try again.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="post-card">
       <VoteButtons
@@ -151,6 +182,14 @@ function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveTogg
             alert('Link copied to clipboard!');
           }}>
             🔗 Share
+          </button>
+          <button 
+            className={`action-button save-button ${isSaved ? 'saved' : ''}`}
+            onClick={handleSaveToggle}
+            disabled={isSaving}
+            title={isSaved ? 'Unsave post' : 'Save post'}
+          >
+            {isSaving ? '⏳' : isSaved ? '🔖' : '📑'} {isSaved ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>
