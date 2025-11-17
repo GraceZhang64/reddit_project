@@ -6,29 +6,30 @@ const router = Router();
 const prisma = new PrismaClient();
 
 /**
- * GET /api/comments/post/:postId
- * Get all comments for a post
+ * GET /api/comments/search
+ * Search comments by keyword
  */
-router.get('/post/:postId', optionalAuth, async (req: Request, res: Response) => {
+router.get('/search', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const postId = parseInt(req.params.postId);
-
-    if (isNaN(postId)) {
-      return res.status(400).json({ error: 'Invalid post ID' });
+    const query = req.query.q as string;
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
     }
 
-    // Check if post exists
-    const post = await prisma.post.findUnique({
-      where: { id: postId }
-    });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
 
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found' });
-    }
-
-    // Get all comments for the post
+    // Search comments using ILIKE for case-insensitive search
     const comments = await prisma.comment.findMany({
-      where: { postId },
+      where: {
+        body: {
+          contains: query,
+          mode: 'insensitive'
+        }
+      },
+      skip,
+      take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
         author: {
@@ -38,9 +39,18 @@ router.get('/post/:postId', optionalAuth, async (req: Request, res: Response) =>
             avatar_url: true
           }
         },
-        _count: {
+        post: {
           select: {
-            replies: true
+            id: true,
+            slug: true,
+            title: true,
+            community: {
+              select: {
+                id: true,
+                name: true,
+                slug: true
+              }
+            }
           }
         }
       }
@@ -81,7 +91,136 @@ router.get('/post/:postId', optionalAuth, async (req: Request, res: Response) =>
       })
     );
 
-    res.json({ comments: commentsWithVotes });
+    // Get total count for pagination
+    const total = await prisma.comment.count({
+      where: {
+        body: {
+          contains: query,
+          mode: 'insensitive'
+        }
+      }
+    });
+
+    res.json({
+      comments: commentsWithVotes,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error searching comments:', error);
+    res.status(500).json({ error: 'Failed to search comments' });
+  }
+});
+
+/**
+ * GET /api/comments/post/:postId
+ * Get all comments for a post
+ */
+router.get('/post/:postId', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const postId = parseInt(req.params.postId);
+
+    if (isNaN(postId)) {
+      return res.status(400).json({ error: 'Invalid post ID' });
+    }
+
+    // Check if post exists
+    const post = await prisma.post.findUnique({
+      where: { id: postId }
+    });
+
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Get ALL comments for the post (both top-level and replies)
+    const allComments = await prisma.comment.findMany({
+      where: { postId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true
+          }
+        }
+      }
+    });
+
+    // Helper function to get vote data for a comment
+    const getCommentVoteData = async (commentId: number) => {
+      const voteCount = await prisma.vote.aggregate({
+        where: {
+          target_type: 'comment',
+          target_id: commentId
+        },
+        _sum: {
+          value: true
+        }
+      });
+
+      let userVote = null;
+      if (req.user) {
+        const vote = await prisma.vote.findUnique({
+          where: {
+            userId_target_type_target_id: {
+              userId: req.user.id,
+              target_type: 'comment',
+              target_id: commentId
+            }
+          }
+        });
+        userVote = vote ? vote.value : null;
+      }
+
+      return {
+        vote_count: voteCount._sum.value || 0,
+        user_vote: userVote
+      };
+    };
+
+    // Build nested comment structure
+    const commentsMap = new Map();
+    const topLevelComments: any[] = [];
+
+    // First pass: Create a map of all comments with their vote data
+    for (const comment of allComments) {
+      const voteData = await getCommentVoteData(comment.id);
+      commentsMap.set(comment.id, {
+        ...comment,
+        ...voteData,
+        post_id: comment.postId,
+        parent_comment_id: comment.parentCommentId,
+        created_at: comment.createdAt,
+        replies: []
+      });
+    }
+
+    // Second pass: Build the tree structure
+    for (const comment of commentsMap.values()) {
+      if (comment.parentCommentId === null) {
+        // Top-level comment
+        topLevelComments.push(comment);
+      } else {
+        // Reply - add to parent's replies array
+        const parent = commentsMap.get(comment.parentCommentId);
+        if (parent) {
+          parent.replies.push(comment);
+        }
+      }
+    }
+
+    // Sort top-level comments by creation date (newest first)
+    topLevelComments.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    res.json({ comments: topLevelComments });
 
   } catch (error) {
     console.error('Error fetching comments:', error);
@@ -241,7 +380,10 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
 
     res.status(201).json({
       ...comment,
+      post_id: comment.postId,
+      parent_comment_id: comment.parentCommentId,
       vote_count: 0,
+      created_at: comment.createdAt,
       user_vote: null
     });
 

@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityPage from './pages/CommunityPage';
 import PostPage from './pages/PostPage';
+import SearchPage from './pages/SearchPage';
 import AuthPage from './pages/AuthPage';
 import SettingsPage from './pages/SettingsPage';
 import './App.css';
@@ -15,20 +16,15 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check authentication status
-    const checkAuth = async () => {
+    // Check authentication status from stored data only (no API call)
+    const checkAuth = () => {
       try {
-        if (authService.isAuthenticated()) {
-          const user = authService.getUser();
-          if (user) {
-            setIsAuthenticated(true);
-            setUsername(user.username);
-          } else {
-            // Try to fetch current user from API
-            const currentUser = await authService.getCurrentUser();
-            setIsAuthenticated(true);
-            setUsername(currentUser.username);
-          }
+        const user = authService.getUser();
+        if (user) {
+          setIsAuthenticated(true);
+          setUsername(user.username);
+        } else {
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -67,12 +63,13 @@ function App() {
           <nav className="navbar">
             <div className="nav-content">
               <Link to="/" className="logo">
-                <span className="logo-icon">💙</span>
+                <img src="/blue%20logo.png" alt="BlueIt" className="logo-icon" />
                 <span className="logo-text">BlueIt</span>
               </Link>
               <div className="nav-links">
                 <Link to="/" className="nav-link">Home</Link>
                 <Link to="/communities" className="nav-link">Communities</Link>
+                <Link to="/search" className="nav-link">🔍 Search</Link>
               </div>
               <div className="nav-actions">
                 <Link to="/settings" className="nav-link">Settings</Link>
@@ -102,6 +99,10 @@ function App() {
           <Route
             path="/p/:id"
             element={isAuthenticated ? <PostPage /> : <Navigate to="/auth" />}
+          />
+          <Route
+            path="/search"
+            element={isAuthenticated ? <SearchPage /> : <Navigate to="/auth" />}
           />
           <Route
             path="/settings"

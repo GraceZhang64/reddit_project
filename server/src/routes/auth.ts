@@ -21,6 +21,47 @@ router.post('/register', async (req: Request, res: Response) => {
       });
     }
 
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        error: 'Invalid email format' 
+      });
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      return res.status(400).json({ 
+        error: 'Password must be at least 8 characters long' 
+      });
+    }
+
+    // Check password complexity
+    if (!/[a-z]/.test(password)) {
+      return res.status(400).json({ 
+        error: 'Password must contain at least one lowercase letter' 
+      });
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ 
+        error: 'Password must contain at least one uppercase letter' 
+      });
+    }
+
+    if (!/\d/.test(password)) {
+      return res.status(400).json({ 
+        error: 'Password must contain at least one number' 
+      });
+    }
+
+    if (!/[@$!%*?&#^()_\-+=[\]{}|;:'",.<>\/\\]/.test(password)) {
+      return res.status(400).json({ 
+        error: 'Password must contain at least one special character' 
+      });
+    }
+
+    // Username validation
     if (username.length < 3 || username.length > 20) {
       return res.status(400).json({ 
         error: 'Username must be between 3 and 20 characters' 

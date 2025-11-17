@@ -86,7 +86,11 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply }: CommentItemP
           >
             [{isCollapsed ? '+' : '−'}]
           </button>
-          <span className="comment-author">{comment.author}</span>
+          <span className="comment-author">
+            {typeof comment.author === 'string' 
+              ? comment.author 
+              : (comment.author as any)?.username || 'Unknown'}
+          </span>
           <span className="comment-meta">• {formatTimestamp(comment.createdAt)}</span>
           {isCollapsed && hasReplies && (
             <span className="collapsed-info">({comment.replies!.length} {comment.replies!.length === 1 ? 'reply' : 'replies'})</span>
