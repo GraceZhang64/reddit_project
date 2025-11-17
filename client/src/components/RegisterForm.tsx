@@ -40,6 +40,27 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       return;
     }
 
+    // Check password complexity
+    if (!/[a-z]/.test(password)) {
+      setError('Password must contain at least one lowercase letter');
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      setError('Password must contain at least one uppercase letter');
+      return;
+    }
+
+    if (!/\d/.test(password)) {
+      setError('Password must contain at least one number');
+      return;
+    }
+
+    if (!/[@$!%*?&#^()_\-+=[\]{}|;:'",.<>\/\\]/.test(password)) {
+      setError('Password must contain at least one special character');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -122,6 +143,9 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
               disabled={isLoading}
               autoComplete="new-password"
             />
+            <small className="field-hint">
+              Must include: uppercase, lowercase, number, and special character
+            </small>
           </div>
 
           <div className="form-field">

@@ -10,16 +10,20 @@ export default function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If already logged in, redirect to communities
-    const authStatus = localStorage.getItem('isAuthenticated') || sessionStorage.getItem('isAuthenticated');
-    if (authStatus === 'true') {
-      navigate('/communities');
+    // If already logged in, redirect to intended destination or communities
+    if (localStorage.getItem('isAuthenticated') === 'true' || 
+        sessionStorage.getItem('isAuthenticated') === 'true') {
+      const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/communities';
+      sessionStorage.removeItem('redirectAfterLogin');
+      navigate(redirectTo);
     }
   }, [navigate]);
 
   const handleAuthSuccess = () => {
-    // Reload the page to update auth state in App.tsx
-    window.location.href = '/communities';
+    // Redirect to intended destination or communities
+    const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/communities';
+    sessionStorage.removeItem('redirectAfterLogin');
+    window.location.href = redirectTo;
   };
 
   return (

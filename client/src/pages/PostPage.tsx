@@ -5,6 +5,7 @@ import CommentItem from '../components/CommentItem';
 import { Post, Comment } from '../types';
 import { commentsApi, postsApi } from '../services/api';
 import './PostPage.css';
+import AISummaryContent from '../components/AISummaryContent';
 
 interface PostWithSummary extends Post {
   summary?: string;
@@ -133,7 +134,7 @@ function PostPage() {
         parentCommentId,
       });
 
-      // Refresh comments after reply
+      // Refresh comments after reply to show the new reply
       const result = await commentsApi.getByPost(post.id);
       const transformedComments = (result.comments || []).map((c: any) => ({
         id: c.id,
@@ -163,7 +164,7 @@ function PostPage() {
         parentCommentId: undefined, // Top-level comment
       });
 
-      // Refresh comments
+      // Refresh comments to show the new comment
       const result = await commentsApi.getByPost(post.id);
       const transformedComments = (result.comments || []).map((c: any) => ({
         id: c.id,
@@ -260,19 +261,7 @@ function PostPage() {
                   <span className="ai-badge">Powered by GPT-4o-mini</span>
                 </div>
                 <div className="ai-summary-content">
-                  {post.summary.split('\n').map((line, i) => {
-                    if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
-                      // Render as heading
-                      return <h4 key={i}>{line.replace(/\*\*/g, '')}</h4>;
-                    } else if (line.trim().startsWith('-')) {
-                      // Render as list item
-                      return <li key={i}>{line.substring(1).trim()}</li>;
-                    } else if (line.trim()) {
-                      // Render as paragraph
-                      return <p key={i}>{line}</p>;
-                    }
-                    return null;
-                  })}
+                  <AISummaryContent content={post.summary} />
                 </div>
               </div>
             ) : (

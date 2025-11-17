@@ -144,6 +144,10 @@ function HomePage() {
     <div className="home-page">
       <div className="home-container">
         <div className="feed-content">
+          <div className="home-hero">
+            <img src="/blue%20logo.png" alt="BlueIt" className="home-hero-logo" />
+            <h1 className="home-hero-title">BlueIt</h1>
+          </div>
           <div className="feed-selector">
             <button 
               className={`feed-tab ${feed === 'hot' ? 'active' : ''}`}
