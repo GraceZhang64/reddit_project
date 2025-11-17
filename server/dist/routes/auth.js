@@ -1,11 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const supabase_1 = require("../config/supabase");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 /**
  * POST /api/auth/register
  * Register a new user with Supabase Auth and create user profile
@@ -65,7 +64,7 @@ router.post('/register', async (req, res) => {
             });
         }
         // Check if username already exists
-        const existingUser = await prisma.user.findUnique({
+        const existingUser = await prisma_1.prisma.user.findUnique({
             where: { username }
         });
         if (existingUser) {
@@ -92,7 +91,7 @@ router.post('/register', async (req, res) => {
         }
         // Create user profile in database
         try {
-            const user = await prisma.user.create({
+            const user = await prisma_1.prisma.user.create({
                 data: {
                     id: authData.user.id,
                     email,
@@ -149,7 +148,7 @@ router.post('/login', async (req, res) => {
             });
         }
         // Get user profile from database
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: data.user.id },
             select: {
                 id: true,
@@ -212,7 +211,7 @@ router.get('/me', async (req, res) => {
             return res.status(401).json({ error: 'Invalid or expired token' });
         }
         // Get full user profile from database
-        const userProfile = await prisma.user.findUnique({
+        const userProfile = await prisma_1.prisma.user.findUnique({
             where: { id: user.id },
             select: {
                 id: true,
@@ -246,8 +245,7 @@ router.post('/update-email', auth_1.authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Valid newEmail is required' });
         }
         // Validate uniqueness in local DB to provide clearer error
-        const prisma = new client_1.PrismaClient();
-        const existing = await prisma.user.findUnique({ where: { email: newEmail } });
+        const existing = await prisma_1.prisma.user.findUnique({ where: { email: newEmail } });
         if (existing && existing.id !== userId) {
             return res.status(400).json({ error: 'Email already in use' });
         }
@@ -264,7 +262,7 @@ router.post('/update-email', auth_1.authenticateToken, async (req, res) => {
             return res.status(400).json({ error: error.message || 'Failed to update email' });
         }
         // Reflect in our DB
-        const updated = await prisma.user.update({ where: { id: userId }, data: { email: newEmail } });
+        const updated = await prisma_1.prisma.user.update({ where: { id: userId }, data: { email: newEmail } });
         res.json({ message: 'Email updated', user: { id: updated.id, email: updated.email } });
     }
     catch (error) {
@@ -287,8 +285,7 @@ router.post('/update-password', auth_1.authenticateToken, async (req, res) => {
         if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
             return res.status(400).json({ error: 'Password must be 8+ chars with upper, lower, and number' });
         }
-        const prisma = new client_1.PrismaClient();
-        const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+        const user = await prisma_1.prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }

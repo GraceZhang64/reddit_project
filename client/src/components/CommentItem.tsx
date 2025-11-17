@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Comment } from '../types';
 import VoteButtons from './VoteButtons';
 import { votesApi } from '../services/api';
+import { formatMentions } from '../utils/formatMentions';
 import './CommentItem.css';
 
 interface CommentItemProps {
@@ -103,7 +104,11 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply }: CommentItemP
 
         {!isCollapsed && (
           <>
-            <div className="comment-body">{comment.body}</div>
+            <div className="comment-body">
+              {formatMentions(comment.body).map((part, idx) => (
+                <span key={idx}>{part}</span>
+              ))}
+            </div>
 
             <div className="comment-actions">
               <VoteButtons

@@ -75,6 +75,18 @@
   color: var(--blueit-text-secondary);
 }
 
+.mention-link {
+  color: #0079d3;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.mention-link:hover {
+  color: #005ba1;
+  text-decoration: underline;
+}
+
 /* Image Post */
 .post-image-content {
   margin-top: 0.75rem;

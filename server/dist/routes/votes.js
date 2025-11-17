@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 /**
  * POST /api/votes
  * Cast or update a vote
@@ -31,7 +30,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
         }
         // Check if target exists
         if (target_type === 'post') {
-            const post = await prisma.post.findUnique({
+            const post = await prisma_1.prisma.post.findUnique({
                 where: { id: parseInt(target_id) }
             });
             if (!post) {
@@ -39,7 +38,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
             }
         }
         else {
-            const comment = await prisma.comment.findUnique({
+            const comment = await prisma_1.prisma.comment.findUnique({
                 where: { id: parseInt(target_id) }
             });
             if (!comment) {
@@ -47,7 +46,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
             }
         }
         // Use upsert to create or update the vote
-        const vote = await prisma.vote.upsert({
+        const vote = await prisma_1.prisma.vote.upsert({
             where: {
                 userId_target_type_target_id: {
                     userId,
@@ -66,7 +65,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
             }
         });
         // Calculate new vote count
-        const voteCount = await prisma.vote.aggregate({
+        const voteCount = await prisma_1.prisma.vote.aggregate({
             where: {
                 target_type,
                 target_id: parseInt(target_id)
@@ -99,7 +98,7 @@ router.delete('/', auth_1.authenticateToken, async (req, res) => {
             });
         }
         // Delete the vote
-        await prisma.vote.delete({
+        await prisma_1.prisma.vote.delete({
             where: {
                 userId_target_type_target_id: {
                     userId,
@@ -111,7 +110,7 @@ router.delete('/', auth_1.authenticateToken, async (req, res) => {
             // Vote doesn't exist, that's okay
         });
         // Calculate new vote count
-        const voteCount = await prisma.vote.aggregate({
+        const voteCount = await prisma_1.prisma.vote.aggregate({
             where: {
                 target_type,
                 target_id: parseInt(target_id)
@@ -137,7 +136,7 @@ router.delete('/', auth_1.authenticateToken, async (req, res) => {
 router.get('/:target_type/:target_id', async (req, res) => {
     try {
         const { target_type, target_id } = req.params;
-        const voteCount = await prisma.vote.aggregate({
+        const voteCount = await prisma_1.prisma.vote.aggregate({
             where: {
                 target_type,
                 target_id: parseInt(target_id)
@@ -163,7 +162,7 @@ router.get('/user/:target_type/:target_id', auth_1.authenticateToken, async (req
     try {
         const { target_type, target_id } = req.params;
         const userId = req.user.id;
-        const vote = await prisma.vote.findUnique({
+        const vote = await prisma_1.prisma.vote.findUnique({
             where: {
                 userId_target_type_target_id: {
                     userId,

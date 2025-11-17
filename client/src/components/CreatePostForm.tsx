@@ -7,35 +7,25 @@ interface CreatePostFormProps {
   onSubmit: (postData: PostData) => void;
   onCancel?: () => void;
   defaultCommunityId?: number;
-  crosspostId?: number;
-  crosspostTitle?: string;
 }
 
-export type PostType = 'text' | 'link' | 'image' | 'video' | 'poll';
+export type PostType = 'text' | 'link' | 'poll';
 
 export interface PostData {
   title: string;
   body?: string;
-  post_type: PostType | 'crosspost';
+  post_type: PostType;
   link_url?: string;
-  image_url?: string;
-  video_url?: string;
-  media_urls?: string[];
   poll_options?: string[];
   poll_expires_hours?: number;
-  crosspost_id?: number;
   community_id: number;
 }
 
-function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId, crosspostId, crosspostTitle }: CreatePostFormProps) {
-  const isCrosspost = !!crosspostId;
-  const [postType, setPostType] = useState<PostType>(isCrosspost ? 'text' : 'text');
-  const [title, setTitle] = useState(crosspostTitle || '');
+function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }: CreatePostFormProps) {
+  const [postType, setPostType] = useState<PostType>('text');
+  const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [mediaUrls, setMediaUrls] = useState<string>('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollExpires, setPollExpires] = useState<string>('72');
   const [communityId, setCommunityId] = useState(defaultCommunityId || communities[0]?.id || 1);
@@ -46,34 +36,15 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId, c
 
     const postData: PostData = {
       title: title.trim(),
-      post_type: isCrosspost ? 'crosspost' : postType,
+      post_type: postType,
       community_id: communityId,
     };
-
-    // Handle crosspost
-    if (isCrosspost && crosspostId) {
-      postData.crosspost_id = crosspostId;
-      postData.body = body.trim(); // Optional comment on crosspost
-      onSubmit(postData);
-      setTitle('');
-      setBody('');
-      return;
-    }
 
     // Add type-specific fields
     if (postType === 'text') {
       postData.body = body.trim();
     } else if (postType === 'link') {
       postData.link_url = linkUrl.trim();
-      postData.body = body.trim(); // Optional description
-    } else if (postType === 'image') {
-      postData.image_url = imageUrl.trim();
-      if (mediaUrls.trim()) {
-        postData.media_urls = mediaUrls.split('\n').map(url => url.trim()).filter(url => url);
-      }
-      postData.body = body.trim(); // Optional caption
-    } else if (postType === 'video') {
-      postData.video_url = videoUrl.trim();
       postData.body = body.trim(); // Optional description
     } else if (postType === 'poll') {
       const validOptions = pollOptions.filter(opt => opt.trim());
@@ -92,9 +63,6 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId, c
     setTitle('');
     setBody('');
     setLinkUrl('');
-    setImageUrl('');
-    setVideoUrl('');
-    setMediaUrls('');
     setPollOptions(['', '']);
     setPollExpires('72');
   };
@@ -119,24 +87,10 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId, c
 
   return (
     <form className="create-post-form" onSubmit={handleSubmit}>
-      <h2>{isCrosspost ? 'Crosspost to Community' : 'Create a Post'}</h2>
+      <h2>Create a Post</h2>
       
-      {isCrosspost && (
-        <div style={{ 
-          padding: '0.75rem', 
-          background: 'rgba(74, 144, 226, 0.1)', 
-          border: '2px solid var(--blueit-primary)',
-          borderRadius: '8px',
-          marginBottom: '1rem',
-          color: 'var(--blueit-text)'
-        }}>
-          <strong>🔄 Crossposting:</strong> {crosspostTitle}
-        </div>
-      )}
-      
-      {/* Post Type Tabs - Hide for crossposts */}
-      {!isCrosspost && (
-        <div className="post-type-tabs">
+      {/* Post Type Tabs */}
+      <div className="post-type-tabs">
         <button
           type="button"
           className={`tab ${postType === 'text' ? 'active' : ''}`}
@@ -153,27 +107,12 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId, c
         </button>
         <button
           type="button"
-          className={`tab ${postType === 'image' ? 'active' : ''}`}
-          onClick={() => setPostType('image')}
-        >
-          🖼️ Image
-        </button>
-        <button
-          type="button"
-          className={`tab ${postType === 'video' ? 'active' : ''}`}
-          onClick={() => setPostType('video')}
-        >
-          🎥 Video
-        </button>
-        <button
-          type="button"
           className={`tab ${postType === 'poll' ? 'active' : ''}`}
           onClick={() => setPostType('poll')}
         >
           📊 Poll
         </button>
       </div>
-      )}
 
       {!defaultCommunityId && (
         <div className="form-group">
@@ -208,25 +147,8 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId, c
         <small>{title.length}/300 characters</small>
       </div>
 
-      {/* Crosspost comment field */}
-      {isCrosspost && (
-        <div className="form-group">
-          <label htmlFor="post-body">Add a comment (optional)</label>
-          <textarea
-            id="post-body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Add your thoughts about this post..."
-            rows={5}
-            maxLength={10000}
-            className="post-body-textarea"
-          />
-          <small>{body.length}/10,000 characters</small>
-        </div>
-      )}
-
       {/* Type-specific fields */}
-      {!isCrosspost && postType === 'text' && (
+      {postType === 'text' && (
         <div className="form-group">
           <label htmlFor="post-body">Body (optional)</label>
           <textarea
@@ -242,7 +164,7 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId, c
         </div>
       )}
 
-      {!isCrosspost && postType === 'link' && (
+      {postType === 'link' && (
         <>
           <div className="form-group">
             <label htmlFor="link-url">URL *</label>
@@ -271,79 +193,7 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId, c
         </>
       )}
 
-      {!isCrosspost && postType === 'image' && (
-        <>
-          <div className="form-group">
-            <label htmlFor="image-url">Image URL *</label>
-            <input
-              id="image-url"
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              required
-              className="post-input"
-            />
-            <small>Direct link to image (jpg, png, gif, webp)</small>
-          </div>
-          <div className="form-group">
-            <label htmlFor="media-urls">Additional Images (optional)</label>
-            <textarea
-              id="media-urls"
-              value={mediaUrls}
-              onChange={(e) => setMediaUrls(e.target.value)}
-              placeholder="One URL per line&#10;https://example.com/image2.jpg&#10;https://example.com/image3.jpg"
-              rows={3}
-              className="post-body-textarea"
-            />
-            <small>Gallery: one URL per line (max 10)</small>
-          </div>
-          <div className="form-group">
-            <label htmlFor="post-body">Caption (optional)</label>
-            <textarea
-              id="post-body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Add a caption..."
-              rows={3}
-              maxLength={10000}
-              className="post-body-textarea"
-            />
-          </div>
-        </>
-      )}
-
-      {!isCrosspost && postType === 'video' && (
-        <>
-          <div className="form-group">
-            <label htmlFor="video-url">Video URL *</label>
-            <input
-              id="video-url"
-              type="url"
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="https://youtube.com/watch?v=... or direct video link"
-              required
-              className="post-input"
-            />
-            <small>YouTube, Vimeo, or direct video link</small>
-          </div>
-          <div className="form-group">
-            <label htmlFor="post-body">Description (optional)</label>
-            <textarea
-              id="post-body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Add a description..."
-              rows={5}
-              maxLength={10000}
-              className="post-body-textarea"
-            />
-          </div>
-        </>
-      )}
-
-      {!isCrosspost && postType === 'poll' && (
+      {postType === 'poll' && (
         <>
           <div className="form-group">
             <label>Poll Options (2-6 options)</label>

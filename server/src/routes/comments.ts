@@ -1,6 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middleware/auth';
+import { cache, CACHE_TTL } from '../lib/cache';
+import { apiLimiter } from '../middleware/rateLimiter';
+import { validateCommentCreation } from '../middleware/requestValidator';
+import { updateCommunityMemberCount } from '../utils/communityMemberCount';
+import { createMentionNotifications } from '../utils/mentions';
 
 const router = Router();
 
@@ -117,14 +122,24 @@ router.get('/search', authenticateToken, async (req: Request, res: Response) => 
 
 /**
  * GET /api/comments/post/:postId
- * Get all comments for a post
+ * Get all comments for a post (cached for performance)
  */
 router.get('/post/:postId', authenticateToken, async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.postId);
+    const userId = req.user?.id;
 
     if (isNaN(postId)) {
       return res.status(400).json({ error: 'Invalid post ID' });
+    }
+
+    // Cache key includes user ID for personalized vote data
+    const cacheKey = `comments:${postId}:${userId}`;
+    
+    // Check cache first
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
     }
 
     // Check if post exists
@@ -136,13 +151,13 @@ router.get('/post/:postId', authenticateToken, async (req: Request, res: Respons
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    // Get top-level comments first (limit to 10 for performance)
+    // Get top-level comments first (limit to 5 for faster performance)
     const topLevelCommentsQuery = await prisma.comment.findMany({
       where: { 
         postId,
         parentCommentId: null
       },
-      take: 10,
+      take: 5, // Reduced from 10 to 5 for faster loading
       orderBy: { createdAt: 'desc' },
       include: {
         author: {
@@ -252,7 +267,12 @@ router.get('/post/:postId', authenticateToken, async (req: Request, res: Respons
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    res.json({ comments: topLevelComments });
+    const result = { comments: topLevelComments };
+
+    // Cache for 30 seconds
+    cache.set(cacheKey, result, CACHE_TTL.COMMENTS);
+
+    res.json(result);
 
   } catch (error) {
     console.error('Error fetching comments:', error);
@@ -342,7 +362,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
  * POST /api/comments
  * Create a new comment or reply
  */
-router.post('/', authenticateToken, async (req: Request, res: Response) => {
+router.post('/', authenticateToken, validateCommentCreation, async (req: Request, res: Response) => {
   try {
     const { body, postId, parentCommentId } = req.body;
     const authorId = req.user!.id;
@@ -413,6 +433,10 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
     // Update community member count if this is user's first interaction
     const { updateCommunityMemberCount } = await import('../utils/communityMemberCount');
     await updateCommunityMemberCount(post.communityId, authorId);
+
+    // Create mention notifications
+    const { createMentionNotifications } = await import('../utils/mentions');
+    await createMentionNotifications(body, authorId, parseInt(postId), comment.id);
 
     res.status(201).json({
       ...comment,

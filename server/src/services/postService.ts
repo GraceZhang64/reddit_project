@@ -11,10 +11,6 @@ interface CreatePostData {
   body: string | null;
   post_type?: string;
   link_url?: string | null;
-  image_url?: string | null;
-  video_url?: string | null;
-  media_urls?: string[];
-  crosspost_id?: number | null;
   community_id: number;
   author_id: string;
   poll_options?: string[] | null;
@@ -533,10 +529,6 @@ export const postService = {
         body: data.body,
         post_type: data.post_type as any || 'text',
         link_url: data.link_url || null,
-        image_url: data.image_url || null,
-        video_url: data.video_url || null,
-        media_urls: data.media_urls || [],
-        crosspost_id: data.crosspost_id || null,
         authorId: data.author_id,
         communityId: data.community_id,
       },
@@ -555,24 +547,6 @@ export const postService = {
             slug: true,
           },
         },
-        crosspost: data.crosspost_id ? {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            author: {
-              select: {
-                username: true,
-              },
-            },
-            community: {
-              select: {
-                name: true,
-                slug: true,
-              },
-            },
-          },
-        } : false,
       },
     });
 
@@ -599,6 +573,12 @@ export const postService = {
     // Update community member count if this is user's first interaction
     const { updateCommunityMemberCount } = await import('../utils/communityMemberCount');
     await updateCommunityMemberCount(data.community_id, data.author_id);
+
+    // Create mention notifications for post body
+    if (data.body) {
+      const { createMentionNotifications } = await import('../utils/mentions');
+      await createMentionNotifications(data.body, data.author_id, post.id);
+    }
 
     return {
       ...post,

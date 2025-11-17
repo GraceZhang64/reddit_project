@@ -1,11 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const supabase_1 = require("../config/supabase");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 /**
  * GET /api/users/:username
  * Get user profile by username
@@ -13,7 +12,7 @@ const prisma = new client_1.PrismaClient();
 router.get('/:username', auth_1.authenticateToken, async (req, res) => {
     try {
         const { username } = req.params;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { username },
             select: {
                 id: true,
@@ -52,15 +51,15 @@ router.get('/:username/posts', auth_1.authenticateToken, async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
         // Find user
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { username }
         });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        // Get posts
+        // Get posts with optimized vote fetching
         const [posts, total] = await Promise.all([
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: { authorId: user.id },
                 skip,
                 take: limit,
@@ -79,20 +78,49 @@ router.get('/:username/posts', auth_1.authenticateToken, async (req, res) => {
                             name: true,
                             slug: true
                         }
-                    },
-                    _count: {
-                        select: {
-                            comments: true
-                        }
                     }
                 }
             }),
-            prisma.post.count({
+            prisma_1.prisma.post.count({
                 where: { authorId: user.id }
             })
         ]);
+        // Batch fetch vote counts and comment counts for all posts
+        const postIds = posts.map(p => p.id);
+        const [voteCounts, commentCounts] = await Promise.all([
+            // Batch vote counts
+            postIds.length > 0 ? prisma_1.prisma.vote.groupBy({
+                by: ['target_id'],
+                where: {
+                    target_type: 'post',
+                    target_id: { in: postIds }
+                },
+                _sum: {
+                    value: true
+                }
+            }) : Promise.resolve([]),
+            // Batch comment counts
+            postIds.length > 0 ? prisma_1.prisma.comment.groupBy({
+                by: ['postId'],
+                where: {
+                    postId: { in: postIds }
+                },
+                _count: {
+                    id: true
+                }
+            }) : Promise.resolve([])
+        ]);
+        // Create maps for quick lookup
+        const voteCountMap = new Map(voteCounts.map(v => [v.target_id, v._sum.value || 0]));
+        const commentCountMap = new Map(commentCounts.map(c => [c.postId, c._count.id]));
+        // Enrich posts with counts
+        const postsWithCounts = posts.map(post => ({
+            ...post,
+            vote_count: voteCountMap.get(post.id) || 0,
+            comment_count: commentCountMap.get(post.id) || 0
+        }));
         res.json({
-            posts,
+            posts: postsWithCounts,
             pagination: {
                 page,
                 limit,
@@ -117,15 +145,15 @@ router.get('/:username/comments', auth_1.authenticateToken, async (req, res) => 
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
         // Find user
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { username }
         });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        // Get comments
+        // Get comments with optimized vote fetching
         const [comments, total] = await Promise.all([
-            prisma.comment.findMany({
+            prisma_1.prisma.comment.findMany({
                 where: { authorId: user.id },
                 skip,
                 take: limit,
@@ -151,12 +179,31 @@ router.get('/:username/comments', auth_1.authenticateToken, async (req, res) => 
                     }
                 }
             }),
-            prisma.comment.count({
+            prisma_1.prisma.comment.count({
                 where: { authorId: user.id }
             })
         ]);
+        // Batch fetch vote counts for all comments
+        const commentIds = comments.map(c => c.id);
+        const voteCounts = commentIds.length > 0 ? await prisma_1.prisma.vote.groupBy({
+            by: ['target_id'],
+            where: {
+                target_type: 'comment',
+                target_id: { in: commentIds }
+            },
+            _sum: {
+                value: true
+            }
+        }) : [];
+        // Create map for quick lookup
+        const voteCountMap = new Map(voteCounts.map(v => [v.target_id, v._sum.value || 0]));
+        // Enrich comments with vote counts
+        const commentsWithCounts = comments.map(comment => ({
+            ...comment,
+            vote_count: voteCountMap.get(comment.id) || 0
+        }));
         res.json({
-            comments,
+            comments: commentsWithCounts,
             pagination: {
                 page,
                 limit,
@@ -179,7 +226,7 @@ router.put('/profile', auth_1.authenticateToken, async (req, res) => {
         const { bio, avatar_url } = req.body;
         const userId = req.user.id;
         // Update user profile
-        const updatedUser = await prisma.user.update({
+        const updatedUser = await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 ...(bio !== undefined && { bio }),
@@ -221,11 +268,11 @@ router.put('/username', auth_1.authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Only letters, numbers, and underscores allowed' });
         }
         // Check uniqueness
-        const existing = await prisma.user.findUnique({ where: { username } });
+        const existing = await prisma_1.prisma.user.findUnique({ where: { username } });
         if (existing && existing.id !== userId) {
             return res.status(400).json({ error: 'Username already taken' });
         }
-        const updated = await prisma.user.update({
+        const updated = await prisma_1.prisma.user.update({
             where: { id: userId },
             data: { username, updated_at: new Date() },
             select: {
@@ -269,7 +316,7 @@ router.delete('/me', auth_1.authenticateToken, async (req, res) => {
             // ignore
         }
         // Delete from our DB (cascades to posts, comments, votes)
-        await prisma.user.delete({ where: { id: userId } });
+        await prisma_1.prisma.user.delete({ where: { id: userId } });
         res.json({ message: 'Account deleted' });
     }
     catch (error) {
@@ -285,14 +332,14 @@ router.get('/:username/communities', auth_1.authenticateToken, async (req, res) 
     try {
         const { username } = req.params;
         // Find user
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { username }
         });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         // Get communities created by user
-        const communities = await prisma.community.findMany({
+        const communities = await prisma_1.prisma.community.findMany({
             where: { creator_id: user.id },
             orderBy: { createdAt: 'desc' },
             include: {

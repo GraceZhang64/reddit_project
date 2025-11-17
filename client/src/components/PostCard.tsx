@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Post } from '../types';
 import VoteButtons from './VoteButtons';
 import PostContent from './PostContent';
-import './PostCard.css';
 import AISummaryContent from './AISummaryContent';
+import { followsApi } from '../services/api';
+import './PostCard.css';
 
 interface PostCardProps {
   post: Post;
@@ -12,6 +14,30 @@ interface PostCardProps {
 }
 
 function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [followChecked, setFollowChecked] = useState(false);
+  const currentUser = localStorage.getItem('username');
+  const isOwnPost = currentUser === post.author;
+
+  // Check follow status on mount
+  useEffect(() => {
+    if (!isOwnPost && currentUser) {
+      checkFollowStatus();
+    }
+  }, [post.author]);
+
+  const checkFollowStatus = async () => {
+    try {
+      const result = await followsApi.checkFollowing(post.author);
+      setIsFollowing(result.isFollowing);
+      setFollowChecked(true);
+    } catch (error) {
+      console.error('Error checking follow status:', error);
+      setFollowChecked(true);
+    }
+  };
+
   const handleUpvote = () => {
     if (onVote) {
       // Toggle upvote: if already upvoted, remove vote; otherwise upvote
@@ -23,6 +49,31 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
     if (onVote) {
       // Toggle downvote: if already downvoted, remove vote; otherwise downvote
       onVote(post.id, userVote === -1 ? 0 : -1);
+    }
+  };
+
+  const handleFollowToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentUser) {
+      alert('Please log in to follow users');
+      return;
+    }
+
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await followsApi.unfollow(post.author);
+        setIsFollowing(false);
+      } else {
+        await followsApi.follow(post.author);
+        setIsFollowing(true);
+      }
+    } catch (error: any) {
+      console.error('Error toggling follow:', error);
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -45,17 +96,24 @@ function PostCard({ post, onVote, userVote = 0 }: PostCardProps) {
             <Link to={`/u/${post.author}`} className="author-link">
               u/{post.author}
             </Link>
+            {!isOwnPost && currentUser && (
+              <button 
+                className={`inline-follow-btn ${isFollowing ? 'following' : ''}`}
+                onClick={handleFollowToggle}
+                disabled={followLoading}
+                title={isFollowing ? 'Unfollow' : 'Follow'}
+              >
+                {followLoading ? '...' : isFollowing ? '✓' : '+'}
+              </button>
+            )}
           </span>
           <span className="separator">•</span>
           <span className="time">{new Date(post.createdAt).toLocaleDateString()}</span>
         </div>
         <Link to={`/p/${post.slug || post.id}`} className="post-title-link">
           <h2 className="post-title">
-            {post.post_type === 'link' && '🔗 '}
-            {post.post_type === 'image' && '🖼️ '}
-            {post.post_type === 'video' && '🎥 '}
-            {post.post_type === 'poll' && '📊 '}
-            {post.post_type === 'crosspost' && '🔄 '}
+          {post.post_type === 'link' && '🔗 '}
+          {post.post_type === 'poll' && '📊 '}
             {post.title}
           </h2>
         </Link>

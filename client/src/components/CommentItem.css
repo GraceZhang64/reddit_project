@@ -98,6 +98,18 @@
   word-wrap: break-word;
 }
 
+.mention-link {
+  color: #0079d3;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.mention-link:hover {
+  color: #005ba1;
+  text-decoration: underline;
+}
+
 /* Collapsed State */
 .comment-item.collapsed .comment-body,
 .comment-item.collapsed .comment-actions,

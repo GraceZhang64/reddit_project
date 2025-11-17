@@ -67,6 +67,16 @@
   text-decoration: underline;
 }
 
+.post-follow-btn-wrapper {
+  margin-left: 0.5rem;
+}
+
+.post-follow-btn-wrapper .follow-button {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  min-width: 80px;
+}
+
 .post-title {
   margin: 0 0 1rem 0;
   font-size: 1.5rem;

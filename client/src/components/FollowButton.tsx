@@ -17,7 +17,7 @@ function FollowButton({ username, onFollowChange }: FollowButtonProps) {
   }, [username]);
 
   const checkFollowStatus = async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     if (!token) {
       setLoading(false);
       return;
@@ -34,7 +34,7 @@ function FollowButton({ username, onFollowChange }: FollowButtonProps) {
   };
 
   const handleFollowToggle = async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     if (!token) {
       alert('Please log in to follow users');
       return;
@@ -67,7 +67,7 @@ function FollowButton({ username, onFollowChange }: FollowButtonProps) {
     );
   }
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
   if (!token) {
     return null; // Don't show button if not logged in
   }
