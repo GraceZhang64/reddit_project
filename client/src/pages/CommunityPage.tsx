@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
 import CreatePostForm, { PostData } from '../components/CreatePostForm';
+import PostSortFilter, { SortOption } from '../components/PostSortFilter';
 import { Post, Community } from '../types';
 import { communitiesApi, postsApi } from '../services/api';
 import './CommunityPage.css';
@@ -17,6 +18,7 @@ function CommunityPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [communities, setCommunities] = useState<Community[]>([]);
+  const [sortOption, setSortOption] = useState<SortOption>('hot');
 
   // Initialize isJoined from localStorage
   const [isJoined, setIsJoined] = useState(() => {
@@ -209,6 +211,31 @@ function CommunityPage() {
     }
   };
 
+  const handleSortChange = (newSort: SortOption) => {
+    setSortOption(newSort);
+  };
+
+  // Sort posts based on selected option
+  const sortedPosts = [...posts].sort((a, b) => {
+    switch (sortOption) {
+      case 'hot':
+      case 'top':
+        // Sort by vote count descending (most upvotes first)
+        return (b.voteCount || 0) - (a.voteCount || 0);
+      case 'new':
+        // Sort by creation date descending (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'oldest':
+        // Sort by creation date ascending (oldest first)
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case 'controversial':
+        // Sort by vote count ascending (most downvotes/lowest score first)
+        return (a.voteCount || 0) - (b.voteCount || 0);
+      default:
+        return 0;
+    }
+  });
+
   return (
     <div className="community-page">
       <div className="community-header">
@@ -257,8 +284,14 @@ function CommunityPage() {
             </div>
           )}
 
+          <PostSortFilter 
+            currentSort={sortOption}
+            onSortChange={handleSortChange}
+            disabled={isLoading}
+          />
+
           <PostFeed 
-            posts={posts} 
+            posts={sortedPosts} 
             onVote={handleVote}
           />
         </div>

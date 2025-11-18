@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { savedPostsApi } from '../services/api';
 import { Post } from '../types';
 import PostCard from '../components/PostCard';
+import PostSortFilter, { SortOption } from '../components/PostSortFilter';
 import './SavedPostsPage.css';
 
 function SavedPostsPage() {
@@ -11,6 +12,7 @@ function SavedPostsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [savedStatuses, setSavedStatuses] = useState<Record<number, boolean>>({});
+  const [sortOption, setSortOption] = useState<SortOption>('new');
 
   useEffect(() => {
     fetchSavedPosts();
@@ -85,6 +87,31 @@ function SavedPostsPage() {
     }
   };
 
+  const handleSortChange = (newSort: SortOption) => {
+    setSortOption(newSort);
+  };
+
+  // Sort posts based on selected option
+  const sortedPosts = [...posts].sort((a, b) => {
+    switch (sortOption) {
+      case 'hot':
+      case 'top':
+        // Sort by vote count descending (most upvotes first)
+        return (b.voteCount || 0) - (a.voteCount || 0);
+      case 'new':
+        // Sort by creation date descending (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'oldest':
+        // Sort by creation date ascending (oldest first)
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case 'controversial':
+        // Sort by vote count ascending (most downvotes/lowest score first)
+        return (a.voteCount || 0) - (b.voteCount || 0);
+      default:
+        return 0;
+    }
+  });
+
   if (loading && posts.length === 0) {
     return (
       <div className="saved-posts-page">
@@ -130,8 +157,14 @@ function SavedPostsPage() {
         </div>
       ) : (
         <>
+          <PostSortFilter 
+            currentSort={sortOption}
+            onSortChange={handleSortChange}
+            disabled={loading}
+          />
+          
           <div className="posts-container">
-            {posts.map(post => (
+            {sortedPosts.map(post => (
               <PostCard 
                 key={post.id} 
                 post={post}

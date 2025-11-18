@@ -2,20 +2,21 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.75rem 0.5rem;
-  background: var(--blueit-bg);
+  gap: 4px;
+  padding: 12px 8px;
+  background: var(--blueit-hover);
   border-right: 1px solid var(--blueit-border);
   min-width: 48px;
+  border-radius: 12px 0 0 12px;
 }
 
 .vote-btn {
-  background: none;
-  border: none;
+  background: var(--blueit-card-bg);
+  border: 1px solid var(--blueit-border);
   color: var(--blueit-text-muted);
-  font-size: 1.5rem;
+  font-size: 18px;
   cursor: pointer;
-  padding: 0.25rem;
+  padding: 4px;
   transition: all 0.2s ease;
   line-height: 1;
   width: 32px;
@@ -23,44 +24,52 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .vote-btn:hover {
-  background: var(--blueit-hover);
+  background: var(--blueit-primary);
+  color: white;
+  border-color: var(--blueit-primary);
   transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
 }
 
 .vote-btn.upvote:hover {
-  color: var(--blueit-primary);
-  background: rgba(74, 144, 226, 0.1);
+  background: var(--blueit-primary);
+  color: white;
 }
 
 .vote-btn.downvote:hover {
-  color: var(--blueit-primary);
-  background: rgba(74, 144, 226, 0.1);
+  background: var(--blueit-primary);
+  color: white;
 }
 
 .vote-btn.upvote.active {
-  color: var(--blueit-primary);
-  background: rgba(74, 144, 226, 0.15);
+  background: var(--blueit-primary);
+  color: white;
+  border-color: var(--blueit-primary);
   font-weight: 700;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
 }
 
 .vote-btn.downvote.active {
-  color: var(--blueit-primary);
-  background: rgba(74, 144, 226, 0.15);
+  background: var(--blueit-primary);
+  color: white;
+  border-color: var(--blueit-primary);
   font-weight: 700;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
 }
 
 .vote-count {
   font-weight: 700;
   color: var(--blueit-text);
-  font-size: 0.875rem;
-  min-width: 36px;
+  font-size: 14px;
+  min-width: 32px;
   text-align: center;
   transition: all 0.2s ease;
-  padding: 0.25rem 0;
+  padding: 4px 0;
 }
 
 .vote-count.upvoted {

@@ -85,7 +85,7 @@
   max-height: 600px;
   object-fit: contain;
   border-radius: 8px;
-  background: #f5f5f5;
+  background: var(--blueit-hover);
 }
 
 .post-image-gallery {
@@ -99,7 +99,7 @@
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 8px;
-  background: #f5f5f5;
+  background: var(--blueit-hover);
 }
 
 .gallery-item img {

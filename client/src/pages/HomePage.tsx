@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
 import SearchBar from '../components/SearchBar';
+import PostSortFilter, { SortOption } from '../components/PostSortFilter';
 import { postsApi, votesApi, followsApi } from '../services/api';
 import { Post } from '../types';
 import './HomePage.css';
@@ -32,6 +33,7 @@ function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [userVotes, setUserVotes] = useState<Record<number, number>>({});
+  const [sortOption, setSortOption] = useState<SortOption>('hot');
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -95,6 +97,31 @@ function HomePage() {
     setFeed(newFeed);
     setSearchQuery(''); // Clear search when changing feed
   };
+
+  const handleSortChange = (newSort: SortOption) => {
+    setSortOption(newSort);
+  };
+
+  // Sort posts based on selected option
+  const sortedPosts = [...posts].sort((a, b) => {
+    switch (sortOption) {
+      case 'hot':
+      case 'top':
+        // Sort by vote count descending (most upvotes first)
+        return (b.voteCount || 0) - (a.voteCount || 0);
+      case 'new':
+        // Sort by creation date descending (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'oldest':
+        // Sort by creation date ascending (oldest first)
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case 'controversial':
+        // Sort by vote count ascending (most downvotes/lowest score first)
+        return (a.voteCount || 0) - (b.voteCount || 0);
+      default:
+        return 0;
+    }
+  });
 
   // Keyword search handler using API
   const handleSearch = async (query: string) => {
@@ -211,6 +238,12 @@ function HomePage() {
             )}
           </div>
 
+          <PostSortFilter 
+            currentSort={sortOption}
+            onSortChange={handleSortChange}
+            disabled={isLoading || isSearching}
+          />
+
           <div className="feed-description">
             {searchQuery ? (
               <p>Search results for "{searchQuery}"</p>
@@ -260,7 +293,7 @@ function HomePage() {
               )}
             </div>
           ) : (
-            <PostFeed posts={posts} onVote={handleVote} />
+            <PostFeed posts={sortedPosts} onVote={handleVote} />
           )}
         </div>
       </div>

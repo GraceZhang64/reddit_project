@@ -13,8 +13,8 @@
 }
 
 .modal-content {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--blueit-card-bg);
+  border: 1px solid var(--blueit-border);
   border-radius: 12px;
   width: 100%;
   max-width: 500px;
@@ -28,20 +28,20 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--blueit-border);
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #fff;
+  color: var(--blueit-text);
 }
 
 .close-button {
   background: none;
   border: none;
   font-size: 2rem;
-  color: #999;
+  color: var(--blueit-text-muted);
   cursor: pointer;
   line-height: 1;
   padding: 0;
@@ -54,7 +54,7 @@
 }
 
 .close-button:hover {
-  color: #fff;
+  color: var(--blueit-text);
 }
 
 .modal-content form {
@@ -68,39 +68,39 @@
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #fff;
+  color: var(--blueit-text);
   font-weight: 500;
 }
 
 .input-wrapper {
   display: flex;
   align-items: center;
-  background: #0f0f0f;
-  border: 1px solid #333;
+  background: var(--blueit-input-bg);
+  border: 1px solid var(--blueit-border);
   border-radius: 6px;
   overflow: hidden;
 }
 
 .input-wrapper:focus-within {
-  border-color: #646cff;
+  border-color: var(--blueit-primary);
 }
 
 .prefix {
   padding: 0.75rem;
-  color: #999;
+  color: var(--blueit-text-muted);
   font-weight: 500;
-  background: #1a1a1a;
-  border-right: 1px solid #333;
+  background: var(--blueit-hover);
+  border-right: 1px solid var(--blueit-border);
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
-  background: #0f0f0f;
-  border: 1px solid #333;
+  background: var(--blueit-input-bg);
+  border: 1px solid var(--blueit-border);
   border-radius: 6px;
-  color: #fff;
+  color: var(--blueit-text);
   font-size: 1rem;
   font-family: inherit;
 }
@@ -118,13 +118,13 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #646cff;
+  border-color: var(--blueit-primary);
 }
 
 .form-group small {
   display: block;
   margin-top: 0.5rem;
-  color: #666;
+  color: var(--blueit-text-muted);
   font-size: 0.85rem;
 }
 
@@ -133,7 +133,7 @@
   gap: 1rem;
   justify-content: flex-end;
   padding-top: 1rem;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--blueit-border);
 }
 
 .cancel-button,
@@ -149,22 +149,22 @@
 
 .cancel-button {
   background: transparent;
-  color: #999;
-  border: 1px solid #333;
+  color: var(--blueit-text-muted);
+  border: 1px solid var(--blueit-border);
 }
 
 .cancel-button:hover {
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--blueit-hover);
+  color: var(--blueit-text);
 }
 
 .create-button {
-  background: #646cff;
+  background: var(--blueit-primary);
   color: white;
 }
 
 .create-button:hover {
-  background: #5558dd;
+  background: var(--blueit-primary-dark);
 }
 
 .create-button:active {

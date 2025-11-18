@@ -7,8 +7,8 @@
 .post-feed-empty {
   text-align: center;
   padding: 3rem 1.5rem;
-  color: #7c7c7c;
-  background: #fff;
+  color: var(--blueit-text-muted);
+  background: var(--blueit-card-bg);
   border-radius: 4px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--blueit-border);
 }

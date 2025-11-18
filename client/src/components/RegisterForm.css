@@ -3,12 +3,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--blueit-bg) 0%, #E8F4FF 100%);
+  background: var(--blueit-bg);
   padding: 2rem;
 }
 
 .register-form-card {
-  background: white;
+  background: var(--blueit-card-bg);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(74, 144, 226, 0.12);
   padding: 3rem;
@@ -75,7 +75,8 @@
   border: 2px solid var(--blueit-border);
   border-radius: 8px;
   transition: all 0.2s ease;
-  background-color: white;
+  background-color: var(--blueit-input-bg);
+  color: var(--blueit-text);
 }
 
 .form-field input:focus {
