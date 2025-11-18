@@ -15,6 +15,8 @@ const mapApiPost = (apiPost: any): Post => ({
   slug: apiPost.slug || undefined,
   title: apiPost.title,
   body: apiPost.body || undefined,
+  post_type: apiPost.post_type || apiPost.postType || 'text',
+  link_url: apiPost.link_url || apiPost.linkUrl || undefined,
   author: apiPost.author?.username || 'Unknown',
   communityId: apiPost.community?.id || 0,
   communityName: apiPost.community?.name || 'Unknown',

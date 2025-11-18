@@ -34,11 +34,10 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.postService = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
 // Calculate vote count for a post or comment
 async function getVoteCount(targetType, targetId) {
-    const result = await prisma.vote.aggregate({
+    const result = await prisma_1.prisma.vote.aggregate({
         where: {
             target_type: targetType,
             target_id: targetId,
@@ -53,7 +52,7 @@ async function getVoteCount(targetType, targetId) {
 async function getUserVote(userId, targetType, targetId) {
     if (!userId)
         return null;
-    const vote = await prisma.vote.findUnique({
+    const vote = await prisma_1.prisma.vote.findUnique({
         where: {
             userId_target_type_target_id: {
                 userId: userId,
@@ -69,7 +68,7 @@ exports.postService = {
         const { page, limit } = params;
         const skip = (page - 1) * limit;
         const [posts, total] = await Promise.all([
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' },
@@ -90,7 +89,7 @@ exports.postService = {
                     },
                 },
             }),
-            prisma.post.count(),
+            prisma_1.prisma.post.count(),
         ]);
         // Get vote counts and user votes for all posts
         const postsWithVotes = await Promise.all(posts.map(async (post) => {
@@ -100,7 +99,7 @@ exports.postService = {
                 ...post,
                 vote_count: voteCount,
                 user_vote: userVote,
-                comment_count: await prisma.comment.count({ where: { postId: post.id } }),
+                comment_count: await prisma_1.prisma.comment.count({ where: { postId: post.id } }),
             };
         }));
         return {
@@ -119,7 +118,7 @@ exports.postService = {
         // Get posts from last 7 days, ordered by vote count
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const posts = await prisma.post.findMany({
+        const posts = await prisma_1.prisma.post.findMany({
             where: {
                 createdAt: {
                     gte: sevenDaysAgo,
@@ -147,7 +146,7 @@ exports.postService = {
         // Calculate hot score (votes + comments * 0.5) and sort
         const postsWithScores = await Promise.all(posts.map(async (post) => {
             const voteCount = await getVoteCount('post', post.id);
-            const commentCount = await prisma.comment.count({ where: { postId: post.id } });
+            const commentCount = await prisma_1.prisma.comment.count({ where: { postId: post.id } });
             const hotScore = voteCount + commentCount * 0.5;
             const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
             return {
@@ -159,7 +158,7 @@ exports.postService = {
             };
         }));
         postsWithScores.sort((a, b) => b.hot_score - a.hot_score);
-        const total = await prisma.post.count({
+        const total = await prisma_1.prisma.post.count({
             where: {
                 createdAt: {
                     gte: sevenDaysAgo,
@@ -180,7 +179,7 @@ exports.postService = {
         const { page, limit } = params;
         const skip = (page - 1) * limit;
         // Use Prisma case-insensitive search
-        const posts = await prisma.post.findMany({
+        const posts = await prisma_1.prisma.post.findMany({
             where: {
                 OR: [
                     {
@@ -224,11 +223,11 @@ exports.postService = {
                 ...post,
                 vote_count: voteCount,
                 user_vote: userVote,
-                comment_count: await prisma.comment.count({ where: { postId: post.id } }),
+                comment_count: await prisma_1.prisma.comment.count({ where: { postId: post.id } }),
             };
         }));
         // Get total count
-        const total = await prisma.post.count({
+        const total = await prisma_1.prisma.post.count({
             where: {
                 OR: [
                     {
@@ -257,7 +256,7 @@ exports.postService = {
         };
     },
     async getPostBySlug(slug, userId) {
-        const post = await prisma.post.findUnique({
+        const post = await prisma_1.prisma.post.findUnique({
             where: { slug },
             include: {
                 author: {
@@ -334,7 +333,7 @@ exports.postService = {
         };
     },
     async getPostById(postId, userId) {
-        const post = await prisma.post.findUnique({
+        const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId },
             include: {
                 author: {
@@ -353,38 +352,101 @@ exports.postService = {
                         description: true,
                     },
                 },
-                comments: {
-                    include: {
-                        author: {
-                            select: {
-                                id: true,
-                                username: true,
-                                avatar_url: true,
-                            },
-                        },
-                    },
-                    orderBy: {
-                        createdAt: 'desc',
-                    },
-                },
             },
         });
         if (!post) {
             return null;
         }
-        const voteCount = await getVoteCount('post', post.id);
-        const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
-        // Build nested comment structure (same as comments endpoint)
+        // Get top-level comments first (limit to 10 for performance)
+        const topLevelCommentsQuery = await prisma_1.prisma.comment.findMany({
+            where: {
+                postId,
+                parentCommentId: null
+            },
+            take: 10,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        username: true,
+                        avatar_url: true,
+                    },
+                },
+            },
+        });
+        // Get all comment IDs (top-level + their replies)
+        const topLevelCommentIds = topLevelCommentsQuery.map(c => c.id);
+        // Get all replies for these top-level comments
+        const replies = await prisma_1.prisma.comment.findMany({
+            where: {
+                postId,
+                parentCommentId: { in: topLevelCommentIds }
+            },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        username: true,
+                        avatar_url: true,
+                    },
+                },
+            },
+        });
+        const allComments = [...topLevelCommentsQuery, ...replies];
+        const commentIds = allComments.map(c => c.id);
+        // Parallelize: Fetch post vote data and comment vote data simultaneously
+        const [postVoteData, commentVoteCounts, userVotes] = await Promise.all([
+            // Post vote count and user vote
+            Promise.all([
+                getVoteCount('post', post.id),
+                userId ? getUserVote(userId, 'post', post.id) : Promise.resolve(null)
+            ]),
+            // Comment vote counts (batch)
+            commentIds.length > 0 ? prisma_1.prisma.vote.groupBy({
+                by: ['target_id'],
+                where: {
+                    target_type: 'comment',
+                    target_id: { in: commentIds }
+                },
+                _sum: {
+                    value: true
+                }
+            }) : Promise.resolve([]),
+            // User votes for comments (batch)
+            userId && commentIds.length > 0 ? prisma_1.prisma.vote.findMany({
+                where: {
+                    userId: userId,
+                    target_type: 'comment',
+                    target_id: { in: commentIds }
+                },
+                select: {
+                    target_id: true,
+                    value: true
+                }
+            }) : Promise.resolve([])
+        ]);
+        const [voteCount, userVote] = postVoteData;
+        // Create a map of commentId -> voteCount
+        const voteCountMap = new Map();
+        commentVoteCounts.forEach(vc => {
+            voteCountMap.set(vc.target_id, vc._sum.value || 0);
+        });
+        // Create a map of commentId -> userVote
+        const userVoteMap = new Map();
+        userVotes.forEach(vote => {
+            userVoteMap.set(vote.target_id, vote.value);
+        });
+        // Build nested comment structure
         const commentsMap = new Map();
         const topLevelComments = [];
-        // First pass: Get vote data for all comments
-        for (const comment of post.comments) {
-            const commentVoteCount = await getVoteCount('comment', comment.id);
-            const commentUserVote = userId ? await getUserVote(userId, 'comment', comment.id) : null;
+        // First pass: Create a map of all comments with their vote data
+        for (const comment of allComments) {
             commentsMap.set(comment.id, {
                 ...comment,
-                vote_count: commentVoteCount,
-                user_vote: commentUserVote,
+                vote_count: voteCountMap.get(comment.id) || 0,
+                user_vote: userVoteMap.get(comment.id) || null,
                 replies: []
             });
         }
@@ -402,28 +464,28 @@ exports.postService = {
         }
         // Sort top-level comments by creation date (newest first)
         topLevelComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        // Get total comment count for the post
+        const totalCommentCount = await prisma_1.prisma.comment.count({
+            where: { postId }
+        });
         return {
             ...post,
             vote_count: voteCount,
             user_vote: userVote,
-            comment_count: post.comments.length,
+            comment_count: totalCommentCount,
             comments: topLevelComments,
         };
     },
     async createPost(data) {
         const { generateUniqueSlug } = await Promise.resolve().then(() => __importStar(require('../utils/slugify')));
         const slug = generateUniqueSlug(data.title);
-        const post = await prisma.post.create({
+        const post = await prisma_1.prisma.post.create({
             data: {
                 title: data.title,
                 slug: slug,
                 body: data.body,
                 post_type: data.post_type || 'text',
                 link_url: data.link_url || null,
-                image_url: data.image_url || null,
-                video_url: data.video_url || null,
-                media_urls: data.media_urls || [],
-                crosspost_id: data.crosspost_id || null,
                 authorId: data.author_id,
                 communityId: data.community_id,
             },
@@ -442,24 +504,6 @@ exports.postService = {
                         slug: true,
                     },
                 },
-                crosspost: data.crosspost_id ? {
-                    select: {
-                        id: true,
-                        title: true,
-                        slug: true,
-                        author: {
-                            select: {
-                                username: true,
-                            },
-                        },
-                        community: {
-                            select: {
-                                name: true,
-                                slug: true,
-                            },
-                        },
-                    },
-                } : false,
             },
         });
         // Create poll if post_type is poll
@@ -467,7 +511,7 @@ exports.postService = {
             const expiresAt = data.poll_expires_hours
                 ? new Date(Date.now() + data.poll_expires_hours * 60 * 60 * 1000)
                 : null;
-            await prisma.poll.create({
+            await prisma_1.prisma.poll.create({
                 data: {
                     postId: post.id,
                     expires_at: expiresAt,
@@ -483,6 +527,11 @@ exports.postService = {
         // Update community member count if this is user's first interaction
         const { updateCommunityMemberCount } = await Promise.resolve().then(() => __importStar(require('../utils/communityMemberCount')));
         await updateCommunityMemberCount(data.community_id, data.author_id);
+        // Create mention notifications for post body
+        if (data.body) {
+            const { createMentionNotifications } = await Promise.resolve().then(() => __importStar(require('../utils/mentions')));
+            await createMentionNotifications(data.body, data.author_id, post.id);
+        }
         return {
             ...post,
             vote_count: 0,
@@ -490,7 +539,7 @@ exports.postService = {
         };
     },
     async updatePost(postId, data) {
-        const post = await prisma.post.update({
+        const post = await prisma_1.prisma.post.update({
             where: { id: postId },
             data: {
                 ...(data.title && { title: data.title }),
@@ -516,7 +565,7 @@ exports.postService = {
             },
         });
         const voteCount = await getVoteCount('post', post.id);
-        const commentCount = await prisma.comment.count({ where: { postId: post.id } });
+        const commentCount = await prisma_1.prisma.comment.count({ where: { postId: post.id } });
         return {
             ...post,
             vote_count: voteCount,
@@ -524,7 +573,7 @@ exports.postService = {
         };
     },
     async deletePost(postId) {
-        await prisma.post.delete({
+        await prisma_1.prisma.post.delete({
             where: { id: postId },
         });
     },

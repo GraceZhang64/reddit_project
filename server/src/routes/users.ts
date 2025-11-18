@@ -64,7 +64,7 @@ router.get('/:username/posts', authenticateToken, async (req: Request, res: Resp
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Get posts
+    // Get posts with optimized vote fetching
     const [posts, total] = await Promise.all([
       prisma.post.findMany({
         where: { authorId: user.id },
@@ -85,11 +85,6 @@ router.get('/:username/posts', authenticateToken, async (req: Request, res: Resp
               name: true,
               slug: true
             }
-          },
-          _count: {
-            select: {
-              comments: true
-            }
           }
         }
       }),
@@ -98,8 +93,46 @@ router.get('/:username/posts', authenticateToken, async (req: Request, res: Resp
       })
     ]);
 
+    // Batch fetch vote counts and comment counts for all posts
+    const postIds = posts.map(p => p.id);
+    
+    const [voteCounts, commentCounts] = await Promise.all([
+      // Batch vote counts
+      postIds.length > 0 ? prisma.vote.groupBy({
+        by: ['target_id'],
+        where: {
+          target_type: 'post',
+          target_id: { in: postIds }
+        },
+        _sum: {
+          value: true
+        }
+      }) : Promise.resolve([]),
+      // Batch comment counts
+      postIds.length > 0 ? prisma.comment.groupBy({
+        by: ['postId'],
+        where: {
+          postId: { in: postIds }
+        },
+        _count: {
+          id: true
+        }
+      }) : Promise.resolve([])
+    ]);
+
+    // Create maps for quick lookup
+    const voteCountMap = new Map(voteCounts.map(v => [v.target_id, v._sum.value || 0]));
+    const commentCountMap = new Map(commentCounts.map(c => [c.postId, c._count.id]));
+
+    // Enrich posts with counts
+    const postsWithCounts = posts.map(post => ({
+      ...post,
+      vote_count: voteCountMap.get(post.id) || 0,
+      comment_count: commentCountMap.get(post.id) || 0
+    }));
+
     res.json({
-      posts,
+      posts: postsWithCounts,
       pagination: {
         page,
         limit,
@@ -134,7 +167,7 @@ router.get('/:username/comments', authenticateToken, async (req: Request, res: R
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Get comments
+    // Get comments with optimized vote fetching
     const [comments, total] = await Promise.all([
       prisma.comment.findMany({
         where: { authorId: user.id },
@@ -167,8 +200,31 @@ router.get('/:username/comments', authenticateToken, async (req: Request, res: R
       })
     ]);
 
+    // Batch fetch vote counts for all comments
+    const commentIds = comments.map(c => c.id);
+    
+    const voteCounts = commentIds.length > 0 ? await prisma.vote.groupBy({
+      by: ['target_id'],
+      where: {
+        target_type: 'comment',
+        target_id: { in: commentIds }
+      },
+      _sum: {
+        value: true
+      }
+    }) : [];
+
+    // Create map for quick lookup
+    const voteCountMap = new Map(voteCounts.map(v => [v.target_id, v._sum.value || 0]));
+
+    // Enrich comments with vote counts
+    const commentsWithCounts = comments.map(comment => ({
+      ...comment,
+      vote_count: voteCountMap.get(comment.id) || 0
+    }));
+
     res.json({
-      comments,
+      comments: commentsWithCounts,
       pagination: {
         page,
         limit,

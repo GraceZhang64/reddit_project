@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 /**
  * POST /api/follows/:username
  * Follow a user
@@ -14,7 +13,7 @@ router.post('/:username', auth_1.authenticateToken, async (req, res) => {
         const { username } = req.params;
         const followerId = req.user.id;
         // Get user to follow
-        const userToFollow = await prisma.user.findUnique({
+        const userToFollow = await prisma_1.prisma.user.findUnique({
             where: { username },
             select: { id: true },
         });
@@ -25,7 +24,7 @@ router.post('/:username', auth_1.authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Cannot follow yourself' });
         }
         // Check if already following
-        const existing = await prisma.userFollow.findUnique({
+        const existing = await prisma_1.prisma.userFollow.findUnique({
             where: {
                 followerId_followingId: {
                     followerId,
@@ -37,7 +36,7 @@ router.post('/:username', auth_1.authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Already following this user' });
         }
         // Create follow
-        await prisma.userFollow.create({
+        await prisma_1.prisma.userFollow.create({
             data: {
                 followerId,
                 followingId: userToFollow.id,
@@ -58,14 +57,14 @@ router.delete('/:username', auth_1.authenticateToken, async (req, res) => {
     try {
         const { username } = req.params;
         const followerId = req.user.id;
-        const userToUnfollow = await prisma.user.findUnique({
+        const userToUnfollow = await prisma_1.prisma.user.findUnique({
             where: { username },
             select: { id: true },
         });
         if (!userToUnfollow) {
             return res.status(404).json({ error: 'User not found' });
         }
-        await prisma.userFollow.deleteMany({
+        await prisma_1.prisma.userFollow.deleteMany({
             where: {
                 followerId,
                 followingId: userToUnfollow.id,
@@ -86,14 +85,14 @@ router.get('/check/:username', auth_1.authenticateToken, async (req, res) => {
     try {
         const { username } = req.params;
         const followerId = req.user.id;
-        const userToCheck = await prisma.user.findUnique({
+        const userToCheck = await prisma_1.prisma.user.findUnique({
             where: { username },
             select: { id: true },
         });
         if (!userToCheck) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const follow = await prisma.userFollow.findUnique({
+        const follow = await prisma_1.prisma.userFollow.findUnique({
             where: {
                 followerId_followingId: {
                     followerId,
@@ -118,7 +117,7 @@ router.get('/followers/:username', async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { username },
             select: { id: true },
         });
@@ -126,7 +125,7 @@ router.get('/followers/:username', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         const [followers, total] = await Promise.all([
-            prisma.userFollow.findMany({
+            prisma_1.prisma.userFollow.findMany({
                 where: { followingId: user.id },
                 include: {
                     follower: {
@@ -143,7 +142,7 @@ router.get('/followers/:username', async (req, res) => {
                 skip,
                 take: limit,
             }),
-            prisma.userFollow.count({ where: { followingId: user.id } }),
+            prisma_1.prisma.userFollow.count({ where: { followingId: user.id } }),
         ]);
         res.json({
             followers: followers.map((f) => f.follower),
@@ -170,7 +169,7 @@ router.get('/following/:username', async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { username },
             select: { id: true },
         });
@@ -178,7 +177,7 @@ router.get('/following/:username', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         const [following, total] = await Promise.all([
-            prisma.userFollow.findMany({
+            prisma_1.prisma.userFollow.findMany({
                 where: { followerId: user.id },
                 include: {
                     following: {
@@ -195,7 +194,7 @@ router.get('/following/:username', async (req, res) => {
                 skip,
                 take: limit,
             }),
-            prisma.userFollow.count({ where: { followerId: user.id } }),
+            prisma_1.prisma.userFollow.count({ where: { followerId: user.id } }),
         ]);
         res.json({
             following: following.map((f) => f.following),
@@ -223,7 +222,7 @@ router.get('/feed', auth_1.authenticateToken, async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
         // Get followed user IDs
-        const following = await prisma.userFollow.findMany({
+        const following = await prisma_1.prisma.userFollow.findMany({
             where: { followerId: userId },
             select: { followingId: true },
         });
@@ -236,7 +235,7 @@ router.get('/feed', auth_1.authenticateToken, async (req, res) => {
         }
         // Get posts from followed users
         const [posts, total] = await Promise.all([
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: { authorId: { in: followedUserIds } },
                 include: {
                     author: {
@@ -259,18 +258,18 @@ router.get('/feed', auth_1.authenticateToken, async (req, res) => {
                 skip,
                 take: limit,
             }),
-            prisma.post.count({ where: { authorId: { in: followedUserIds } } }),
+            prisma_1.prisma.post.count({ where: { authorId: { in: followedUserIds } } }),
         ]);
         // Get vote counts and comment counts
         const postsWithCounts = await Promise.all(posts.map(async (post) => {
             const [voteCount, commentCount, userVote] = await Promise.all([
-                prisma.vote.aggregate({
+                prisma_1.prisma.vote.aggregate({
                     where: { target_type: 'post', target_id: post.id },
                     _sum: { value: true },
                 }),
-                prisma.comment.count({ where: { postId: post.id } }),
+                prisma_1.prisma.comment.count({ where: { postId: post.id } }),
                 // Get current user's vote if authenticated
-                prisma.vote.findFirst({
+                prisma_1.prisma.vote.findFirst({
                     where: {
                         userId,
                         target_type: 'post',

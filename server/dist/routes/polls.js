@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 /**
  * GET /api/polls/post/:postId
  * Get poll data for a post
@@ -15,7 +14,7 @@ router.get('/post/:postId', async (req, res) => {
         if (isNaN(postId)) {
             return res.status(400).json({ error: 'Invalid post ID' });
         }
-        const poll = await prisma.poll.findFirst({
+        const poll = await prisma_1.prisma.poll.findFirst({
             where: { postId },
             include: {
                 options: {
@@ -71,7 +70,7 @@ router.post('/vote', auth_1.authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Invalid option_id' });
         }
         // Check if option exists and get poll info
-        const option = await prisma.pollOption.findUnique({
+        const option = await prisma_1.prisma.pollOption.findUnique({
             where: { id: optionId },
             include: {
                 poll: true,
@@ -85,7 +84,7 @@ router.post('/vote', auth_1.authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Poll has expired' });
         }
         // Check if user has already voted on any option in this poll
-        const existingVote = await prisma.pollVote.findFirst({
+        const existingVote = await prisma_1.prisma.pollVote.findFirst({
             where: {
                 userId,
                 option: {
@@ -98,19 +97,19 @@ router.post('/vote', auth_1.authenticateToken, async (req, res) => {
         });
         // If user is voting for the same option, remove the vote (toggle)
         if (existingVote && existingVote.optionId === optionId) {
-            await prisma.pollVote.delete({
+            await prisma_1.prisma.pollVote.delete({
                 where: { id: existingVote.id },
             });
             return res.json({ message: 'Vote removed', voted_option_id: null });
         }
         // If user has voted for a different option, delete old vote and create new one
         if (existingVote) {
-            await prisma.pollVote.delete({
+            await prisma_1.prisma.pollVote.delete({
                 where: { id: existingVote.id },
             });
         }
         // Create new vote
-        await prisma.pollVote.create({
+        await prisma_1.prisma.pollVote.create({
             data: {
                 userId,
                 optionId,
@@ -134,7 +133,7 @@ router.get('/:pollId/user-vote', auth_1.authenticateToken, async (req, res) => {
         if (isNaN(pollId)) {
             return res.status(400).json({ error: 'Invalid poll ID' });
         }
-        const userVote = await prisma.pollVote.findFirst({
+        const userVote = await prisma_1.prisma.pollVote.findFirst({
             where: {
                 userId,
                 option: {

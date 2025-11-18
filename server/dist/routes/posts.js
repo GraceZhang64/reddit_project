@@ -38,17 +38,30 @@ const postService_1 = require("../services/postService");
 const auth_1 = require("../middleware/auth");
 const aiService_1 = require("../services/aiService");
 const supabase_1 = require("../config/supabase");
+const prisma_1 = require("../lib/prisma");
+const cache_1 = require("../lib/cache");
+const rateLimiter_1 = require("../middleware/rateLimiter");
+const requestValidator_1 = require("../middleware/requestValidator");
 const router = (0, express_1.Router)();
 /**
  * GET /api/posts
- * Get all posts with pagination
+ * Get all posts with pagination (with caching)
  */
 router.get('/', auth_1.authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const userId = req.user?.id;
+        // Cache key includes page and limit
+        const cacheKey = `posts:${page}:${limit}:${userId}`;
+        // Check cache first
+        const cachedData = cache_1.cache.get(cacheKey);
+        if (cachedData) {
+            return res.json(cachedData);
+        }
         const result = await postService_1.postService.getPosts({ page, limit }, userId);
+        // Cache for 30 seconds
+        cache_1.cache.set(cacheKey, result, cache_1.CACHE_TTL.POST_LIST);
         res.json(result);
     }
     catch (error) {
@@ -58,14 +71,23 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
 });
 /**
  * GET /api/posts/hot
- * Get hot/trending posts
+ * Get hot/trending posts (with caching)
  */
 router.get('/hot', auth_1.authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const userId = req.user?.id;
+        // Cache key for hot posts
+        const cacheKey = `hot:${page}:${limit}:${userId}`;
+        // Check cache first
+        const cachedData = cache_1.cache.get(cacheKey);
+        if (cachedData) {
+            return res.json(cachedData);
+        }
         const result = await postService_1.postService.getHotPosts({ page, limit }, userId);
+        // Cache for 1 minute
+        cache_1.cache.set(cacheKey, result, cache_1.CACHE_TTL.HOT_POSTS);
         res.json(result);
     }
     catch (error) {
@@ -160,8 +182,7 @@ router.get('/:idOrSlug/summary', auth_1.authenticateToken, async (req, res) => {
                 ;
                 summary = await aiService.generatePostSummary(postData);
                 // Update the post with the new summary and current comment count
-                const { PrismaClient } = await Promise.resolve().then(() => __importStar(require('@prisma/client')));
-                const prisma = new PrismaClient();
+                const { prisma } = await Promise.resolve().then(() => __importStar(require('../lib/prisma')));
                 try {
                     // Use raw query since Prisma client may not be regenerated yet
                     await prisma.$executeRaw `
@@ -202,6 +223,13 @@ router.get('/:idOrSlug', auth_1.authenticateToken, async (req, res) => {
     try {
         const { idOrSlug } = req.params;
         const userId = req.user?.id;
+        // Cache key for this specific post
+        const cacheKey = `post:${idOrSlug}:${userId}`;
+        // Check cache first
+        const cachedData = cache_1.cache.get(cacheKey);
+        if (cachedData) {
+            return res.json(cachedData);
+        }
         // Try to parse as ID first
         const postId = parseInt(idOrSlug);
         let post;
@@ -216,61 +244,108 @@ router.get('/:idOrSlug', auth_1.authenticateToken, async (req, res) => {
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
-        res.json(post);
+        // Include ai_summary if it exists in the database (don't wait for generation)
+        const actualPostId = post.id;
+        const postWithSummary = await prisma_1.prisma.post.findUnique({
+            where: { id: actualPostId },
+            select: { ai_summary: true }
+        });
+        // Trigger async AI summary generation if it doesn't exist (fire and forget)
+        if (!postWithSummary?.ai_summary) {
+            // Don't await - let it generate in background
+            generateAISummaryAsync(actualPostId, post).catch(err => {
+                console.error('Background AI summary generation failed:', err);
+            });
+        }
+        const result = {
+            ...post,
+            ai_summary: postWithSummary?.ai_summary || null
+        };
+        // Cache for 1 minute
+        cache_1.cache.set(cacheKey, result, cache_1.CACHE_TTL.POST_DETAIL);
+        res.json(result);
     }
     catch (error) {
         console.error('Error fetching post:', error);
         res.status(500).json({ error: 'Failed to fetch post' });
     }
 });
+// Async function to generate AI summary in background
+async function generateAISummaryAsync(postId, post) {
+    try {
+        const aiService = (0, aiService_1.getAIService)();
+        const currentCommentCount = post.comment_count || 0;
+        // Prepare post data for AI summary
+        const postData = {
+            title: post.title,
+            body: post.body || '',
+            voteCount: post.vote_count || 0,
+            comments: []
+        };
+        // Fetch comments for the post
+        const supabase = (0, supabase_1.getSupabaseClient)();
+        const { data: commentsData } = await supabase
+            .from('comments')
+            .select('body, author_id, vote_count, created_at')
+            .eq('post_id', postId)
+            .order('vote_count', { ascending: false })
+            .limit(10); // Limit to top 10 comments for summary
+        if (commentsData && commentsData.length > 0) {
+            postData.comments = commentsData.map((c) => ({
+                body: c.body,
+                author: c.author_id,
+                voteCount: c.vote_count || 0,
+                createdAt: new Date(c.created_at)
+            }));
+        }
+        const summary = await aiService.generatePostSummary(postData);
+        // Update the post with the new summary
+        await prisma_1.prisma.$executeRaw `
+      UPDATE posts 
+      SET ai_summary = ${summary},
+          ai_summary_generated_at = NOW(),
+          ai_summary_comment_count = ${currentCommentCount}
+      WHERE id = ${postId}
+    `;
+        console.log(`✅ AI summary generated and cached for post ${postId}`);
+    }
+    catch (error) {
+        console.error('Background AI summary generation failed:', error);
+        // Don't throw - this is fire and forget
+    }
+}
 /**
  * POST /api/posts
- * Create a new post (supports text, link, image, video, poll, crosspost)
+ * Create a new post (supports text, link, poll)
  */
-router.post('/', auth_1.authenticateToken, async (req, res) => {
+router.post('/', auth_1.authenticateToken, rateLimiter_1.postCreationLimiter.middleware(), requestValidator_1.validatePostCreation, async (req, res) => {
     try {
-        const { title, body, post_type = 'text', link_url, image_url, video_url, media_urls, community_id, poll_options, poll_expires_hours, crosspost_id } = req.body;
+        const { title, body, post_type = 'text', link_url, community_id, poll_options, poll_expires_hours } = req.body;
         // Validation
         if (!title || !community_id) {
             return res.status(400).json({ error: 'Title and community_id are required' });
         }
         // Validate post type
-        const validTypes = ['text', 'link', 'image', 'video', 'poll', 'crosspost'];
+        const validTypes = ['text', 'link', 'poll'];
         if (!validTypes.includes(post_type)) {
-            return res.status(400).json({ error: 'Invalid post_type' });
+            return res.status(400).json({ error: 'Invalid post_type. Allowed types: text, link, poll' });
         }
         // Type-specific validation
         if (post_type === 'link' && !link_url) {
             return res.status(400).json({ error: 'link_url is required for link posts' });
         }
-        if (post_type === 'image' && !image_url && (!media_urls || media_urls.length === 0)) {
-            return res.status(400).json({ error: 'image_url or media_urls is required for image posts' });
-        }
-        if (post_type === 'video' && !video_url) {
-            return res.status(400).json({ error: 'video_url is required for video posts' });
-        }
         if (post_type === 'poll' && (!poll_options || poll_options.length < 2)) {
             return res.status(400).json({ error: 'At least 2 poll options are required for poll posts' });
-        }
-        if (post_type === 'crosspost' && !crosspost_id) {
-            return res.status(400).json({ error: 'crosspost_id is required for crosspost posts' });
         }
         // URL validation
         if (link_url && !isValidUrl(link_url)) {
             return res.status(400).json({ error: 'Invalid link_url format' });
-        }
-        if (video_url && !isValidUrl(video_url)) {
-            return res.status(400).json({ error: 'Invalid video_url format' });
         }
         const post = await postService_1.postService.createPost({
             title,
             body: body || null,
             post_type,
             link_url: link_url || null,
-            image_url: image_url || null,
-            video_url: video_url || null,
-            media_urls: media_urls || [],
-            crosspost_id: crosspost_id ? parseInt(crosspost_id) : null,
             community_id: parseInt(community_id),
             author_id: req.user.id,
             poll_options: poll_options || null,

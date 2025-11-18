@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 /**
  * GET /api/communities
  * Get all communities
@@ -15,7 +14,7 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
         const [communities, total] = await Promise.all([
-            prisma.community.findMany({
+            prisma_1.prisma.community.findMany({
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' },
@@ -33,7 +32,7 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
                     }
                 }
             }),
-            prisma.community.count()
+            prisma_1.prisma.community.count()
         ]);
         res.json({
             communities,
@@ -57,7 +56,7 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
 router.get('/:slug', auth_1.authenticateToken, async (req, res) => {
     try {
         const { slug } = req.params;
-        const community = await prisma.community.findUnique({
+        const community = await prisma_1.prisma.community.findUnique({
             where: { slug },
             include: {
                 users: {
@@ -103,7 +102,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
             });
         }
         // Check if slug already exists
-        const existing = await prisma.community.findUnique({
+        const existing = await prisma_1.prisma.community.findUnique({
             where: { slug }
         });
         if (existing) {
@@ -112,7 +111,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
             });
         }
         // Create community
-        const community = await prisma.community.create({
+        const community = await prisma_1.prisma.community.create({
             data: {
                 name,
                 slug,
@@ -144,7 +143,7 @@ router.put('/:slug', auth_1.authenticateToken, async (req, res) => {
         const { slug } = req.params;
         const { name, description } = req.body;
         // Find community
-        const community = await prisma.community.findUnique({
+        const community = await prisma_1.prisma.community.findUnique({
             where: { slug }
         });
         if (!community) {
@@ -157,7 +156,7 @@ router.put('/:slug', auth_1.authenticateToken, async (req, res) => {
             });
         }
         // Update community
-        const updated = await prisma.community.update({
+        const updated = await prisma_1.prisma.community.update({
             where: { slug },
             data: {
                 ...(name && { name }),
@@ -187,7 +186,7 @@ router.delete('/:slug', auth_1.authenticateToken, async (req, res) => {
     try {
         const { slug } = req.params;
         // Find community
-        const community = await prisma.community.findUnique({
+        const community = await prisma_1.prisma.community.findUnique({
             where: { slug }
         });
         if (!community) {
@@ -200,7 +199,7 @@ router.delete('/:slug', auth_1.authenticateToken, async (req, res) => {
             });
         }
         // Delete community
-        await prisma.community.delete({
+        await prisma_1.prisma.community.delete({
             where: { slug }
         });
         res.json({
@@ -224,7 +223,7 @@ router.get('/:slug/posts', auth_1.authenticateToken, async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
         // Find community
-        const community = await prisma.community.findUnique({
+        const community = await prisma_1.prisma.community.findUnique({
             where: { slug }
         });
         if (!community) {
@@ -232,7 +231,7 @@ router.get('/:slug/posts', auth_1.authenticateToken, async (req, res) => {
         }
         // Get posts
         const [posts, total] = await Promise.all([
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: { communityId: community.id },
                 skip,
                 take: limit,
@@ -259,7 +258,7 @@ router.get('/:slug/posts', auth_1.authenticateToken, async (req, res) => {
                     }
                 }
             }),
-            prisma.post.count({
+            prisma_1.prisma.post.count({
                 where: { communityId: community.id }
             })
         ]);

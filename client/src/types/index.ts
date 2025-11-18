@@ -7,7 +7,7 @@ export interface Community {
   createdAt: string;
 }
 
-export type PostType = 'text' | 'link' | 'image' | 'video' | 'poll' | 'crosspost';
+export type PostType = 'text' | 'link' | 'poll';
 
 export interface Post {
   id: number;
@@ -16,17 +16,6 @@ export interface Post {
   body?: string;
   post_type?: PostType;
   link_url?: string;
-  image_url?: string;
-  video_url?: string;
-  media_urls?: string[];
-  crosspost_id?: number;
-  crosspost?: {
-    id: number;
-    title: string;
-    slug?: string;
-    author: { username: string };
-    community: { name: string; slug: string };
-  };
   author: string;
   communityId: number;
   communityName: string;

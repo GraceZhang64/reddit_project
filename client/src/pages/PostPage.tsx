@@ -4,8 +4,9 @@ import VoteButtons from '../components/VoteButtons';
 import CommentItem from '../components/CommentItem';
 import PostContent from '../components/PostContent';
 import PollWidget from '../components/PollWidget';
+import FollowButton from '../components/FollowButton';
 import { Post, Comment } from '../types';
-import { commentsApi, postsApi, savedPostsApi } from '../services/api';
+import { commentsApi, postsApi } from '../services/api';
 import './PostPage.css';
 import AISummaryContent from '../components/AISummaryContent';
 
@@ -23,8 +24,7 @@ function PostPage() {
   const [loading, setLoading] = useState(true);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const currentUser = localStorage.getItem('username');
 
   // Fetch post data (loads immediately, AI summary loads async)
   useEffect(() => {
@@ -45,6 +45,8 @@ function PostPage() {
           slug: apiData.slug || undefined,
           title: apiData.title,
           body: apiData.body || undefined,
+          post_type: apiData.post_type || apiData.postType || 'text',
+          link_url: apiData.link_url || apiData.linkUrl || undefined,
           author: apiData.author?.username || 'Unknown',
           communityId: apiData.community?.id || apiData.communityId || 0,
           communityName: apiData.community?.name || apiData.communityName || 'General',
@@ -97,22 +99,6 @@ function PostPage() {
 
     fetchPost();
   }, [id]);
-
-  // Fetch saved status when post is loaded
-  useEffect(() => {
-    const checkSavedStatus = async () => {
-      if (!post) return;
-      
-      try {
-        const result = await savedPostsApi.checkIfSaved(post.id);
-        setIsSaved(result.saved);
-      } catch (error) {
-        console.error('Error checking saved status:', error);
-      }
-    };
-
-    checkSavedStatus();
-  }, [post?.id]);
 
   // Poll for AI summary when it's being generated
   const pollForAISummary = async (postId: string) => {
@@ -177,31 +163,6 @@ function PostPage() {
       setUserVote(oldVote);
       setPost({ ...post, voteCount: (post.voteCount || 0) - voteDiff });
       alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
-    }
-  };
-
-  const handleSaveToggle = async () => {
-    if (!post || isSaving) return;
-    
-    setIsSaving(true);
-    try {
-      if (isSaved) {
-        await savedPostsApi.unsavePost(post.id);
-        setIsSaved(false);
-      } else {
-        await savedPostsApi.savePost(post.id);
-        setIsSaved(true);
-      }
-    } catch (error: any) {
-      console.error('Error toggling save:', error);
-      // Handle 409 conflict (already saved) as success
-      if (error.response?.status === 409) {
-        setIsSaved(true);
-      } else {
-        alert('Failed to ' + (isSaved ? 'unsave' : 'save') + ' post. Please try again.');
-      }
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -324,15 +285,17 @@ function PostPage() {
                     u/{post.author}
                   </Link>
                 </span>
+                {currentUser && currentUser !== post.author && (
+                  <span className="post-follow-btn-wrapper">
+                    <FollowButton username={post.author} />
+                  </span>
+                )}
                 <span className="separator">•</span>
                 <span className="time">{new Date(post.createdAt).toLocaleDateString()}</span>
               </div>
               <h1 className="post-title">
                 {post.post_type === 'link' && '🔗 '}
-                {post.post_type === 'image' && '🖼️ '}
-                {post.post_type === 'video' && '🎥 '}
                 {post.post_type === 'poll' && '📊 '}
-                {post.post_type === 'crosspost' && '🔄 '}
                 {post.title}
               </h1>
             </div>
@@ -376,23 +339,6 @@ function PostPage() {
                 }}
               >
                 🔗 Share
-              </button>
-              <button 
-                className={`action-button save-button ${isSaved ? 'saved' : ''}`}
-                onClick={handleSaveToggle}
-                disabled={isSaving}
-                title={isSaved ? 'Unsave post' : 'Save post'}
-              >
-                {isSaving ? '⏳' : isSaved ? '🔖' : '📑'} {isSaved ? 'Saved' : 'Save'}
-              </button>
-              <button 
-                className="action-button"
-                onClick={() => {
-                  const crosspostUrl = `/communities?crosspost=${post.id}`;
-                  window.location.href = crosspostUrl;
-                }}
-              >
-                🔄 Crosspost
               </button>
             </div>
           </div>

@@ -87,6 +87,8 @@ function CommunityPage() {
         slug: p.slug || undefined,
         title: p.title,
         body: p.body || undefined,
+        post_type: p.post_type || p.postType || 'text',
+        link_url: p.link_url || p.linkUrl || undefined,
         author: p.author?.username || 'Unknown',
         communityId: p.community?.id || 0,
         communityName: p.community?.name || 'Unknown',

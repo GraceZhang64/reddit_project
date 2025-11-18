@@ -4,12 +4,15 @@ import { authenticateToken } from '../middleware/auth';
 import { getAIService } from '../services/aiService';
 import { getSupabaseClient } from '../config/supabase';
 import { prisma } from '../lib/prisma';
+import { cache, CACHE_TTL } from '../lib/cache';
+import { apiLimiter, postCreationLimiter } from '../middleware/rateLimiter';
+import { validatePostCreation } from '../middleware/requestValidator';
 
 const router = Router();
 
 /**
  * GET /api/posts
- * Get all posts with pagination
+ * Get all posts with pagination (with caching)
  */
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -17,7 +20,19 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const userId = req.user?.id;
 
+    // Cache key includes page and limit
+    const cacheKey = `posts:${page}:${limit}:${userId}`;
+    
+    // Check cache first
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
     const result = await postService.getPosts({ page, limit }, userId);
+
+    // Cache for 30 seconds
+    cache.set(cacheKey, result, CACHE_TTL.POST_LIST);
 
     res.json(result);
   } catch (error) {
@@ -28,7 +43,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 
 /**
  * GET /api/posts/hot
- * Get hot/trending posts
+ * Get hot/trending posts (with caching)
  */
 router.get('/hot', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -36,7 +51,19 @@ router.get('/hot', authenticateToken, async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const userId = req.user?.id;
 
+    // Cache key for hot posts
+    const cacheKey = `hot:${page}:${limit}:${userId}`;
+    
+    // Check cache first
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
     const result = await postService.getHotPosts({ page, limit }, userId);
+
+    // Cache for 1 minute
+    cache.set(cacheKey, result, CACHE_TTL.HOT_POSTS);
 
     res.json(result);
   } catch (error) {
@@ -193,6 +220,15 @@ router.get('/:idOrSlug', authenticateToken, async (req: Request, res: Response) 
     const { idOrSlug } = req.params;
     const userId = req.user?.id;
     
+    // Cache key for this specific post
+    const cacheKey = `post:${idOrSlug}:${userId}`;
+    
+    // Check cache first
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+    
     // Try to parse as ID first
     const postId = parseInt(idOrSlug);
     let post;
@@ -224,10 +260,15 @@ router.get('/:idOrSlug', authenticateToken, async (req: Request, res: Response) 
       });
     }
 
-    res.json({
+    const result = {
       ...post,
       ai_summary: postWithSummary?.ai_summary || null
-    });
+    };
+
+    // Cache for 1 minute
+    cache.set(cacheKey, result, CACHE_TTL.POST_DETAIL);
+
+    res.json(result);
   } catch (error) {
     console.error('Error fetching post:', error);
     res.status(500).json({ error: 'Failed to fetch post' });
@@ -295,22 +336,18 @@ async function generateAISummaryAsync(postId: number, post: any) {
 
 /**
  * POST /api/posts
- * Create a new post (supports text, link, image, video, poll, crosspost)
+ * Create a new post (supports text, link, poll)
  */
-router.post('/', authenticateToken, async (req: Request, res: Response) => {
+router.post('/', authenticateToken, postCreationLimiter.middleware(), validatePostCreation, async (req: Request, res: Response) => {
   try {
     const { 
       title, 
       body, 
       post_type = 'text',
       link_url, 
-      image_url, 
-      video_url,
-      media_urls,
       community_id,
       poll_options,
-      poll_expires_hours,
-      crosspost_id
+      poll_expires_hours
     } = req.body;
 
     // Validation
@@ -319,34 +356,22 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
     }
 
     // Validate post type
-    const validTypes = ['text', 'link', 'image', 'video', 'poll', 'crosspost'];
+    const validTypes = ['text', 'link', 'poll'];
     if (!validTypes.includes(post_type)) {
-      return res.status(400).json({ error: 'Invalid post_type' });
+      return res.status(400).json({ error: 'Invalid post_type. Allowed types: text, link, poll' });
     }
 
     // Type-specific validation
     if (post_type === 'link' && !link_url) {
       return res.status(400).json({ error: 'link_url is required for link posts' });
     }
-    if (post_type === 'image' && !image_url && (!media_urls || media_urls.length === 0)) {
-      return res.status(400).json({ error: 'image_url or media_urls is required for image posts' });
-    }
-    if (post_type === 'video' && !video_url) {
-      return res.status(400).json({ error: 'video_url is required for video posts' });
-    }
     if (post_type === 'poll' && (!poll_options || poll_options.length < 2)) {
       return res.status(400).json({ error: 'At least 2 poll options are required for poll posts' });
-    }
-    if (post_type === 'crosspost' && !crosspost_id) {
-      return res.status(400).json({ error: 'crosspost_id is required for crosspost posts' });
     }
 
     // URL validation
     if (link_url && !isValidUrl(link_url)) {
       return res.status(400).json({ error: 'Invalid link_url format' });
-    }
-    if (video_url && !isValidUrl(video_url)) {
-      return res.status(400).json({ error: 'Invalid video_url format' });
     }
 
     const post = await postService.createPost({
@@ -354,10 +379,6 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       body: body || null,
       post_type,
       link_url: link_url || null,
-      image_url: image_url || null,
-      video_url: video_url || null,
-      media_urls: media_urls || [],
-      crosspost_id: crosspost_id ? parseInt(crosspost_id) : null,
       community_id: parseInt(community_id),
       author_id: req.user!.id,
       poll_options: poll_options || null,

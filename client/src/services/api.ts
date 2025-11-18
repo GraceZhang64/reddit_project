@@ -116,12 +116,8 @@ export interface CreatePostData {
   body?: string;
   post_type?: string;
   link_url?: string;
-  image_url?: string;
-  video_url?: string;
-  media_urls?: string[];
   poll_options?: string[];
   poll_expires_hours?: number;
-  crosspost_id?: number;
   community_id: number;
 }
 
