@@ -258,7 +258,7 @@ router.get('/:slug/posts', authenticateToken, async (req: Request, res: Response
       return res.status(404).json({ error: 'Community not found' });
     }
 
-    // Get posts
+    // Get posts (basic data)
     const [posts, total] = await Promise.all([
       prisma.post.findMany({
         where: { communityId: community.id },
@@ -292,8 +292,43 @@ router.get('/:slug/posts', authenticateToken, async (req: Request, res: Response
       })
     ]);
 
+    // Aggregate vote counts for posts in this page
+    const postIds = posts.map(p => p.id);
+    const voteGroups = postIds.length > 0 ? await prisma.vote.groupBy({
+      by: ['target_id'],
+      where: {
+        target_type: 'post',
+        target_id: { in: postIds }
+      },
+      _sum: { value: true }
+    }) : [];
+    const voteMap = new Map<number, number>();
+    voteGroups.forEach(g => voteMap.set(g.target_id, g._sum.value || 0));
+
+    // Fetch current user's votes for these posts (if authenticated)
+    let userVoteMap = new Map<number, number | null>();
+    if (req.user && postIds.length > 0) {
+      const userVotes = await prisma.vote.findMany({
+        where: {
+          userId: req.user.id,
+          target_type: 'post',
+          target_id: { in: postIds }
+        },
+        select: { target_id: true, value: true }
+      });
+      userVotes.forEach(v => userVoteMap.set(v.target_id, v.value));
+    }
+
+    // Enrich posts with vote_count, comment_count, and user_vote
+    const enriched = posts.map(p => ({
+      ...p,
+      vote_count: voteMap.get(p.id) || 0,
+      comment_count: (p as any)._count?.comments || 0,
+      user_vote: userVoteMap.get(p.id) ?? null
+    }));
+
     res.json({
-      posts,
+      posts: enriched,
       pagination: {
         page,
         limit,

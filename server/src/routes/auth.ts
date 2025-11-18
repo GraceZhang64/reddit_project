@@ -169,7 +169,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // Get user profile from database
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { id: data.user.id },
       select: {
         id: true,
@@ -180,10 +180,29 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     });
 
+    // If profile was deleted in our DB but still exists in Supabase Auth, recreate it
     if (!user) {
-      return res.status(404).json({ 
-        error: 'User profile not found' 
+      const fallbackUsername =
+        (data.user.user_metadata && (data.user.user_metadata as any).username) ||
+        (data.user.email ? data.user.email.split('@')[0] : `user_${data.user.id.substring(0, 8)}`);
+
+      const created = await prisma.user.create({
+        data: {
+          id: data.user.id,
+          email: data.user.email || '',
+          username: fallbackUsername,
+          avatar_url: null,
+          bio: null
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          avatar_url: true,
+          bio: true
+        }
       });
+      user = created;
     }
 
     res.json({

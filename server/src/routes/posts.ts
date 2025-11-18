@@ -471,6 +471,36 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
 
 export default router;
 
+/**
+ * POST /api/posts/:id/vote
+ * Upvote, downvote, or remove vote for a post
+ * Body: { value: 1 | -1 | 0 }
+ */
+router.post('/:id/vote', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const postId = parseInt(req.params.id);
+    const userId = req.user?.id;
+    const { value } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (isNaN(postId)) {
+      return res.status(400).json({ error: 'Invalid post ID' });
+    }
+    if (![1, -1, 0].includes(value)) {
+      return res.status(400).json({ error: 'Vote value must be 1, -1, or 0' });
+    }
+
+    // Call service to handle vote
+    const result = await postService.voteOnPost({ postId, userId, value });
+    res.json(result);
+  } catch (error) {
+    console.error('Error voting on post:', error);
+    res.status(500).json({ error: 'Failed to vote on post' });
+  }
+});
+
 
 
 

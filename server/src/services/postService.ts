@@ -640,10 +640,55 @@ export const postService = {
     };
   },
 
+
   async deletePost(postId: number) {
     await prisma.post.delete({
       where: { id: postId },
     });
+  },
+
+  /**
+   * Upvote, downvote, or remove vote for a post
+   * @param { postId, userId, value } value: 1 (upvote), -1 (downvote), 0 (remove)
+   */
+  async voteOnPost({ postId, userId, value }: { postId: number, userId: string, value: 1 | -1 | 0 }) {
+    // Check post exists
+    const post = await prisma.post.findUnique({ where: { id: postId } });
+    if (!post) throw new Error('Post not found');
+
+    // Remove vote if value is 0
+    if (value === 0) {
+      await prisma.vote.deleteMany({
+        where: {
+          userId,
+          target_type: 'post',
+          target_id: postId,
+        },
+      });
+    } else {
+      // Upsert vote
+      await prisma.vote.upsert({
+        where: {
+          userId_target_type_target_id: {
+            userId,
+            target_type: 'post',
+            target_id: postId,
+          },
+        },
+        update: { value },
+        create: {
+          userId,
+          target_type: 'post',
+          target_id: postId,
+          value,
+        },
+      });
+    }
+
+    // Return updated vote count and user's vote
+    const vote_count = await getVoteCount('post', postId);
+    const user_vote = await getUserVote(userId, 'post', postId);
+    return { postId, vote_count, user_vote };
   },
 };
 

@@ -279,11 +279,22 @@ router.get('/check/:postId', authenticateToken, async (req: Request, res: Respon
  * POST /api/saved-posts/check-multiple
  * Check if multiple posts are saved by the authenticated user
  */
-router.post('/check-multiple', authenticateToken, async (req: Request, res: Response) => {
+router.post('/check-multiple', async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    // Accept both authenticated and unauthenticated; unauthenticated returns all false
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    let userId: string | null = null;
+    if (token) {
+      try {
+        const { getSupabaseClient } = await import('../config/supabase');
+        const supabase = getSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser(token);
+        if (user) userId = user.id;
+      } catch (e) {
+        // Ignore auth errors; treat as unauthenticated
+        userId = null;
+      }
     }
 
     const { postIds } = req.body;
@@ -291,17 +302,17 @@ router.post('/check-multiple', authenticateToken, async (req: Request, res: Resp
       return res.status(400).json({ error: 'postIds must be an array' });
     }
 
-    const savedPosts = await prisma.savedPost.findMany({
-      where: {
-        userId,
-        postId: { in: postIds },
-      },
-      select: {
-        postId: true,
-      },
-    });
-
-    const savedPostIds = new Set(savedPosts.map(sp => sp.postId));
+    let savedPostIds: Set<number> = new Set();
+    if (userId) {
+      const savedPosts = await prisma.savedPost.findMany({
+        where: {
+          userId,
+          postId: { in: postIds },
+        },
+        select: { postId: true },
+      });
+      savedPostIds = new Set(savedPosts.map(sp => sp.postId));
+    }
     const result: Record<number, boolean> = {};
     
     postIds.forEach(postId => {
