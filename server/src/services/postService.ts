@@ -201,6 +201,14 @@ export const postService = {
               contains: query,
               mode: 'insensitive'
             }
+          },
+          {
+            community: {
+              name: {
+                contains: query,
+                mode: 'insensitive'
+              }
+            }
           }
         ]
       },
@@ -253,6 +261,14 @@ export const postService = {
             body: {
               contains: query,
               mode: 'insensitive'
+            }
+          },
+          {
+            community: {
+              name: {
+                contains: query,
+                mode: 'insensitive'
+              }
             }
           }
         ]

@@ -34,6 +34,8 @@ model User {
   userFlairs        UserFlair[]
   savedPosts        SavedPost[]
   multireddits      Multireddit[]
+  // Memberships (communities this user has joined)
+  communityMemberships CommunityMembership[]
 
   @@index([email], map: "idx_users_email")
   @@index([username], map: "idx_users_username")
@@ -55,6 +57,8 @@ model Community {
   userFlairs            UserFlair[]
   postFlairs            PostFlair[]
   multiredditCommunities MultiredditCommunity[]
+  // Membership records (users who have joined this community)
+  memberships CommunityMembership[]
 
   @@index([creator_id], map: "idx_communities_creator")
   @@index([slug], map: "idx_communities_slug")
@@ -389,4 +393,19 @@ model MultiredditCommunity {
   @@index([multiredditId], map: "idx_multi_communities_multi")
   @@index([communityId], map: "idx_multi_communities_community")
   @@map("multireddit_communities")
+}
+
+// Community membership join table (renamed from previous CommunityMember model)
+model CommunityMembership {
+  userId      String    @map("user_id") @db.Uuid
+  communityId Int       @map("community_id")
+  joinedAt    DateTime? @default(now()) @map("joined_at") @db.Timestamptz(6)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([userId, communityId])
+  @@index([userId], map: "idx_members_user")
+  @@index([communityId], map: "idx_members_community")
+  @@map("community_members")
 }
