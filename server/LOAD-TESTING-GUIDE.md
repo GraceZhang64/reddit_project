@@ -2,16 +2,29 @@
 
 ## Overview
 
-This guide explains how to run load tests for the **Critical Workflow: Viewing a Post + First 10 Comments** with 100 trials to measure latency and responsiveness.
+This guide explains how to run load tests for the **Critical Workflow: Viewing a Post + First 10 Comments + AI Summary** with 100 trials to measure latency and responsiveness.
 
 ## Responsiveness KPI
 
-**Metric:** Average Latency for Critical Workflow (Viewing a Post + First 10 Comments)
+**Metric:** Average Latency for Critical Workflow (Viewing a Post + All Comments + AI Summary)
 
 **Method of Measurement:**
-- Conducted 100 trials using K6 load testing tool
-- Workflow: User loads a post → Fetches first 10 comments
-- Measured backend response time (server) excluding front-end rendering
+
+- **Tool:** K6 load testing tool
+- **Trials:** 100 iterations
+- **Workflow:**
+  1. User loads a post
+  2. Fetches first 10 comments
+  3. Loads AI summary from cache or generates new summary
+- **Measurement Scope:**
+  - Backend response time (server-side latency)
+  - Front-end rendering time (client-side latency)
+  - Total end-to-end latency (server + client)
+- **Metrics Collected:**
+  - Average latency across all trials
+  - P50, P95, P99 percentiles
+  - Success rate
+  - Breakdown by component (post load, comments fetch, AI summary)
 
 ## Prerequisites
 
@@ -70,7 +83,10 @@ npm run loadtest:critical
 **What it measures:**
 - Latency for loading a post
 - Latency for fetching first 10 comments
-- Total workflow latency
+- Latency for loading AI summary (cache hit or generation)
+- Backend response time (server-side)
+- Front-end rendering time (client-side)
+- Total end-to-end workflow latency
 - Success rate
 
 **Success Criteria:**
@@ -115,7 +131,7 @@ The test output includes:
 ========================================
 CRITICAL WORKFLOW TEST RESULTS
 ========================================
-Workflow: Viewing a Post + First 10 Comments
+Workflow: Viewing a Post + First 10 Comments + AI Summary
 Trials: 100
 
 LATENCY METRICS:
