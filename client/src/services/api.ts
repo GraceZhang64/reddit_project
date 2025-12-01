@@ -219,6 +219,13 @@ export const communitiesApi = {
     await api.delete(`/communities/${slug}`);
   },
 
+  async search(query: string, page = 1, limit = 50): Promise<PaginationResponse<Community>> {
+    const response = await api.get<PaginationResponse<Community>>('/communities/search', {
+      params: { q: query, page, limit }
+    });
+    return response.data;
+  },
+
   async getPosts(slug: string, page = 1, limit = 20): Promise<PaginationResponse<Post>> {
     const response = await api.get<PaginationResponse<Post>>(`/communities/${slug}/posts`, {
       params: { page, limit }

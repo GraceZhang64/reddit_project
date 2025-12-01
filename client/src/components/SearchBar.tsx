@@ -19,10 +19,10 @@ function SearchBar({
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  // Debounced search
+  // Debounced search - only trigger when there's actual content
   useEffect(() => {
     if (query.trim() === '') {
-      onSearch('');
+      // Don't call onSearch for empty queries
       setIsSearching(false);
       return;
     }

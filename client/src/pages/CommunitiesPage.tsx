@@ -18,40 +18,36 @@ function CommunitiesPage() {
     fetchCommunities();
   }, []);
 
-  // Filter communities based on search query
+  // When no search query, show all loaded communities
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredCommunities(communities);
-    } else {
-      const query = searchQuery.toLowerCase();
-      const filtered = communities.filter((community) => {
-        const nameMatch = community.name.toLowerCase().includes(query);
-        const descMatch = community.description?.toLowerCase().includes(query);
-        return nameMatch || descMatch;
-      });
-      setFilteredCommunities(filtered);
     }
+    // When there's a search query, filteredCommunities is set by handleSearch
   }, [searchQuery, communities]);
 
   const fetchCommunities = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await communitiesApi.getAll(1, 100);
+      const response = await communitiesApi.getAll(1, 1000); // Load more communities for better search
       const apiCommunities = response.communities || [];
-      
+
       // Map API communities to component type
       const mappedCommunities: Community[] = apiCommunities.map((c: any) => ({
         id: c.id,
         name: c.name,
         slug: c.slug,
         description: c.description || '',
-        memberCount: c.users?.length || 0,
+        memberCount: c.member_count || c.memberCount || c.users?.length || 0,
         createdAt: c.createdAt || c.created_at,
       }));
-      
+
       setCommunities(mappedCommunities);
-      setFilteredCommunities(mappedCommunities);
+      // Only set filtered communities if there's no active search
+      if (!searchQuery.trim()) {
+        setFilteredCommunities(mappedCommunities);
+      }
     } catch (err) {
       console.error('Error fetching communities:', err);
       setError('Failed to load communities. Please try again.');
@@ -60,8 +56,41 @@ function CommunitiesPage() {
     }
   };
 
-  const handleSearch = (query: string) => {
+  const handleSearch = async (query: string) => {
     setSearchQuery(query);
+
+    if (!query.trim()) {
+      // If search is cleared, reload all communities
+      await fetchCommunities();
+      return;
+    }
+
+    // Perform server-side search
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await communitiesApi.search(query, 1, 100);
+      const apiCommunities = response.communities || [];
+
+      // Map API communities to component type
+      const mappedCommunities: Community[] = apiCommunities.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        description: c.description || '',
+        memberCount: c.member_count || c.memberCount || c.users?.length || 0,
+        createdAt: c.createdAt || c.created_at,
+      }));
+
+      setCommunities(mappedCommunities);
+      setFilteredCommunities(mappedCommunities);
+    } catch (err) {
+      console.error('Error searching communities:', err);
+      setError('Search failed. Please try again.');
+      setFilteredCommunities([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCreateCommunity = async (name: string, description: string) => {

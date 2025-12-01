@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/30</span>
+                <span class='fraction'>0/33</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/14</span>
+                <span class='fraction'>0/18</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/30</span>
+                <span class='fraction'>0/33</span>
             </div>
         
             
@@ -195,7 +195,12 @@
 <a name='L130'></a><a href='#L130'>130</a>
 <a name='L131'></a><a href='#L131'>131</a>
 <a name='L132'></a><a href='#L132'>132</a>
-<a name='L133'></a><a href='#L133'>133</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -210,6 +215,11 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -337,7 +347,7 @@ interface LoginFormProps {
 }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >export default function <span class="fstat-no" title="function not covered" >L</span>oginForm(</span>{ onSuccess, onSwitchToRegister }: LoginFormProps) {
-  const [email, setEmail] = <span class="cstat-no" title="statement not covered" >useState('');</span>
+  const [username, setUsername] = <span class="cstat-no" title="statement not covered" >useState('');</span>
   const [password, setPassword] = <span class="cstat-no" title="statement not covered" >useState('');</span>
   const [error, setError] = <span class="cstat-no" title="statement not covered" >useState('');</span>
   const [isLoading, setIsLoading] = <span class="cstat-no" title="statement not covered" >useState(false);</span>
@@ -348,13 +358,18 @@ interface LoginFormProps {
 <span class="cstat-no" title="statement not covered" >    setError('');</span>
 &nbsp;
     // Validation
-<span class="cstat-no" title="statement not covered" >    if (!email || !password) {</span>
-<span class="cstat-no" title="statement not covered" >      setError('Please enter both email and password');</span>
+<span class="cstat-no" title="statement not covered" >    if (!username || !password) {</span>
+<span class="cstat-no" title="statement not covered" >      setError('Please enter both username and password');</span>
 <span class="cstat-no" title="statement not covered" >      return;</span>
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    if (!email.includes('@')) {</span>
-<span class="cstat-no" title="statement not covered" >      setError('Please enter a valid email address');</span>
+<span class="cstat-no" title="statement not covered" >    if (username.length &lt; 3 || username.length &gt; 20) {</span>
+<span class="cstat-no" title="statement not covered" >      setError('Username must be between 3 and 20 characters');</span>
+<span class="cstat-no" title="statement not covered" >      return;</span>
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    if (!/^[a-zA-Z0-9_]+$/.test(username)) {</span>
+<span class="cstat-no" title="statement not covered" >      setError('Username can only contain letters, numbers, and underscores');</span>
 <span class="cstat-no" title="statement not covered" >      return;</span>
     }
 &nbsp;
@@ -362,7 +377,7 @@ interface LoginFormProps {
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
       // Call real API through auth service
-<span class="cstat-no" title="statement not covered" >      await authService.login({ email, password }, rememberMe);</span>
+<span class="cstat-no" title="statement not covered" >      await authService.login({ username, password }, rememberMe);</span>
 &nbsp;
       // Success
 <span class="cstat-no" title="statement not covered" >      if (onSuccess) {</span>
@@ -372,7 +387,7 @@ interface LoginFormProps {
 <span class="cstat-no" title="statement not covered" >        window.location.href = '/';</span>
       }
     } catch (err: any) {
-<span class="cstat-no" title="statement not covered" >      setError(err.message || 'Invalid email or password. Please try again.');</span>
+<span class="cstat-no" title="statement not covered" >      setError(err.message || 'Invalid username or password. Please try again.');</span>
     } finally {
 <span class="cstat-no" title="statement not covered" >      setIsLoading(false);</span>
     }
@@ -394,15 +409,15 @@ interface LoginFormProps {
 &nbsp;
         &lt;form onSubmit={handleSubmit} className="login-form"&gt;
           &lt;div className="form-field"&gt;
-            &lt;label htmlFor="email"&gt;Email&lt;/label&gt;
+            &lt;label htmlFor="username"&gt;Username&lt;/label&gt;
             &lt;input
-              type="email"
-              id="email"
-              value={email}
-              onChange={<span class="fstat-no" title="function not covered" >(e</span>) =&gt; <span class="cstat-no" title="statement not covered" >setEmail(e.target.value)}</span>
-              placeholder="Enter your email"
+              type="text"
+              id="username"
+              value={username}
+              onChange={<span class="fstat-no" title="function not covered" >(e</span>) =&gt; <span class="cstat-no" title="statement not covered" >setUsername(e.target.value)}</span>
+              placeholder="Enter your username"
               disabled={isLoading}
-              autoComplete="email"
+              autoComplete="username"
             /&gt;
           &lt;/div&gt;
 &nbsp;
@@ -466,7 +481,7 @@ interface LoginFormProps {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-18T06:57:27.797Z
+                at 2025-12-01T06:49:34.905Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

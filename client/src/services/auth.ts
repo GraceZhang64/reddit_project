@@ -21,7 +21,7 @@ export interface AuthResponse {
 }
 
 export interface LoginCredentials {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -48,11 +48,24 @@ class AuthService {
     }
   }
 
-  // Check if authenticated
+  // Check if authenticated (basic check)
   isAuthenticated(): boolean {
     const token = this.getToken();
     const user = this.getUser();
     return !!(token && user);
+  }
+
+  // Validate authentication with server
+  async validateAuth(): Promise<boolean> {
+    try {
+      const token = this.getToken();
+      if (!token) return false;
+
+      await this.getCurrentUser();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // Store auth data
@@ -66,7 +79,7 @@ class AuthService {
   }
 
   // Clear auth data
-  private clearAuthData() {
+  clearAuthData() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
@@ -117,7 +130,7 @@ class AuthService {
         );
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      // Ignore logout errors
     } finally {
       this.clearAuthData();
     }

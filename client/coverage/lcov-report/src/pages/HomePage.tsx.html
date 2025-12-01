@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">8.91% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/101</span>
+                <span class='fraction'>9/101</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">9% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/100</span>
+                <span class='fraction'>9/100</span>
             </div>
         
             
@@ -370,19 +370,19 @@
 <a name='L305'></a><a href='#L305'>305</a>
 <a name='L306'></a><a href='#L306'>306</a>
 <a name='L307'></a><a href='#L307'>307</a>
-<a name='L308'></a><a href='#L308'>308</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<a name='L308'></a><a href='#L308'>308</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -675,21 +675,21 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import { useState, useEffect } from 'react';</span>
-<span class="cstat-no" title="statement not covered" >import { Link } from 'react-router-dom';</span>
-<span class="cstat-no" title="statement not covered" >import PostFeed from '../components/PostFeed';</span>
-<span class="cstat-no" title="statement not covered" >import SearchBar from '../components/SearchBar';</span>
-<span class="cstat-no" title="statement not covered" >import PostSortFilter, { SortOption } from '../components/PostSortFilter';</span>
-<span class="cstat-no" title="statement not covered" >import { postsApi, votesApi, followsApi } from '../services/api';</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import PostFeed from '../components/PostFeed';
+import SearchBar from '../components/SearchBar';
+import PostSortFilter, { SortOption } from '../components/PostSortFilter';
+import { postsApi, votesApi, followsApi } from '../services/api';
 import { Post } from '../types';
-<span class="cstat-no" title="statement not covered" >import './HomePage.css';</span>
+import './HomePage.css';
 &nbsp;
 type FeedType = 'all' | 'hot' | 'following';
 &nbsp;
 // Map API post to component Post type - moved outside to avoid recreation
-const mapApiPost = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(a</span>piPost: any): Post =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span>
+const mapApiPost = <span class="fstat-no" title="function not covered" >(a</span>piPost: any): Post =&gt; (<span class="cstat-no" title="statement not covered" >{</span>
   id: apiPost.id,
   slug: apiPost.slug || undefined,
   title: apiPost.title,
@@ -982,7 +982,7 @@ function <span class="fstat-no" title="function not covered" >HomePage(</span>) 
   );
 }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export default HomePage;</span>
+export default HomePage;
 &nbsp;
 &nbsp;</pre></td></tr></table></pre>
 
@@ -991,7 +991,7 @@ function <span class="fstat-no" title="function not covered" >HomePage(</span>) 
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-18T06:57:27.797Z
+                at 2025-12-01T06:49:34.905Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

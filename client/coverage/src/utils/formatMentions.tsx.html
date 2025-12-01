@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85% </span>
+                <span class="strong">10% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>17/20</span>
+                <span class='fraction'>2/20</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">87.5% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>7/8</span>
+                <span class='fraction'>0/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">50% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/2</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85% </span>
+                <span class="strong">10% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>17/20</span>
+                <span class='fraction'>2/20</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -110,29 +110,29 @@
 <a name='L45'></a><a href='#L45'>45</a>
 <a name='L46'></a><a href='#L46'>46</a>
 <a name='L47'></a><a href='#L47'>47</a>
-<a name='L48'></a><a href='#L48'>48</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L48'></a><a href='#L48'>48</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -149,12 +149,12 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Link } from 'react-router-dom';
@@ -163,23 +163,23 @@
  * Format text with clickable mention links
  * Converts @username to clickable links
  */
-export function formatMentions(text: string): (string | JSX.Element)[] {
-  const parts: (string | JSX.Element)[] = [];
-  const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
-  let lastIndex = 0;
+export function <span class="fstat-no" title="function not covered" >formatMentions(</span>text: string): (string | JSX.Element)[] {
+  const parts: (string | JSX.Element)[] = <span class="cstat-no" title="statement not covered" >[];</span>
+  const mentionRegex = <span class="cstat-no" title="statement not covered" >/@([a-zA-Z0-9_-]+)/g;</span>
+  let lastIndex = <span class="cstat-no" title="statement not covered" >0;</span>
   let match;
-  let key = 0;
+  let key = <span class="cstat-no" title="statement not covered" >0;</span>
 &nbsp;
-  while ((match = mentionRegex.exec(text)) !== null) {
-    const beforeMatch = text.substring(lastIndex, match.index);
-    if (beforeMatch) {
-      parts.push(beforeMatch);
+<span class="cstat-no" title="statement not covered" >  while ((match = mentionRegex.exec(text)) !== null) {</span>
+    const beforeMatch = <span class="cstat-no" title="statement not covered" >text.substring(lastIndex, match.index);</span>
+<span class="cstat-no" title="statement not covered" >    if (beforeMatch) {</span>
+<span class="cstat-no" title="statement not covered" >      parts.push(beforeMatch);</span>
     }
 &nbsp;
-    const username = match[1];
+    const username = <span class="cstat-no" title="statement not covered" >match[1];</span>
     // Don't create links for common false positives
-    if (!['http', 'https', 'www'].includes(username.toLowerCase())) {
-      parts.push(
+<span class="cstat-no" title="statement not covered" >    if (!['http', 'https', 'www'].includes(username.toLowerCase())) {</span>
+<span class="cstat-no" title="statement not covered" >      parts.push(</span>
         &lt;Link
           key={`mention-${key++}`}
           to={`/u/${username}`}
@@ -189,19 +189,19 @@ export function formatMentions(text: string): (string | JSX.Element)[] {
           @{username}
         &lt;/Link&gt;
       );
-    } else <span class="missing-if-branch" title="else path not taken" >E</span>{
+    } else {
 <span class="cstat-no" title="statement not covered" >      parts.push(match[0]);</span>
     }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    lastIndex = mentionRegex.lastIndex;</span>
   }
 &nbsp;
-  const remaining = text.substring(lastIndex);
-  if (remaining) {
-    parts.push(remaining);
+  const remaining = <span class="cstat-no" title="statement not covered" >text.substring(lastIndex);</span>
+<span class="cstat-no" title="statement not covered" >  if (remaining) {</span>
+<span class="cstat-no" title="statement not covered" >    parts.push(remaining);</span>
   }
 &nbsp;
-  return parts.length &gt; 0 ? parts : [text];
+<span class="cstat-no" title="statement not covered" >  return parts.length &gt; 0 ? parts : [text];</span>
 }
 &nbsp;
 &nbsp;</pre></td></tr></table></pre>
@@ -211,7 +211,7 @@ export function formatMentions(text: string): (string | JSX.Element)[] {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-18T06:57:27.877Z
+                at 2025-12-01T06:49:34.986Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
