@@ -5,108 +5,121 @@
 # 📊 Architecture Overview
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'fontSize': '14px',
+    'edgeLabelBackground': '#ffffff',
+    'labelBackground': '#ffffff'
+  },
+  'flowchart': {
+    'nodeSpacing': 30,
+    'rankSpacing': 60,
+    'curve': 'basis'
+  }
+}}%%
+
 graph TB
     %% User Layer
     User[👤 User Browser]
-    
+
     %% Frontend Layer
-    subgraph FRONTEND["🎨 FRONTEND (Port 3000)"]
-        Vite[Vite Dev Server]
+    subgraph FRONTEND["🎨 FRONTEND"]
+        direction TB
+        Vite[Vite]
         React[React App]
-        Router[React Router]
+        Router[Router]
         Context[Theme Context]
-        Axios[Axios Client]
-        
-        Vite --> React
-        React --> Router
-        React --> Context
-        React --> Axios
+        Axios[Axios]
+        Vite --> React --> Router & Context & Axios
     end
-    
+
     %% Backend Layer
     subgraph BACKEND["⚙️ BACKEND API (Port 5000)"]
-        Express[Express.js Server]
+        direction TB
+        Express[Express.js]
         
-        subgraph MIDDLEWARE["Middleware Layer"]
-            Auth[Auth Middleware<br/>Supabase JWT]
-            RateLimit[Rate Limiter<br/>In-Memory]
-            Compression[Compression]
-            Validator[Request Validator]
+        subgraph MIDDLE["Middleware"]
+            direction LR
+            Auth[Auth<br/>Supabase JWT]
+            Rate[Rate Limiter]
+            Comp[Compression]
+            Valid[Validator]
         end
         
-        subgraph ROUTES["API Routes"]
-            AuthRoute[/api/auth]
-            PostRoute[/api/posts]
-            CommentRoute[/api/comments]
-            CommunityRoute[/api/communities]
-            VoteRoute[/api/votes]
-            UserRoute[/api/users]
-            FollowRoute[/api/follows]
-            SavedRoute[/api/saved-posts]
-            PollRoute[/api/polls]
+        subgraph ROUTES["Routes"]
+            direction TB
+            R1[🔐 Auth · 📝 Posts · 💬 Comments<br/>👥 Communities · ⬆️ Votes]
+            R2[👤 Users · 🔔 Follows<br/>⭐ Saved · 📊 Polls]
         end
         
-        subgraph SERVICES["Business Logic"]
-            PostSvc[Post Service<br/>Vote Aggregation]
-            AISvc[AI Service<br/>Summary Generation]
+        subgraph SERV["Services"]
+            direction LR
+            PostSvc[Post Service<br/>+ Vote Aggregation]
+            AISvc[AI Service<br/>+ Summaries]
         end
         
-        Express --> MIDDLEWARE
-        MIDDLEWARE --> ROUTES
-        ROUTES --> SERVICES
+        Express --> MIDDLE --> ROUTES
+        ROUTES --> SERV
     end
-    
+
     %% Data Layer
     subgraph DATA["💾 DATA LAYER"]
+        direction TB
         Prisma[Prisma ORM]
-        Cache[In-Memory Cache<br/>5000 entries<br/>TTL-based]
-        
-        subgraph SUPABASE["Supabase (PostgreSQL)"]
-            Tables[(Users<br/>Posts<br/>Comments<br/>Votes<br/>Communities<br/>Polls<br/>Follows<br/>SavedPosts)]
+        Cache[In-Memory Cache<br/>5k entries · TTL]
+        subgraph DB["Supabase PostgreSQL"]
+            Tables[(Users Posts Comments<br/>Votes Communities + more)]
         end
+        Prisma --> Tables
+        Cache -.-> Prisma
     end
-    
+
     %% External Services
     subgraph EXTERNAL["🌐 EXTERNAL SERVICES"]
-        OpenAI[OpenAI API<br/>GPT-4o-mini<br/>$0.001/summary]
-        SupabaseAuth[Supabase Auth<br/>JWT Validation]
+        direction TB
+        OpenAI[OpenAI<br/>GPT-4o-mini]
+        SupaAuth[Supabase Auth<br/>JWT Validation]
     end
-    
-    %% Connections
-    User -->|1. Browse to localhost:3000| Vite
-    Axios -->|2. API Requests<br/>/api/*| Express
-    
-    Express -->|3. Validate JWT| Auth
-    Auth -->|4. Check Supabase| SupabaseAuth
-    
-    Express -->|5. Check Cache| Cache
-    Cache -.->|Cache Miss| ROUTES
-    
-    SERVICES -->|6. Query DB| Prisma
-    Prisma -->|7. CRUD Operations| Tables
-    
-    AISvc -->|8. Generate Summary| OpenAI
-    AISvc -->|9. Store Summary| Prisma
-    
-    PostSvc -->|10. Vote Count| Prisma
-    PostSvc -->|11. Cache Result| Cache
-    
-    %% Styling
-    classDef frontend fill:#61DAFB,stroke:#0A9396,stroke-width:3px,color:#000
-    classDef backend fill:#68A063,stroke:#2E7D32,stroke-width:3px,color:#fff
-    classDef data fill:#336791,stroke:#1A237E,stroke-width:3px,color:#fff
-    classDef external fill:#FF6F00,stroke:#E65100,stroke-width:3px,color:#fff
-    classDef middleware fill:#9C27B0,stroke:#6A1B9A,stroke-width:2px,color:#fff
-    classDef service fill:#F57C00,stroke:#E65100,stroke-width:2px,color:#fff
-    
+
+    %% Connections with BIG, CLEAR labels
+    User -->|"1. Open localhost:3000"| Vite
+    Axios -->|"2. /api/* requests"| Express
+
+    Express -->|"3. Validate JWT"| Auth
+    Auth -->|"4. Verify token"| SupaAuth
+
+    Express -->|"5. Cache check"| Cache
+
+    SERV -->|"6. DB queries"| Prisma
+    Prisma -->|"7. CRUD"| Tables
+
+    AISvc -->|"8. Generate summary"| OpenAI
+    AISvc -->|"9. Store summary"| Prisma
+
+    PostSvc -->|"10. Count votes"| Prisma
+    PostSvc -->|"11. Cache result"| Cache
+
+    %% Styling - Compact & Clean
+    classDef box fill:#f9f9f9,stroke:#333,stroke-width:1.5px,rx:8,ry:8
+    classDef frontend fill:#61DAFB,stroke:#0A9396,color:#000,font-weight:bold
+    classDef backend fill:#68A063,stroke:#2E7D32,color:#fff,font-weight:bold
+    classDef data fill:#336791,stroke:#1A237E,color:#fff,font-weight:bold
+    classDef external fill:#FF6F00,stroke:#E65100,color:#fff,font-weight:bold
+    classDef service fill:#F57C00,stroke:#E65100,color:#fff
+    classDef small fill:#fff,stroke:#666,stroke-dasharray: 5 5
+
     class FRONTEND frontend
     class BACKEND backend
-    class DATA,SUPABASE data
+    class DATA data
     class EXTERNAL external
-    class MIDDLEWARE middleware
-    class SERVICES service
-```
+    class SERV service
+    class MIDDLE,ROUTES,DB small
+    class User,Vite,React,Router,Context,Axios,Express,Auth,Rate,Comp,Valid,R1,R2,PostSvc,AISvc,Prisma,Cache,Tables,OpenAI,SupaAuth box
 
+    %% Force top alignment of the four main boxes
+    class FRONTEND,BACKEND,DATA,EXTERNAL box
+```
 # 🏗️ Tech Stack
 
 ## Frontend
