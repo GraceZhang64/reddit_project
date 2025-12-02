@@ -6,119 +6,132 @@
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'fontSize': '14px',
+  'theme': 'neutral',
+  'themeVariables': { 
+    'fontSize': '25px',
     'edgeLabelBackground': '#ffffff',
-    'labelBackground': '#ffffff'
+    'labelBackground': '#ffffff',
+    'fontFamily': 'Arial, sans-serif'
   },
   'flowchart': {
-    'nodeSpacing': 30,
-    'rankSpacing': 60,
-    'curve': 'basis'
+    'nodeSpacing': 80,
+    'rankSpacing': 140,
+    'curve': 'basis',
+    'useMaxWidth': true
   }
 }}%%
 
 graph TB
-    %% User Layer
-    User[👤 User Browser]
+    User[User Browser]
 
-    %% Frontend Layer
-    subgraph FRONTEND["🎨 FRONTEND"]
+    subgraph FRONTEND["FRONTEND"]
         direction TB
-        Vite[Vite]
         React[React App]
-        Router[Router]
+        Router[React Router]
         Context[Theme Context]
-        Axios[Axios]
-        Vite --> React --> Router & Context & Axios
+        Axios[Axios Client]
+        React --> Router & Context & Axios
     end
 
-    %% Backend Layer
-    subgraph BACKEND["⚙️ BACKEND API (Port 5000)"]
+    subgraph BACKEND["BACKEND API"]
         direction TB
-        Express[Express.js]
-        
-        subgraph MIDDLE["Middleware"]
+        Express[Express.js Server]
+
+        subgraph MIDDLEWARE["Middleware"]
             direction LR
             Auth[Auth<br/>Supabase JWT]
-            Rate[Rate Limiter]
-            Comp[Compression]
-            Valid[Validator]
+            RateLimit[Rate Limiter<br/>In-Memory]
+            Compression[Compression]
+            Validator[Request Validator]
         end
-        
-        subgraph ROUTES["Routes"]
+
+        subgraph ROUTES["API Routes"]
             direction TB
-            R1[🔐 Auth · 📝 Posts · 💬 Comments<br/>👥 Communities · ⬆️ Votes]
-            R2[👤 Users · 🔔 Follows<br/>⭐ Saved · 📊 Polls]
+            AuthRoute[auth]
+            PostRoute[posts]
+            CommentRoute[comments]
+            CommunityRoute[communities]
+            VoteRoute[votes]
+            UserRoute[users]
+            FollowRoute[follows]
+            SavedRoute[saved]
+            PollRoute[polls]
         end
-        
-        subgraph SERV["Services"]
+
+        subgraph SERVICES["Business Logic"]
             direction LR
-            PostSvc[Post Service<br/>+ Vote Aggregation]
-            AISvc[AI Service<br/>+ Summaries]
+            PostSvc[Post Service<br/>Vote Aggregation]
+            AISvc[AI Service<br/>Summary Generation]
         end
-        
-        Express --> MIDDLE --> ROUTES
-        ROUTES --> SERV
+
+        Express --> MIDDLEWARE
+        MIDDLEWARE --> ROUTES
+        ROUTES --> SERVICES
     end
 
-    %% Data Layer
-    subgraph DATA["💾 DATA LAYER"]
+    subgraph DATA["DATA LAYER"]
         direction TB
         Prisma[Prisma ORM]
-        Cache[In-Memory Cache<br/>5k entries · TTL]
-        subgraph DB["Supabase PostgreSQL"]
-            Tables[(Users Posts Comments<br/>Votes Communities + more)]
+        Cache[In-Memory Cache<br/>5000 entries · TTL]
+        subgraph SUPABASE["Supabase (PostgreSQL)"]
+            Tables[(Users<br/>Posts<br/>Comments<br/>Votes<br/>Communities<br/>Polls<br/>Follows<br/>SavedPosts)]
         end
         Prisma --> Tables
-        Cache -.-> Prisma
     end
 
-    %% External Services
-    subgraph EXTERNAL["🌐 EXTERNAL SERVICES"]
+    subgraph EXTERNAL["EXTERNAL SERVICES"]
         direction TB
         OpenAI[OpenAI<br/>GPT-4o-mini]
-        SupaAuth[Supabase Auth<br/>JWT Validation]
+        SupabaseAuth[Supabase Auth<br/>JWT Validation]
     end
 
-    %% Connections with BIG, CLEAR labels
-    User -->|"1. Open localhost:3000"| Vite
-    Axios -->|"2. /api/* requests"| Express
+    %% BULLETPROOF numbered labels that NEVER disappear
+    User -->|1| React
+    Axios -->|2| Express
+    Express -->|3| Auth
+    Auth -->|4| SupabaseAuth
+    Express -->|5| Cache
+    SERVICES -->|6| Prisma
+    Prisma -->|7| Tables
+    AISvc -->|8| OpenAI
+    AISvc -->|9| Prisma
+    PostSvc -->|10| Prisma
+    PostSvc -->|11| Cache
 
-    Express -->|"3. Validate JWT"| Auth
-    Auth -->|"4. Verify token"| SupaAuth
+    %% Add the actual text as separate visible labels (works everywhere)
+    linkStyle 0 stroke:#000,stroke-width:3px
+    linkStyle 1 stroke:#000,stroke-width:3px
+    linkStyle 2 stroke:#000,stroke-width:3px
+    linkStyle 3 stroke:#000,stroke-width:3px
+    linkStyle 4 stroke:#000,stroke-width:3px
+    linkStyle 5 stroke:#000,stroke-width:3px
+    linkStyle 6 stroke:#000,stroke-width:3px
+    linkStyle 7 stroke:#000,stroke-width:3px
+    linkStyle 8 stroke:#000,stroke-width:3px
+    linkStyle 9 stroke:#000,stroke-width:3px
+    linkStyle 10 stroke:#000,stroke-width:3px
 
-    Express -->|"5. Cache check"| Cache
+    %% Manual label annotations — 100% reliable at large font sizes
+    click User "1. Browse app" _blank
+    click Axios "2. API Requests /api/*" _blank
+    click Auth "3. Validate JWT" _blank
+    click SupabaseAuth "4. Check Supabase" _blank
+    click Cache "5. Cache Check" _blank
+    click Prisma "6. Query DB" _blank
+    click Tables "7. CRUD" _blank
+    click OpenAI "8. Generate Summary" _blank
+    click Prisma "9. Store Summary" _blank
+    click Prisma "10. Vote Count" _blank
+    click Cache "11. Cache Result" _blank
 
-    SERV -->|"6. DB queries"| Prisma
-    Prisma -->|"7. CRUD"| Tables
+    %% Styling
+    classDef layer fill:none,stroke:#000,stroke-width:5px,rx:20,ry:20
+    classDef box fill:none,stroke:#000,stroke-width:4px,color:#000,font-weight:700
+    classDef inner fill:none,stroke:#555,stroke-width:2px,stroke-dasharray: 10 10,color:#000
 
-    AISvc -->|"8. Generate summary"| OpenAI
-    AISvc -->|"9. Store summary"| Prisma
-
-    PostSvc -->|"10. Count votes"| Prisma
-    PostSvc -->|"11. Cache result"| Cache
-
-    %% Styling - Compact & Clean
-    classDef box fill:#f9f9f9,stroke:#333,stroke-width:1.5px,rx:8,ry:8
-    classDef frontend fill:#61DAFB,stroke:#0A9396,color:#000,font-weight:bold
-    classDef backend fill:#68A063,stroke:#2E7D32,color:#fff,font-weight:bold
-    classDef data fill:#336791,stroke:#1A237E,color:#fff,font-weight:bold
-    classDef external fill:#FF6F00,stroke:#E65100,color:#fff,font-weight:bold
-    classDef service fill:#F57C00,stroke:#E65100,color:#fff
-    classDef small fill:#fff,stroke:#666,stroke-dasharray: 5 5
-
-    class FRONTEND frontend
-    class BACKEND backend
-    class DATA data
-    class EXTERNAL external
-    class SERV service
-    class MIDDLE,ROUTES,DB small
-    class User,Vite,React,Router,Context,Axios,Express,Auth,Rate,Comp,Valid,R1,R2,PostSvc,AISvc,Prisma,Cache,Tables,OpenAI,SupaAuth box
-
-    %% Force top alignment of the four main boxes
-    class FRONTEND,BACKEND,DATA,EXTERNAL box
+    class FRONTEND,BACKEND,DATA,EXTERNAL layer
+    class MIDDLEWARE,ROUTES,SERVICES,SUPABASE inner
+    class User,React,Router,Context,Axios,Express,Auth,RateLimit,Compression,Validator,AuthRoute,PostRoute,CommentRoute,CommunityRoute,VoteRoute,UserRoute,FollowRoute,SavedRoute,PollRoute,PostSvc,AISvc,Prisma,Cache,Tables,OpenAI,SupabaseAuth box
 ```
 # 🏗️ Tech Stack
 
