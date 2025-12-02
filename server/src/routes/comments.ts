@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middleware/auth';
+import { optionalAuth } from '../middleware/auth';
 import { cache, CACHE_TTL } from '../lib/cache';
 import { apiLimiter } from '../middleware/rateLimiter';
 import { validateCommentCreation } from '../middleware/requestValidator';

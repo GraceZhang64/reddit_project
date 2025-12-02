@@ -19,7 +19,7 @@ describe('Integration Tests', () => {
                 title: 'Integration Test Post',
                 body: 'This is a test',
                 slug: 'integration-test-post',
-                authorId: 'test-user-id',
+                authorId: '00000000-0000-0000-0000-000000000001', // Valid UUID format
                 communityId: 1,
             };
             // Create post

@@ -32,7 +32,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/123</span>
+                <span class='fraction'>0/131</span>
             </div>
         
             
@@ -456,7 +456,14 @@
 <a name='L391'></a><a href='#L391'>391</a>
 <a name='L392'></a><a href='#L392'>392</a>
 <a name='L393'></a><a href='#L393'>393</a>
-<a name='L394'></a><a href='#L394'>394</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L394'></a><a href='#L394'>394</a>
+<a name='L395'></a><a href='#L395'>395</a>
+<a name='L396'></a><a href='#L396'>396</a>
+<a name='L397'></a><a href='#L397'>397</a>
+<a name='L398'></a><a href='#L398'>398</a>
+<a name='L399'></a><a href='#L399'>399</a>
+<a name='L400'></a><a href='#L400'>400</a>
+<a name='L401'></a><a href='#L401'>401</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -791,6 +798,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -808,7 +816,13 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1118,9 +1132,10 @@ function <span class="fstat-no" title="function not covered" >PostPage(</span>) 
         &lt;div className="post-detail"&gt;
           &lt;VoteButtons
             voteCount={post.voteCount || 0}
-            onUpvote={<span class="fstat-no" title="function not covered" >() =</span>&gt; <span class="cstat-no" title="statement not covered" >handleVote(1)}</span>
-            onDownvote={<span class="fstat-no" title="function not covered" >() =</span>&gt; <span class="cstat-no" title="statement not covered" >handleVote(-1)}</span>
+            onUpvote={currentUser ? <span class="fstat-no" title="function not covered" >() =</span>&gt; <span class="cstat-no" title="statement not covered" >handleVote(1) </span>: undefined}
+            onDownvote={currentUser ? <span class="fstat-no" title="function not covered" >() =</span>&gt; <span class="cstat-no" title="statement not covered" >handleVote(-1) </span>: undefined}
             userVote={userVote}
+            disabled={!currentUser}
           /&gt;
           
           &lt;div className="post-main"&gt;
@@ -1197,25 +1212,31 @@ function <span class="fstat-no" title="function not covered" >PostPage(</span>) 
 &nbsp;
         &lt;div className="comments-section"&gt;
           &lt;h2&gt;Comments ({comments.length})&lt;/h2&gt;
-          
-          &lt;form className="comment-form" onSubmit={handleCommentSubmit}&gt;
-            &lt;textarea
-              value={commentBody}
-              onChange={<span class="fstat-no" title="function not covered" >(e</span>) =&gt; <span class="cstat-no" title="statement not covered" >setCommentBody(e.target.value)}</span>
-              placeholder="What are your thoughts?"
-              rows={4}
-              className="comment-textarea"
-            /&gt;
-            &lt;div className="comment-actions"&gt;
-              &lt;button type="submit" className="comment-submit" disabled={!commentBody.trim()}&gt;
-                Comment
-              &lt;/button&gt;
+&nbsp;
+          {currentUser ? (
+            &lt;form className="comment-form" onSubmit={handleCommentSubmit}&gt;
+              &lt;textarea
+                value={commentBody}
+                onChange={<span class="fstat-no" title="function not covered" >(e</span>) =&gt; <span class="cstat-no" title="statement not covered" >setCommentBody(e.target.value)}</span>
+                placeholder="What are your thoughts?"
+                rows={4}
+                className="comment-textarea"
+              /&gt;
+              &lt;div className="comment-actions"&gt;
+                &lt;button type="submit" className="comment-submit" disabled={!commentBody.trim()}&gt;
+                  Comment
+                &lt;/button&gt;
+              &lt;/div&gt;
+            &lt;/form&gt;
+          ) : (
+            &lt;div className="auth-required-message"&gt;
+              &lt;p&gt;Please &lt;Link to="/auth"&gt;log in&lt;/Link&gt; to comment.&lt;/p&gt;
             &lt;/div&gt;
-          &lt;/form&gt;
+          )}
 &nbsp;
           &lt;div className="comments-list"&gt;
             {comments.map(<span class="fstat-no" title="function not covered" >(c</span>omment) =&gt; (
-<span class="cstat-no" title="statement not covered" >              &lt;CommentItem key={comment.id} comment={comment} onReply={handleReply} /&gt;</span>
+<span class="cstat-no" title="statement not covered" >              &lt;CommentItem key={comment.id} comment={comment} onReply={currentUser ? handleReply : undefined} disabled={!currentUser} /&gt;</span>
             ))}
           &lt;/div&gt;
         &lt;/div&gt;
@@ -1249,7 +1270,7 @@ function <span class="fstat-no" title="function not covered" >PostPage(</span>) 
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-12-01T06:49:34.905Z
+                at 2025-12-01T21:26:20.155Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

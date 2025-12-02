@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">14.28% </span>
+                <span class="strong">40.9% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>3/21</span>
+                <span class='fraction'>9/22</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">26.08% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/23</span>
+                <span class='fraction'>6/23</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">28.57% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/7</span>
+                <span class='fraction'>2/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">15% </span>
+                <span class="strong">42.85% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>3/20</span>
+                <span class='fraction'>9/21</span>
             </div>
         
             
@@ -152,7 +152,9 @@
 <a name='L87'></a><a href='#L87'>87</a>
 <a name='L88'></a><a href='#L88'>88</a>
 <a name='L89'></a><a href='#L89'>89</a>
-<a name='L90'></a><a href='#L90'>90</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -176,28 +178,28 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -241,7 +243,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Post } from '../types';
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React from 'react';
+import { Post } from '../types';
 import { formatMentions } from '../utils/formatMentions';
 import './PostContent.css';
 &nbsp;
@@ -264,17 +267,17 @@ function <span class="fstat-no" title="function not covered" >getVimeoId(</span>
 <span class="cstat-no" title="statement not covered" >  return match ? match[1] : null;</span>
 }
 &nbsp;
-function <span class="fstat-no" title="function not covered" >PostContent(</span>{ post, isFullView = <span class="branch-0 cbranch-no" title="branch not covered" >false </span>}: PostContentProps) {
-  const postType = <span class="cstat-no" title="statement not covered" >post.post_type || 'text';</span>
+function PostContent({ post, isFullView = <span class="branch-0 cbranch-no" title="branch not covered" >false </span>}: PostContentProps) {
+  const postType = post.post_type || 'text';
 &nbsp;
   // Text post
-<span class="cstat-no" title="statement not covered" >  if (postType === 'text') {</span>
-<span class="cstat-no" title="statement not covered" >    if (!post.body) <span class="cstat-no" title="statement not covered" >return null;</span></span>
+  <span class="missing-if-branch" title="else path not taken" >E</span>if (postType === 'text') {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!post.body) <span class="cstat-no" title="statement not covered" >return null;</span>
     
-<span class="cstat-no" title="statement not covered" >    return (</span>
+    return (
       &lt;div className="post-text-content"&gt;
         {isFullView ? (
-          post.body.split('\n').map(<span class="fstat-no" title="function not covered" >(p</span>aragraph, i) =&gt; (
+<span class="branch-0 cbranch-no" title="branch not covered" >          post.body.split('\n').map(<span class="fstat-no" title="function not covered" >(p</span>aragraph, i) =&gt; (</span>
 <span class="cstat-no" title="statement not covered" >            &lt;p key={i}&gt;</span>
               {formatMentions(paragraph).map(<span class="fstat-no" title="function not covered" >(p</span>art, idx) =&gt; (
 <span class="cstat-no" title="statement not covered" >                &lt;span key={idx}&gt;{part}&lt;/span&gt;</span>
@@ -284,9 +287,9 @@ function <span class="fstat-no" title="function not covered" >PostContent(</span
         ) : (
           &lt;p className="post-preview"&gt;
             {formatMentions(
-              post.body.length &gt; 300 ? `${post.body.substring(0, 300)}...` : post.body
-            ).map(<span class="fstat-no" title="function not covered" >(p</span>art, idx) =&gt; (
-<span class="cstat-no" title="statement not covered" >              &lt;span key={idx}&gt;{part}&lt;/span&gt;</span>
+              post.body.length &gt; 300 ? <span class="branch-0 cbranch-no" title="branch not covered" >`${post.body.substring(0, 300)}...` </span>: post.body
+            ).map((part, idx) =&gt; (
+              &lt;span key={idx}&gt;{part}&lt;/span&gt;
             ))}
           &lt;/p&gt;
         )}
@@ -337,7 +340,7 @@ export default PostContent;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-12-01T06:49:34.986Z
+                at 2025-12-01T21:26:20.242Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

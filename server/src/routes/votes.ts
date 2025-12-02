@@ -106,17 +106,13 @@ router.delete('/', authenticateToken, async (req: Request, res: Response) => {
       });
     }
 
-    // Delete the vote
-    await prisma.vote.delete({
+    // Delete the vote (use deleteMany to avoid errors when vote doesn't exist)
+    await prisma.vote.deleteMany({
       where: {
-        userId_target_type_target_id: {
-          userId,
-          target_type,
-          target_id: parseInt(target_id)
-        }
+        userId,
+        target_type,
+        target_id: parseInt(target_id)
       }
-    }).catch(() => {
-      // Vote doesn't exist, that's okay
     });
 
     // Calculate new vote count

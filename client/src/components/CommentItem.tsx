@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Comment } from '../types';
 import VoteButtons from './VoteButtons';
@@ -11,9 +11,10 @@ interface CommentItemProps {
   depth?: number;
   maxDepth?: number;
   onReply?: (parentId: number, body: string) => void;
+  disabled?: boolean;
 }
 
-function CommentItem({ comment, depth = 0, maxDepth = 3, onReply }: CommentItemProps) {
+function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, disabled = false }: CommentItemProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState('');
@@ -25,6 +26,7 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply }: CommentItemP
   const canShowReplies = depth < maxDepth && hasReplies;
 
   const handleVote = async (value: number) => {
+    if (disabled) return;
     const oldVote = userVote;
     const newVote = oldVote === value ? 0 : value;
     const voteDiff = newVote - oldVote;

@@ -14,11 +14,15 @@ const comments_1 = __importDefault(require("./routes/comments"));
 const users_1 = __importDefault(require("./routes/users"));
 const polls_1 = __importDefault(require("./routes/polls"));
 const follows_1 = __importDefault(require("./routes/follows"));
+const savedPosts_1 = __importDefault(require("./routes/savedPosts"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const port = process.env.PORT || 5000;
+const port = parseInt(process.env.PORT || '5000', 10);
 // Middleware
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: true, // Allow all origins for beta testing
+    credentials: true
+}));
 app.use(express_1.default.json());
 // Routes
 app.get('/', (req, res) => {
@@ -81,6 +85,13 @@ app.get('/', (req, res) => {
                 followers: 'GET /api/follows/followers/:username',
                 following: 'GET /api/follows/following/:username',
                 feed: 'GET /api/follows/feed'
+            },
+            savedPosts: {
+                list: 'GET /api/saved-posts',
+                save: 'POST /api/saved-posts/:postId',
+                unsave: 'DELETE /api/saved-posts/:postId',
+                check: 'GET /api/saved-posts/check/:postId',
+                checkMultiple: 'POST /api/saved-posts/check-multiple'
             }
         }
     });
@@ -97,6 +108,9 @@ app.use('/api/votes', votes_1.default);
 app.use('/api/polls', polls_1.default);
 app.use('/api/users', users_1.default);
 app.use('/api/follows', follows_1.default);
-app.listen(port, () => {
-    console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+app.use('/api/saved-posts', savedPosts_1.default);
+app.listen(port, '0.0.0.0', () => {
+    console.log(`⚡️[server]: Server is running at http://0.0.0.0:${port}`);
+    console.log(`⚡️[server]: Local access: http://localhost:${port}`);
+    console.log(`⚡️[server]: Network access: Find your IP with 'ipconfig' and use http://YOUR_IP:${port}`);
 });

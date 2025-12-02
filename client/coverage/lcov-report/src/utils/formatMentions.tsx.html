@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">10% </span>
+                <span class="strong">55% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>2/20</span>
+                <span class='fraction'>11/20</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">25% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/8</span>
+                <span class='fraction'>2/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/2</span>
+                <span class='fraction'>1/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">10% </span>
+                <span class="strong">55% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>2/20</span>
+                <span class='fraction'>11/20</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -117,28 +117,22 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -146,15 +140,21 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Link } from 'react-router-dom';
@@ -163,14 +163,14 @@
  * Format text with clickable mention links
  * Converts @username to clickable links
  */
-export function <span class="fstat-no" title="function not covered" >formatMentions(</span>text: string): (string | JSX.Element)[] {
-  const parts: (string | JSX.Element)[] = <span class="cstat-no" title="statement not covered" >[];</span>
-  const mentionRegex = <span class="cstat-no" title="statement not covered" >/@([a-zA-Z0-9_-]+)/g;</span>
-  let lastIndex = <span class="cstat-no" title="statement not covered" >0;</span>
+export function formatMentions(text: string): (string | JSX.Element)[] {
+  const parts: (string | JSX.Element)[] = [];
+  const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
+  let lastIndex = 0;
   let match;
-  let key = <span class="cstat-no" title="statement not covered" >0;</span>
+  let key = 0;
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  while ((match = mentionRegex.exec(text)) !== null) {</span>
+  while ((match = mentionRegex.exec(text)) !== null) {
     const beforeMatch = <span class="cstat-no" title="statement not covered" >text.substring(lastIndex, match.index);</span>
 <span class="cstat-no" title="statement not covered" >    if (beforeMatch) {</span>
 <span class="cstat-no" title="statement not covered" >      parts.push(beforeMatch);</span>
@@ -196,12 +196,12 @@ export function <span class="fstat-no" title="function not covered" >formatMenti
 <span class="cstat-no" title="statement not covered" >    lastIndex = mentionRegex.lastIndex;</span>
   }
 &nbsp;
-  const remaining = <span class="cstat-no" title="statement not covered" >text.substring(lastIndex);</span>
-<span class="cstat-no" title="statement not covered" >  if (remaining) {</span>
-<span class="cstat-no" title="statement not covered" >    parts.push(remaining);</span>
+  const remaining = text.substring(lastIndex);
+  <span class="missing-if-branch" title="else path not taken" >E</span>if (remaining) {
+    parts.push(remaining);
   }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  return parts.length &gt; 0 ? parts : [text];</span>
+  return parts.length &gt; 0 ? parts : <span class="branch-1 cbranch-no" title="branch not covered" >[text];</span>
 }
 &nbsp;
 &nbsp;</pre></td></tr></table></pre>
@@ -211,7 +211,7 @@ export function <span class="fstat-no" title="function not covered" >formatMenti
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-12-01T06:49:34.905Z
+                at 2025-12-01T21:26:20.155Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

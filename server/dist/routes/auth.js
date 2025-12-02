@@ -131,24 +131,46 @@ router.post('/register', async (req, res) => {
  */
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
-        if (!email || !password) {
+        const { username, password } = req.body;
+        if (!username || !password) {
             return res.status(400).json({
-                error: 'Email and password are required'
+                error: 'Username and password are required'
             });
         }
+        // Validate username format
+        if (username.length < 3 || username.length > 20) {
+            return res.status(400).json({
+                error: 'Username must be between 3 and 20 characters'
+            });
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            return res.status(400).json({
+                error: 'Username can only contain letters, numbers, and underscores'
+            });
+        }
+        // Find user by username to get their email
+        const userByUsername = await prisma_1.prisma.user.findUnique({
+            where: { username },
+            select: { id: true, email: true, username: true }
+        });
+        if (!userByUsername) {
+            return res.status(401).json({
+                error: 'Invalid username or password'
+            });
+        }
+        // Use the email associated with the username for Supabase authentication
         const supabase = (0, supabase_1.getSupabaseClient)();
         const { data, error } = await supabase.auth.signInWithPassword({
-            email,
+            email: userByUsername.email,
             password
         });
         if (error || !data.user) {
             return res.status(401).json({
-                error: 'Invalid email or password'
+                error: 'Invalid username or password'
             });
         }
         // Get user profile from database
-        const user = await prisma_1.prisma.user.findUnique({
+        let userProfile = await prisma_1.prisma.user.findUnique({
             where: { id: data.user.id },
             select: {
                 id: true,
@@ -158,14 +180,31 @@ router.post('/login', async (req, res) => {
                 bio: true
             }
         });
-        if (!user) {
-            return res.status(404).json({
-                error: 'User profile not found'
+        // If profile was deleted in our DB but still exists in Supabase Auth, recreate it
+        if (!userProfile) {
+            const fallbackUsername = (data.user.user_metadata && data.user.user_metadata.username) ||
+                (data.user.email ? data.user.email.split('@')[0] : `user_${data.user.id.substring(0, 8)}`);
+            const created = await prisma_1.prisma.user.create({
+                data: {
+                    id: data.user.id,
+                    email: data.user.email || '',
+                    username: fallbackUsername,
+                    avatar_url: null,
+                    bio: null
+                },
+                select: {
+                    id: true,
+                    email: true,
+                    username: true,
+                    avatar_url: true,
+                    bio: true
+                }
             });
+            userProfile = created;
         }
         res.json({
             message: 'Login successful',
-            user,
+            user: userProfile,
             session: data.session
         });
     }

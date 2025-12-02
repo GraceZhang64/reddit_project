@@ -122,7 +122,7 @@ function App() {
           />
           <Route
             path="/p/:id"
-            element={isAuthenticated ? <PostPage /> : <Navigate to="/auth" />}
+            element={<PostPage />}
           />
           <Route
             path="/search"
