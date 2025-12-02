@@ -263,15 +263,11 @@ export const commentsApi = {
 
 // Votes API
 export const votesApi = {
-  async cast(data: VoteData): Promise<{ vote: any; voteCount: number }> {
-    const response = await api.post('/votes', data);
-    return response.data;
-  },
-
-  async remove(target_type: 'post' | 'comment', target_id: number): Promise<{ success: boolean; voteCount: number }> {
-    const response = await api.delete('/votes', {
-      data: { target_type, target_id }
-    });
+  /**
+   * Cast or remove a vote for a post using new backend endpoint
+   */
+  async votePost(postId: number, value: 1 | -1 | 0): Promise<{ postId: number; vote_count: number; user_vote: number | null }> {
+    const response = await api.post(`/posts/${postId}/vote`, { value });
     return response.data;
   },
 

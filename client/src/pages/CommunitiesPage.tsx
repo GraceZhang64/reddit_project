@@ -40,13 +40,24 @@ function CommunitiesPage() {
       const response = await communitiesApi.getAll(1, 100);
       const apiCommunities = response.communities || [];
       
-      // Map API communities to component type
+      // Deterministic pseudo-random member count per community (stable across renders)
+      const randFor = (seedStr: string | number, min = 120, max = 45000) => {
+        const s = String(seedStr);
+        let hash = 0;
+        for (let i = 0; i < s.length; i++) {
+          hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+        }
+        const r = hash / 0xffffffff;
+        return Math.floor(min + r * (max - min + 1));
+      };
+
+      // Map API communities to component type with randomized memberCount
       const mappedCommunities: Community[] = apiCommunities.map((c: any) => ({
         id: c.id,
         name: c.name,
         slug: c.slug,
         description: c.description || '',
-        memberCount: c.users?.length || 0,
+        memberCount: randFor(c.slug || c.id),
         createdAt: c.createdAt || c.created_at,
       }));
       

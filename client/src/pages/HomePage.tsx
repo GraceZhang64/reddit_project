@@ -38,16 +38,8 @@ function HomePage() {
   const [sortOption, setSortOption] = useState<SortOption>('hot');
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      console.log('🔍 HomePage useEffect triggered', { feed, searchQuery: searchQuery.trim() });
-      
-      // Only fetch if not currently searching
-      if (searchQuery.trim()) {
-        console.log('⏭️ Skipping fetch because searchQuery exists:', searchQuery);
-        return;
-      }
-      
-      console.log('📡 Fetching posts for feed:', feed);
+    if (searchQuery.trim()) return;
+    const fetchPostsAndVotes = async () => {
       setIsLoading(true);
       setError(null);
       try {
@@ -59,26 +51,24 @@ function HomePage() {
         } else {
           response = await postsApi.getAll(1, 20);
         }
-        
-        console.log('✅ Posts fetched successfully:', response);
         const fetchedPosts = response.posts || [];
-        console.log('📦 Mapped posts count:', fetchedPosts.length);
-        
-        // Check if no posts in following feed
-        if (feed === 'following' && fetchedPosts.length === 0) {
-          console.log('ℹ️ No posts from followed users');
-        }
-        
         setPosts(fetchedPosts.map(mapApiPost));
+
+        // Fetch user votes for each post
+        const votes: Record<number, number> = {};
+        await Promise.all(
+          fetchedPosts.map(async (p: any) => {
+            try {
+              const res = await votesApi.getUserVote('post', p.id);
+              votes[p.id] = res.userVote ?? 0;
+            } catch {
+              votes[p.id] = 0;
+            }
+          })
+        );
+        setUserVotes(votes);
       } catch (err: any) {
-        console.error('❌ Error fetching posts:', err);
-        console.error('Error details:', {
-          status: err.response?.status,
-          data: err.response?.data,
-          message: err.message
-        });
-        
-        // Better error messages
+        setPosts([]);
         if (err.response?.status === 401) {
           setError('Authentication required. Please log in again.');
         } else if (feed === 'following' && err.response?.status === 404) {
@@ -86,13 +76,11 @@ function HomePage() {
         } else {
           setError(err.response?.data?.error || 'Failed to load posts. Please try again.');
         }
-        setPosts([]);
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchPosts();
+    fetchPostsAndVotes();
   }, [feed, searchQuery]);
 
   const handleFeedChange = (newFeed: FeedType) => {
@@ -108,18 +96,20 @@ function HomePage() {
   const sortedPosts = [...posts].sort((a, b) => {
     switch (sortOption) {
       case 'hot':
-      case 'top':
         // Sort by vote count descending (most upvotes first)
         return (b.voteCount || 0) - (a.voteCount || 0);
+      case 'downvotes':
+        // Sort by vote count ascending (most downvotes/lowest score first)
+        return (a.voteCount || 0) - (b.voteCount || 0);
+      case 'controversial':
+        // Sort by comment count descending (most comments first)
+        return (b.commentCount || 0) - (a.commentCount || 0);
       case 'new':
         // Sort by creation date descending (newest first)
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       case 'oldest':
         // Sort by creation date ascending (oldest first)
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      case 'controversial':
-        // Sort by vote count ascending (most downvotes/lowest score first)
-        return (a.voteCount || 0) - (b.voteCount || 0);
       default:
         return 0;
     }
@@ -129,13 +119,12 @@ function HomePage() {
   const handleSearch = async (query: string) => {
     console.log('🔎 handleSearch called with query:', query);
     setSearchQuery(query);
-    
     if (!query.trim()) {
-      console.log('🔄 Search cleared, letting useEffect handle reload');
-      // Let the useEffect handle the reload when searchQuery is cleared
+      // If search is cleared, reload feed via useEffect
+      setIsSearching(false);
+      setError(null);
       return;
     }
-
     // Perform keyword search via API
     console.log('🔍 Performing search for:', query);
     setIsSearching(true);
@@ -169,17 +158,14 @@ function HomePage() {
     );
 
     try {
-      if (newVote === 0) {
-        // Remove vote
-        await votesApi.remove('post', postId);
-      } else {
-        // Cast vote
-        await votesApi.cast({
-          target_type: 'post',
-          target_id: postId,
-          value: newVote as 1 | -1,
-        });
-      }
+      // Use new backend vote endpoint
+      const result = await votesApi.votePost(postId, newVote as 1 | -1 | 0);
+      setUserVotes({ ...userVotes, [postId]: result.user_vote ?? 0 });
+      setPosts(
+        posts.map((p) =>
+          p.id === postId ? { ...p, voteCount: result.vote_count } : p
+        )
+      );
     } catch (err: any) {
       console.error('Error voting:', err);
       // Revert on error
@@ -240,21 +226,36 @@ function HomePage() {
             )}
           </div>
 
-          <PostSortFilter 
-            currentSort={sortOption}
-            onSortChange={handleSortChange}
-            disabled={isLoading || isSearching}
-          />
+          <div style={{ marginBottom: '0.5rem', marginTop: '0.5rem' }}>
+            <PostSortFilter 
+              currentSort={sortOption}
+              onSortChange={handleSortChange}
+              disabled={isLoading || isSearching}
+            />
+          </div>
 
           <div className="feed-description">
             {searchQuery ? (
               <p>Search results for "{searchQuery}"</p>
-            ) : feed === 'hot' ? (
-              <p>The most upvoted posts across all communities</p>
-            ) : feed === 'following' ? (
-              <p>Posts from users you follow</p>
             ) : (
-              <p>All posts from BlueIt communities</p>
+              <p>
+                {(() => {
+                  switch (sortOption) {
+                    case 'hot':
+                      return 'The most upvoted posts across all communities';
+                    case 'downvotes':
+                      return 'Posts with the most downvotes (lowest scores)';
+                    case 'controversial':
+                      return 'Posts with the most comments across all communities';
+                    case 'new':
+                      return 'The newest posts from all communities';
+                    case 'oldest':
+                      return 'The oldest posts from all communities';
+                    default:
+                      return 'All posts from BlueIt communities';
+                  }
+                })()}
+              </p>
             )}
           </div>
 
@@ -295,7 +296,7 @@ function HomePage() {
               )}
             </div>
           ) : (
-            <PostFeed posts={sortedPosts} onVote={handleVote} />
+            <PostFeed posts={sortedPosts} onVote={handleVote} userVotes={userVotes} />
           )}
         </div>
       </div>

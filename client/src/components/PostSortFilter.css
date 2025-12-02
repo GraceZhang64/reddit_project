@@ -1,13 +1,15 @@
 .post-sort-filter {
   display: flex;
   gap: 0.5rem;
-  padding: 0.75rem;
+  padding: 0.75rem 1.5rem;
   background: var(--blueit-card-bg);
-  border: 1px solid var(--blueit-border);
-  border-radius: 12px;
-  margin-bottom: 1rem;
+  border: 2px dashed var(--blueit-primary);
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
   overflow-x: auto;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.08);
+  position: relative;
+  z-index: 2;
 }
 
 .sort-option {

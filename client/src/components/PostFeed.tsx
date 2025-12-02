@@ -7,9 +7,10 @@ import './PostFeed.css';
 interface PostFeedProps {
   posts: Post[];
   onVote?: (postId: number, value: number) => void;
+  userVotes?: Record<number, number>;
 }
 
-function PostFeed({ posts, onVote }: PostFeedProps) {
+function PostFeed({ posts, onVote, userVotes = {} }: PostFeedProps) {
   const [savedStatuses, setSavedStatuses] = useState<Record<number, boolean>>({});
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
 
@@ -54,6 +55,7 @@ function PostFeed({ posts, onVote }: PostFeedProps) {
             key={post.id} 
             post={post} 
             onVote={onVote}
+            userVote={userVotes ? userVotes[post.id] ?? 0 : 0}
             initialSaved={savedStatuses[post.id] ?? false}
             onSaveToggle={handleSaveToggle}
           />

@@ -1,6 +1,6 @@
 import './PostSortFilter.css';
 
-export type SortOption = 'hot' | 'new' | 'top' | 'controversial' | 'oldest';
+export type SortOption = 'hot' | 'new' | 'downvotes' | 'controversial' | 'oldest';
 
 interface PostSortFilterProps {
   currentSort: SortOption;
@@ -12,8 +12,8 @@ function PostSortFilter({ currentSort, onSortChange, disabled = false }: PostSor
   const sortOptions: { value: SortOption; label: string; icon: string; description: string }[] = [
     { value: 'hot', label: 'Hot', icon: '🔥', description: 'Most upvoted' },
     { value: 'new', label: 'New', icon: '✨', description: 'Most recent' },
-    { value: 'top', label: 'Top', icon: '⬆️', description: 'Highest score' },
-    { value: 'controversial', label: 'Controversial', icon: '⚡', description: 'Most downvoted' },
+    { value: 'downvotes', label: 'Most Downvotes', icon: '⬇️', description: 'Lowest score' },
+    { value: 'controversial', label: 'Controversial', icon: '💬', description: 'Most commented' },
     { value: 'oldest', label: 'Oldest', icon: '📅', description: 'Oldest first' },
   ];
 

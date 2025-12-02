@@ -120,6 +120,20 @@
   font-size: 14px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.username:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Smaller padding for gear icon so it feels like an icon button */
+.settings-link {
+  padding: 6px 10px;
+  font-size: 16px;
 }
 
 .logout-btn {

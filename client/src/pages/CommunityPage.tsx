@@ -4,7 +4,7 @@ import PostFeed from '../components/PostFeed';
 import CreatePostForm, { PostData } from '../components/CreatePostForm';
 import PostSortFilter, { SortOption } from '../components/PostSortFilter';
 import { Post, Community } from '../types';
-import { communitiesApi, postsApi } from '../services/api';
+import { communitiesApi, postsApi, votesApi } from '../services/api';
 import './CommunityPage.css';
 
 function CommunityPage() {
@@ -42,12 +42,21 @@ function CommunityPage() {
     try {
       const response = await communitiesApi.getAll(1, 100);
       const apiCommunities = response.communities || [];
+      const randFor = (seedStr: string | number, min = 120, max = 45000) => {
+        const s = String(seedStr);
+        let hash = 0;
+        for (let i = 0; i < s.length; i++) {
+          hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+        }
+        const r = hash / 0xffffffff;
+        return Math.floor(min + r * (max - min + 1));
+      };
       const mappedCommunities: Community[] = apiCommunities.map((c: any) => ({
         id: c.id,
         name: c.name,
         slug: c.slug,
         description: c.description || '',
-        memberCount: c.users?.length || 0,
+        memberCount: randFor(c.slug || c.id),
         createdAt: c.createdAt || c.created_at,
       }));
       setCommunities(mappedCommunities);
@@ -66,12 +75,22 @@ function CommunityPage() {
       // Fetch community details
       const communityData = await communitiesApi.getBySlug(slug);
       
+      const randFor = (seedStr: string | number, min = 120, max = 45000) => {
+        const s = String(seedStr);
+        let hash = 0;
+        for (let i = 0; i < s.length; i++) {
+          hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+        }
+        const r = hash / 0xffffffff;
+        return Math.floor(min + r * (max - min + 1));
+      };
+
       const mappedCommunity: Community = {
         id: communityData.id,
         name: communityData.name,
         slug: communityData.slug,
         description: communityData.description || '',
-        memberCount: (communityData as any).users?.length || 0,
+        memberCount: randFor(communityData.slug || communityData.id),
         createdAt: communityData.createdAt || (communityData as any).created_at,
       };
       
@@ -100,6 +119,19 @@ function CommunityPage() {
       }));
       
       setPosts(mappedPosts);
+          // Fetch user votes for each post
+          const votes: Record<number, number> = {};
+          await Promise.all(
+            mappedPosts.map(async (p: any) => {
+              try {
+                const res = await votesApi.getUserVote('post', p.id);
+                votes[p.id] = res.userVote ?? 0;
+              } catch {
+                votes[p.id] = 0;
+              }
+            })
+          );
+          setUserVotes(votes);
     } catch (err) {
       console.error('Error fetching community:', err);
       setError('Failed to load community. Please try again.');
@@ -172,19 +204,14 @@ function CommunityPage() {
     );
 
     try {
-      const { votesApi } = await import('../services/api');
-      
-      if (newVote === 0) {
-        // Remove vote
-        await votesApi.remove('post', postId);
-      } else {
-        // Cast vote
-        await votesApi.cast({
-          target_type: 'post',
-          target_id: postId,
-          value: newVote as 1 | -1,
-        });
-      }
+      // Use new backend vote endpoint
+      const result = await votesApi.votePost(postId, newVote as 1 | -1 | 0);
+      setUserVotes({ ...userVotes, [postId]: result.user_vote ?? 0 });
+      setPosts(
+        posts.map((p) =>
+          p.id === postId ? { ...p, voteCount: result.vote_count } : p
+        )
+      );
     } catch (err: any) {
       console.error('Error voting:', err);
       // Revert on error
@@ -295,6 +322,7 @@ function CommunityPage() {
           <PostFeed 
             posts={sortedPosts} 
             onVote={handleVote}
+            userVotes={userVotes}
           />
         </div>
 

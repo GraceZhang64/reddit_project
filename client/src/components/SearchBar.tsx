@@ -19,22 +19,8 @@ function SearchBar({
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  // Debounced search
-  useEffect(() => {
-    if (query.trim() === '') {
-      onSearch('');
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-    const timer = setTimeout(() => {
-      onSearch(query.trim());
-      setIsSearching(false);
-    }, debounceMs);
-
-    return () => clearTimeout(timer);
-  }, [query, debounceMs, onSearch]);
+  // Only search on submit or clear
+  // Removed debounced useEffect
 
   const handleClear = () => {
     setQuery('');
@@ -43,9 +29,7 @@ function SearchBar({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) {
-      onSearch(query.trim());
-    }
+    onSearch(query.trim());
   };
 
   return (

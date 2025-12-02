@@ -7,6 +7,7 @@ import PollWidget from '../components/PollWidget';
 import FollowButton from '../components/FollowButton';
 import { Post, Comment } from '../types';
 import { commentsApi, postsApi } from '../services/api';
+import { votesApi } from '../services/api';
 import './PostPage.css';
 import AISummaryContent from '../components/AISummaryContent';
 
@@ -146,17 +147,10 @@ function PostPage() {
     setPost({ ...post, voteCount: (post.voteCount || 0) + voteDiff });
 
     try {
-      const { votesApi } = await import('../services/api');
-      
-      if (newVote === 0) {
-        await votesApi.remove('post', post.id);
-      } else {
-        await votesApi.cast({
-          target_type: 'post',
-          target_id: post.id,
-          value: newVote as 1 | -1,
-        });
-      }
+      // Use new backend vote endpoint
+      const result = await votesApi.votePost(post.id, newVote as 1 | -1 | 0);
+      setUserVote(result.user_vote ?? 0);
+      setPost({ ...post, voteCount: result.vote_count });
     } catch (err: any) {
       console.error('Error voting:', err);
       // Revert on error

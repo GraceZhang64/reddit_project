@@ -80,8 +80,8 @@ function App() {
                 <button onClick={toggleTheme} className="theme-toggle" title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
                   {theme === 'light' ? '🌙' : '☀️'}
                 </button>
-                <Link to="/settings" className="nav-link">Settings</Link>
-                <span className="username">u/{username}</span>
+                <Link to={`/u/${username}`} className="username" title="Your profile">u/{username}</Link>
+                <Link to="/settings" className="nav-link settings-link" title="Settings">⚙️</Link>
                 <button onClick={handleLogout} className="logout-btn">
                   Logout
                 </button>
