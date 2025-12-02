@@ -403,11 +403,15 @@ router.put('/:id', auth_1.authenticateToken, async (req, res) => {
  * DELETE /api/posts/:id
  * Delete a post
  */
-router.delete('/:id', auth_1.authenticateToken, async (req, res) => {
+router.delete('/:id', auth_1.optionalAuth, async (req, res) => {
     try {
         const postId = parseInt(req.params.id);
         if (isNaN(postId)) {
             return res.status(400).json({ error: 'Invalid post ID' });
+        }
+        // Check if user is authenticated
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
         }
         // Check if post exists and user owns it
         const existingPost = await postService_1.postService.getPostById(postId);
@@ -421,8 +425,35 @@ router.delete('/:id', auth_1.authenticateToken, async (req, res) => {
         res.json({ success: true, message: 'Post deleted' });
     }
     catch (error) {
-        console.error('Error deleting post:', error);
         res.status(500).json({ error: 'Failed to delete post' });
     }
 });
 exports.default = router;
+/**
+ * POST /api/posts/:id/vote
+ * Upvote, downvote, or remove vote for a post
+ * Body: { value: 1 | -1 | 0 }
+ */
+router.post('/:id/vote', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const postId = parseInt(req.params.id);
+        const userId = req.user?.id;
+        const { value } = req.body;
+        if (!userId) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        if (isNaN(postId)) {
+            return res.status(400).json({ error: 'Invalid post ID' });
+        }
+        if (![1, -1, 0].includes(value)) {
+            return res.status(400).json({ error: 'Vote value must be 1, -1, or 0' });
+        }
+        // Call service to handle vote
+        const result = await postService_1.postService.voteOnPost({ postId, userId, value });
+        res.json(result);
+    }
+    catch (error) {
+        console.error('Error voting on post:', error);
+        res.status(500).json({ error: 'Failed to vote on post' });
+    }
+});

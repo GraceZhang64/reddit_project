@@ -56,7 +56,7 @@ function CommunityPage() {
         name: c.name,
         slug: c.slug,
         description: c.description || '',
-        memberCount: randFor(c.slug || c.id),
+        memberCount: c.memberCount || c.member_count || c.users?.length || 0,
         createdAt: c.createdAt || c.created_at,
       }));
       setCommunities(mappedCommunities);
@@ -90,7 +90,7 @@ function CommunityPage() {
         name: communityData.name,
         slug: communityData.slug,
         description: communityData.description || '',
-        memberCount: randFor(communityData.slug || communityData.id),
+        memberCount: communityData.memberCount || communityData.memberCount || (communityData as any).users?.length || 0,
         createdAt: communityData.createdAt || (communityData as any).created_at,
       };
       
@@ -275,7 +275,6 @@ function CommunityPage() {
             </div>
             <div className="community-details">
               <h1>r/{community.name}</h1>
-              <p>{community.description}</p>
               <div className="community-stats">
                 <span>{memberCount.toLocaleString()} members</span>
               </div>

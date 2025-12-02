@@ -19,7 +19,13 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          memberCount: true,
+          createdAt: true,
           users: {
             select: {
               id: true,
@@ -53,6 +59,78 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/communities/search
+ * Search communities by name or description
+ */
+router.get('/search', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const query = (req.query.q as string)?.trim();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const skip = (page - 1) * limit;
+
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    const [communities, total] = await Promise.all([
+      prisma.community.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { description: { contains: query, mode: 'insensitive' } }
+          ]
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          memberCount: true,
+          createdAt: true,
+          users: {
+            select: {
+              id: true,
+              username: true
+            }
+          },
+          _count: {
+            select: {
+              posts: true
+            }
+          }
+        }
+      }),
+      prisma.community.count({
+        where: {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { description: { contains: query, mode: 'insensitive' } }
+          ]
+        }
+      })
+    ]);
+
+    res.json({
+      communities,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error searching communities:', error);
+    res.status(500).json({ error: 'Failed to search communities' });
+  }
+});
+
+/**
  * GET /api/communities/:slug
  * Get a specific community by slug
  */
@@ -62,7 +140,13 @@ router.get('/:slug', authenticateToken, async (req: Request, res: Response) => {
 
     const community = await prisma.community.findUnique({
       where: { slug },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        memberCount: true,
+        createdAt: true,
         users: {
           select: {
             id: true,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { followsApi } from '../services/api';
 import './FollowButton.css';
 

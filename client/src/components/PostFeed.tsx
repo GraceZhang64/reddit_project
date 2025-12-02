@@ -18,14 +18,20 @@ function PostFeed({ posts, onVote, userVotes = {} }: PostFeedProps) {
     const fetchSavedStatuses = async () => {
       if (posts.length === 0) {
         setIsLoadingSaved(false);
+        // Set empty statuses for UI to work
+        setSavedStatuses({});
         return;
       }
 
       setIsLoadingSaved(true);
       try {
         const postIds = posts.map(p => p.id);
-        const statuses = await savedPostsApi.checkMultipleSaved(postIds);
-        setSavedStatuses(statuses);
+        if (postIds.length > 0) {
+          const statuses = await savedPostsApi.checkMultipleSaved(postIds);
+          setSavedStatuses(statuses);
+        } else {
+          setSavedStatuses({});
+        }
       } catch (error: any) {
         console.warn('Saved posts feature not available:', error.response?.status === 404 ? 'Endpoint not found' : error.message);
         // Silently fail - saved posts feature may not be set up yet

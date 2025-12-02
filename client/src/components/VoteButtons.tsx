@@ -1,4 +1,5 @@
-﻿import './VoteButtons.css';
+﻿import React from 'react';
+import './VoteButtons.css';
 
 
 interface VoteButtonsProps {
@@ -8,10 +9,12 @@ interface VoteButtonsProps {
   onDownvote?: () => void;
   userVote?: number; // -1, 0, or 1
   size?: 'small' | 'normal';
+  disabled?: boolean;
 }
 
-function VoteButtons({ voteCount, onVote, onUpvote, onDownvote, userVote = 0, size = 'normal' }: VoteButtonsProps) {
+function VoteButtons({ voteCount, onVote, onUpvote, onDownvote, userVote = 0, size = 'normal', disabled = false }: VoteButtonsProps) {
   const handleUpvote = () => {
+    if (disabled) return;
     if (onVote) {
       onVote(1);
     } else if (onUpvote) {
@@ -20,6 +23,7 @@ function VoteButtons({ voteCount, onVote, onUpvote, onDownvote, userVote = 0, si
   };
 
   const handleDownvote = () => {
+    if (disabled) return;
     if (onVote) {
       onVote(-1);
     } else if (onDownvote) {
@@ -28,11 +32,13 @@ function VoteButtons({ voteCount, onVote, onUpvote, onDownvote, userVote = 0, si
   };
 
   return (
-    <div className={`vote-buttons ${size === 'small' ? 'vote-buttons-small' : ''}`}>
+    <div className={`vote-buttons ${size === 'small' ? 'vote-buttons-small' : ''} ${disabled ? 'disabled' : ''}`}>
       <button
         className={`vote-btn upvote ${userVote === 1 ? 'active' : ''}`}
         onClick={handleUpvote}
+        disabled={disabled}
         aria-label="Upvote"
+        title={disabled ? "Log in to vote" : "Upvote"}
       >
         ▲
       </button>
@@ -42,7 +48,9 @@ function VoteButtons({ voteCount, onVote, onUpvote, onDownvote, userVote = 0, si
       <button
         className={`vote-btn downvote ${userVote === -1 ? 'active' : ''}`}
         onClick={handleDownvote}
+        disabled={disabled}
         aria-label="Downvote"
+        title={disabled ? "Log in to vote" : "Downvote"}
       >
         ▼
       </button>

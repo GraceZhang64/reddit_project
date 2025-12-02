@@ -14,10 +14,13 @@ import savedPostsRouter from './routes/savedPosts';
 dotenv.config();
 
 const app: Express = express();
-const port = process.env.PORT || 5000;
+const port = parseInt(process.env.PORT || '5000', 10);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: true, // Allow all origins for beta testing
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
@@ -108,6 +111,8 @@ app.use('/api/users', usersRouter);
 app.use('/api/follows', followsRouter);
 app.use('/api/saved-posts', savedPostsRouter);
 
-app.listen(port, () => {
-  console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`⚡️[server]: Server is running at http://0.0.0.0:${port}`);
+  console.log(`⚡️[server]: Local access: http://localhost:${port}`);
+  console.log(`⚡️[server]: Network access: Find your IP with 'ipconfig' and use http://YOUR_IP:${port}`);
 });

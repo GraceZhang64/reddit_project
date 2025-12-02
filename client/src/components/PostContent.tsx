@@ -1,3 +1,4 @@
+import React from 'react';
 import { Post } from '../types';
 import { formatMentions } from '../utils/formatMentions';
 import './PostContent.css';

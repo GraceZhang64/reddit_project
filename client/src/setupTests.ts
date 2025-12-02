@@ -1,5 +1,29 @@
 import '@testing-library/jest-dom';
 
+// Silence console methods during tests
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+beforeAll(() => {
+  console.error = jest.fn();
+  console.warn = jest.fn();
+});
+
+afterAll(() => {
+  console.error = originalConsoleError;
+  console.warn = originalConsoleWarn;
+});
+
+// Mock AISummaryContent component
+jest.mock('./components/AISummaryContent', () => {
+  const React = require('react');
+  return {
+    default: function AISummaryContent({ summary }: { summary: string }) {
+      return React.createElement('div', { 'data-testid': 'ai-summary' }, summary);
+    }
+  };
+});
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

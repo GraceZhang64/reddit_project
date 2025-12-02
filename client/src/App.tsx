@@ -20,18 +20,34 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check authentication status from stored data only (no API call)
-    const checkAuth = () => {
+    // Check authentication status from stored data and validate token
+    const checkAuth = async () => {
       try {
+        const token = authService.getToken();
         const user = authService.getUser();
-        if (user) {
-          setIsAuthenticated(true);
-          setUsername(user.username);
+
+        // Check if user has stored auth data
+
+        if (token && user) {
+          // Validate token by calling /me endpoint
+          try {
+            const currentUser = await authService.getCurrentUser();
+            setIsAuthenticated(true);
+            setUsername(currentUser.username);
+            // Auth validation successful
+          } catch (validationError) {
+            // Token validation failed
+            // Token is invalid, clear auth data
+            authService.clearAuthData();
+            setIsAuthenticated(false);
+            setUsername('');
+          }
         } else {
+          console.log('ℹ️ No stored auth data');
           setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
+        console.error('🚫 Auth check failed:', error);
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
@@ -74,7 +90,7 @@ function App() {
                 <Link to="/" className="nav-link">Home</Link>
                 <Link to="/communities" className="nav-link">Communities</Link>
                 <Link to="/saved" className="nav-link">📑 Saved</Link>
-                <Link to="/search" className="nav-link">🔍 Search</Link>
+                <Link to="/search" className="nav-link">Search</Link>
               </div>
               <div className="nav-actions">
                 <button onClick={toggleTheme} className="theme-toggle" title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
@@ -106,7 +122,7 @@ function App() {
           />
           <Route
             path="/p/:id"
-            element={isAuthenticated ? <PostPage /> : <Navigate to="/auth" />}
+            element={<PostPage />}
           />
           <Route
             path="/search"

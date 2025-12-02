@@ -18,7 +18,13 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' },
-                include: {
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    description: true,
+                    memberCount: true,
+                    createdAt: true,
                     users: {
                         select: {
                             id: true,
@@ -50,6 +56,74 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
     }
 });
 /**
+ * GET /api/communities/search
+ * Search communities by name or description
+ */
+router.get('/search', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const query = req.query.q?.trim();
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const skip = (page - 1) * limit;
+        if (!query) {
+            return res.status(400).json({ error: 'Search query is required' });
+        }
+        const [communities, total] = await Promise.all([
+            prisma_1.prisma.community.findMany({
+                where: {
+                    OR: [
+                        { name: { contains: query, mode: 'insensitive' } },
+                        { description: { contains: query, mode: 'insensitive' } }
+                    ]
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    description: true,
+                    memberCount: true,
+                    createdAt: true,
+                    users: {
+                        select: {
+                            id: true,
+                            username: true
+                        }
+                    },
+                    _count: {
+                        select: {
+                            posts: true
+                        }
+                    }
+                }
+            }),
+            prisma_1.prisma.community.count({
+                where: {
+                    OR: [
+                        { name: { contains: query, mode: 'insensitive' } },
+                        { description: { contains: query, mode: 'insensitive' } }
+                    ]
+                }
+            })
+        ]);
+        res.json({
+            communities,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error searching communities:', error);
+        res.status(500).json({ error: 'Failed to search communities' });
+    }
+});
+/**
  * GET /api/communities/:slug
  * Get a specific community by slug
  */
@@ -58,7 +132,13 @@ router.get('/:slug', auth_1.authenticateToken, async (req, res) => {
         const { slug } = req.params;
         const community = await prisma_1.prisma.community.findUnique({
             where: { slug },
-            include: {
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+                description: true,
+                memberCount: true,
+                createdAt: true,
                 users: {
                     select: {
                         id: true,
@@ -229,7 +309,7 @@ router.get('/:slug/posts', auth_1.authenticateToken, async (req, res) => {
         if (!community) {
             return res.status(404).json({ error: 'Community not found' });
         }
-        // Get posts
+        // Get posts (basic data)
         const [posts, total] = await Promise.all([
             prisma_1.prisma.post.findMany({
                 where: { communityId: community.id },
@@ -262,8 +342,40 @@ router.get('/:slug/posts', auth_1.authenticateToken, async (req, res) => {
                 where: { communityId: community.id }
             })
         ]);
+        // Aggregate vote counts for posts in this page
+        const postIds = posts.map(p => p.id);
+        const voteGroups = postIds.length > 0 ? await prisma_1.prisma.vote.groupBy({
+            by: ['target_id'],
+            where: {
+                target_type: 'post',
+                target_id: { in: postIds }
+            },
+            _sum: { value: true }
+        }) : [];
+        const voteMap = new Map();
+        voteGroups.forEach(g => voteMap.set(g.target_id, g._sum.value || 0));
+        // Fetch current user's votes for these posts (if authenticated)
+        let userVoteMap = new Map();
+        if (req.user && postIds.length > 0) {
+            const userVotes = await prisma_1.prisma.vote.findMany({
+                where: {
+                    userId: req.user.id,
+                    target_type: 'post',
+                    target_id: { in: postIds }
+                },
+                select: { target_id: true, value: true }
+            });
+            userVotes.forEach(v => userVoteMap.set(v.target_id, v.value));
+        }
+        // Enrich posts with vote_count, comment_count, and user_vote
+        const enriched = posts.map(p => ({
+            ...p,
+            vote_count: voteMap.get(p.id) || 0,
+            comment_count: p._count?.comments || 0,
+            user_vote: userVoteMap.get(p.id) ?? null
+        }));
         res.json({
-            posts,
+            posts: enriched,
             pagination: {
                 page,
                 limit,

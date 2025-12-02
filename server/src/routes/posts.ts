@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { postService } from '../services/postService';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, optionalAuth } from '../middleware/auth';
 import { getAIService } from '../services/aiService';
 import { getSupabaseClient } from '../config/supabase';
 import { prisma } from '../lib/prisma';
@@ -14,7 +14,7 @@ const router = Router();
  * GET /api/posts
  * Get all posts with pagination (with caching)
  */
-router.get('/', authenticateToken, async (req: Request, res: Response) => {
+router.get('/', optionalAuth, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -104,7 +104,7 @@ router.get('/search', authenticateToken, async (req: Request, res: Response) => 
  * GET /api/posts/:idOrSlug/summary
  * Get a specific post with AI-generated summary
  */
-router.get('/:idOrSlug/summary', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:idOrSlug/summary', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { idOrSlug } = req.params;
     const userId = req.user?.id;
@@ -215,7 +215,7 @@ router.get('/:idOrSlug/summary', authenticateToken, async (req: Request, res: Re
   }
 });
 
-router.get('/:idOrSlug', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:idOrSlug', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { idOrSlug } = req.params;
     const userId = req.user?.id;
@@ -442,12 +442,17 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
  * DELETE /api/posts/:id
  * Delete a post
  */
-router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/:id', optionalAuth, async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id);
 
     if (isNaN(postId)) {
       return res.status(400).json({ error: 'Invalid post ID' });
+    }
+
+    // Check if user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     // Check if post exists and user owns it
@@ -456,7 +461,7 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    if (existingPost.authorId !== req.user!.id) {
+    if (existingPost.authorId !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized to delete this post' });
     }
 
@@ -464,7 +469,6 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
 
     res.json({ success: true, message: 'Post deleted' });
   } catch (error) {
-    console.error('Error deleting post:', error);
     res.status(500).json({ error: 'Failed to delete post' });
   }
 });

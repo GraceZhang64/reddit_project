@@ -19,8 +19,22 @@ function SearchBar({
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  // Only search on submit or clear
-  // Removed debounced useEffect
+  // Debounced search - only trigger when there's actual content
+  useEffect(() => {
+    if (query.trim() === '') {
+      // Don't call onSearch for empty queries
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      onSearch(query.trim());
+      setIsSearching(false);
+    }, debounceMs);
+
+    return () => clearTimeout(timer);
+  }, [query, debounceMs, onSearch]);
 
   const handleClear = () => {
     setQuery('');

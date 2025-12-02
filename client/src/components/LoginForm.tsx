@@ -8,7 +8,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,13 +19,18 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
     setError('');
 
     // Validation
-    if (!email || !password) {
-      setError('Please enter both email and password');
+    if (!username || !password) {
+      setError('Please enter both username and password');
       return;
     }
 
-    if (!email.includes('@')) {
-      setError('Please enter a valid email address');
+    if (username.length < 3 || username.length > 20) {
+      setError('Username must be between 3 and 20 characters');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setError('Username can only contain letters, numbers, and underscores');
       return;
     }
 
@@ -33,7 +38,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
 
     try {
       // Call real API through auth service
-      await authService.login({ email, password }, rememberMe);
+      await authService.login({ username, password }, rememberMe);
 
       // Success
       if (onSuccess) {
@@ -43,7 +48,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
         window.location.href = '/';
       }
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password. Please try again.');
+      setError(err.message || 'Invalid username or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -65,15 +70,15 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="username">Username</label>
             <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
               disabled={isLoading}
-              autoComplete="email"
+              autoComplete="username"
             />
           </div>
 

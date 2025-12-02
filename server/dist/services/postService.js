@@ -193,6 +193,14 @@ exports.postService = {
                             contains: query,
                             mode: 'insensitive'
                         }
+                    },
+                    {
+                        community: {
+                            name: {
+                                contains: query,
+                                mode: 'insensitive'
+                            }
+                        }
                     }
                 ]
             },
@@ -240,6 +248,14 @@ exports.postService = {
                         body: {
                             contains: query,
                             mode: 'insensitive'
+                        }
+                    },
+                    {
+                        community: {
+                            name: {
+                                contains: query,
+                                mode: 'insensitive'
+                            }
                         }
                     }
                 ]
@@ -576,5 +592,48 @@ exports.postService = {
         await prisma_1.prisma.post.delete({
             where: { id: postId },
         });
+    },
+    /**
+     * Upvote, downvote, or remove vote for a post
+     * @param { postId, userId, value } value: 1 (upvote), -1 (downvote), 0 (remove)
+     */
+    async voteOnPost({ postId, userId, value }) {
+        // Check post exists
+        const post = await prisma_1.prisma.post.findUnique({ where: { id: postId } });
+        if (!post)
+            throw new Error('Post not found');
+        // Remove vote if value is 0
+        if (value === 0) {
+            await prisma_1.prisma.vote.deleteMany({
+                where: {
+                    userId,
+                    target_type: 'post',
+                    target_id: postId,
+                },
+            });
+        }
+        else {
+            // Upsert vote
+            await prisma_1.prisma.vote.upsert({
+                where: {
+                    userId_target_type_target_id: {
+                        userId,
+                        target_type: 'post',
+                        target_id: postId,
+                    },
+                },
+                update: { value },
+                create: {
+                    userId,
+                    target_type: 'post',
+                    target_id: postId,
+                    value,
+                },
+            });
+        }
+        // Return updated vote count and user's vote
+        const vote_count = await getVoteCount('post', postId);
+        const user_vote = await getUserVote(userId, 'post', postId);
+        return { postId, vote_count, user_vote };
     },
 };

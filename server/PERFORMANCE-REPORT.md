@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document details the performance optimizations implemented and their measurable impact on the Reddit clone application's critical workflow: **Viewing a Post + First 10 Comments**.
+This document details the performance optimizations implemented and their measurable impact on the Reddit clone application's critical workflow: **Viewing a Post + First 10 Comments + AI Summary**.
 
 ## Optimizations Implemented
 
@@ -56,8 +56,11 @@ Applied performance indexes on frequently queried columns:
 - **Tool**: K6 Load Testing
 - **Iterations**: 100 trials
 - **Virtual Users**: 10 concurrent
-- **Workflow**: View Post + First 10 Comments
-- **Measurement**: Backend response time (excluding frontend rendering)
+- **Workflow**: View Post + First 10 Comments + AI Summary
+- **Measurement**: 
+  - Backend response time (server-side latency)
+  - Front-end rendering time (client-side latency)
+  - Total end-to-end latency (server + client)
 
 ### Results
 
@@ -110,6 +113,7 @@ This resulted in:
 1. **Post List Fetch**: 717.50 ms average (warmup only)
 2. **Post View**: 485.31 ms average (35.6% of total time)
 3. **Comments Fetch**: 878.99 ms average (64.4% of total time) ⚠️
+4. **AI Summary**: Measured separately (cache hit vs generation)
 
 **Primary Bottleneck**: **Comments Fetch** (64.4% of workflow time)  
 

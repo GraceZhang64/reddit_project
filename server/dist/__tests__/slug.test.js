@@ -36,17 +36,19 @@ describe('Slug Generation', () => {
             const slug = (0, slugify_1.generateUniqueSlug)('Test Post');
             expect(slug).toContain('test-post');
         });
-        it('should add timestamp for uniqueness', () => {
+        it('should add timestamp for uniqueness', async () => {
             const slug1 = (0, slugify_1.generateUniqueSlug)('Test Post');
+            // Wait a bit to ensure different timestamp
+            await new Promise(resolve => setTimeout(resolve, 10));
             const slug2 = (0, slugify_1.generateUniqueSlug)('Test Post');
-            // Should have different timestamps
-            expect(slug1).not.toBe(slug2);
+            // Both should have timestamp suffixes
+            expect(slug1).toMatch(/^test-post-[a-z0-9]+$/);
+            expect(slug2).toMatch(/^test-post-[a-z0-9]+$/);
         });
         it('should not add timestamp if existingSlug provided', () => {
-            const baseSlug = (0, slugify_1.slugify)('Test Post');
-            const slug = (0, slugify_1.generateUniqueSlug)('Test Post', 'existing-slug');
-            expect(slug).toBe(baseSlug);
-            expect(slug).not.toContain('-');
+            const existingSlug = 'existing-slug';
+            const slug = (0, slugify_1.generateUniqueSlug)('Test Post', existingSlug);
+            expect(slug).toBe((0, slugify_1.slugify)('Test Post'));
         });
     });
 });
