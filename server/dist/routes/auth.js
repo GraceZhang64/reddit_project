@@ -85,6 +85,13 @@ router.post('/register', async (req, res) => {
         });
         if (authError || !authData.user) {
             console.error('Supabase registration error:', authError);
+            // Handle specific case where user exists in Supabase but not in local DB
+            if (authError?.message?.includes('User already registered') ||
+                authError?.code === 'user_already_exists') {
+                return res.status(400).json({
+                    error: 'An account with this email already exists. Please try logging in instead.'
+                });
+            }
             return res.status(400).json({
                 error: authError?.message || 'Registration failed'
             });
@@ -211,6 +218,52 @@ router.post('/login', async (req, res) => {
     catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+/**
+ * POST /api/auth/refresh
+ * Refresh access token using refresh token
+ */
+router.post('/refresh', async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) {
+            return res.status(400).json({ error: 'Refresh token required' });
+        }
+        const supabase = (0, supabase_1.getSupabaseClient)();
+        const { data, error } = await supabase.auth.refreshSession({
+            refresh_token: refreshToken
+        });
+        if (error || !data.session || !data.user) {
+            return res.status(401).json({ error: 'Invalid refresh token' });
+        }
+        // Get user profile from database
+        const userProfile = await prisma_1.prisma.user.findUnique({
+            where: { id: data.user.id },
+            select: {
+                id: true,
+                email: true,
+                username: true,
+                avatar_url: true,
+                bio: true
+            }
+        });
+        if (!userProfile) {
+            return res.status(404).json({ error: 'User profile not found' });
+        }
+        res.json({
+            message: 'Token refreshed',
+            user: userProfile,
+            session: {
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token,
+                expires_in: data.session.expires_in
+            }
+        });
+    }
+    catch (error) {
+        console.error('Token refresh error:', error);
+        res.status(500).json({ error: 'Token refresh failed' });
     }
 });
 /**

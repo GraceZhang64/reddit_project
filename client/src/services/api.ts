@@ -278,6 +278,42 @@ export const votesApi = {
     return response.data;
   },
 
+  /**
+   * Cast a vote for a comment
+   */
+  async cast(data: { target_type: 'post' | 'comment'; target_id: number; value: 1 | -1 }): Promise<{ vote: any; voteCount: number }> {
+    const response = await api.post('/votes', data);
+    return response.data;
+  },
+
+  /**
+   * Remove a vote for a post or comment
+   */
+  async remove(target_type: 'post' | 'comment', target_id: number): Promise<{ success: boolean; voteCount: number }> {
+    const response = await api.delete('/votes', {
+      data: { target_type, target_id }
+    });
+    return response.data;
+  },
+
+  /**
+   * Vote on a comment (upvote, downvote, or remove)
+   */
+  async voteComment(commentId: number, value: 1 | -1 | 0): Promise<{ voteCount: number; user_vote: number | null }> {
+    if (value === 0) {
+      const result = await this.remove('comment', commentId);
+      return { voteCount: result.voteCount, user_vote: null };
+    } else {
+      const result = await this.cast({
+        target_type: 'comment',
+        target_id: commentId,
+        value: value as 1 | -1
+      });
+      // Get user vote after casting (should be the value we just cast)
+      return { voteCount: result.voteCount, user_vote: value as number };
+    }
+  },
+
   async getCount(target_type: 'post' | 'comment', target_id: number): Promise<{ voteCount: number }> {
     const response = await api.get(`/votes/${target_type}/${target_id}`);
     return response.data;

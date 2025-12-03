@@ -47,7 +47,7 @@ const router = (0, express_1.Router)();
  * GET /api/posts
  * Get all posts with pagination (with caching)
  */
-router.get('/', auth_1.authenticateToken, async (req, res) => {
+router.get('/', auth_1.optionalAuth, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
@@ -124,7 +124,7 @@ router.get('/search', auth_1.authenticateToken, async (req, res) => {
  * GET /api/posts/:idOrSlug/summary
  * Get a specific post with AI-generated summary
  */
-router.get('/:idOrSlug/summary', auth_1.authenticateToken, async (req, res) => {
+router.get('/:idOrSlug/summary', auth_1.optionalAuth, async (req, res) => {
     try {
         const { idOrSlug } = req.params;
         const userId = req.user?.id;
@@ -219,7 +219,7 @@ router.get('/:idOrSlug/summary', auth_1.authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch post' });
     }
 });
-router.get('/:idOrSlug', auth_1.authenticateToken, async (req, res) => {
+router.get('/:idOrSlug', auth_1.optionalAuth, async (req, res) => {
     try {
         const { idOrSlug } = req.params;
         const userId = req.user?.id;

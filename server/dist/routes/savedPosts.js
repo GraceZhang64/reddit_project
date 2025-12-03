@@ -306,8 +306,19 @@ router.post('/check-multiple', async (req, res) => {
             }
         }
         const { postIds } = req.body;
+        if (!postIds) {
+            return res.status(400).json({ error: 'postIds is required' });
+        }
         if (!Array.isArray(postIds)) {
             return res.status(400).json({ error: 'postIds must be an array' });
+        }
+        // Handle empty array gracefully
+        if (postIds.length === 0) {
+            return res.json({});
+        }
+        // Validate all postIds are numbers
+        if (!postIds.every(id => typeof id === 'number' && Number.isInteger(id) && id > 0)) {
+            return res.status(400).json({ error: 'All postIds must be positive integers' });
         }
         let savedPostIds = new Set();
         if (userId) {

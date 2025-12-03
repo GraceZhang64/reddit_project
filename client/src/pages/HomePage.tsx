@@ -7,7 +7,7 @@ import { postsApi, votesApi, followsApi } from '../services/api';
 import { Post } from '../types';
 import './HomePage.css';
 
-type FeedType = 'all' | 'hot' | 'following';
+type FeedType = 'all' | 'following';
 
 // Map API post to component Post type - moved outside to avoid recreation
 const mapApiPost = (apiPost: any): Post => ({
@@ -28,7 +28,7 @@ const mapApiPost = (apiPost: any): Post => ({
 });
 
 function HomePage() {
-  const [feed, setFeed] = useState<FeedType>('hot');
+  const [feed, setFeed] = useState<FeedType>('all');
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +44,7 @@ function HomePage() {
       setError(null);
       try {
         let response;
-        if (feed === 'hot') {
-          response = await postsApi.getHot(1, 20);
-        } else if (feed === 'following') {
+        if (feed === 'following') {
           response = await followsApi.getFollowingFeed(1, 20);
         } else {
           response = await postsApi.getAll(1, 20);
@@ -185,12 +183,12 @@ function HomePage() {
         <div className="feed-content">
           <div className="feed-selector">
             <button 
-              className={`feed-tab ${feed === 'hot' ? 'active' : ''}`}
-              onClick={() => handleFeedChange('hot')}
+              className={`feed-tab ${feed === 'all' ? 'active' : ''}`}
+              onClick={() => handleFeedChange('all')}
               disabled={!!searchQuery}
             >
-              <span className="tab-icon">🔥</span>
-              <span className="tab-text">Hot</span>
+              <span className="tab-icon">🌐</span>
+              <span className="tab-text">All</span>
             </button>
             <button 
               className={`feed-tab ${feed === 'following' ? 'active' : ''}`}
@@ -199,14 +197,6 @@ function HomePage() {
             >
               <span className="tab-icon">👥</span>
               <span className="tab-text">Following</span>
-            </button>
-            <button 
-              className={`feed-tab ${feed === 'all' ? 'active' : ''}`}
-              onClick={() => handleFeedChange('all')}
-              disabled={!!searchQuery}
-            >
-              <span className="tab-icon">🌐</span>
-              <span className="tab-text">All</span>
             </button>
           </div>
 

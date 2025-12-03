@@ -63,7 +63,29 @@ class AuthService {
 
       await this.getCurrentUser();
       return true;
+    } catch (error: any) {
+      // If token is expired, try to refresh it
+      if (error.message?.includes('Token expired') ||
+          error.message?.includes('Invalid or expired token')) {
+        return await this.attemptTokenRefresh();
+      }
+      return false;
+    }
+  }
+
+  // Attempt to refresh expired tokens
+  private async attemptTokenRefresh(): Promise<boolean> {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token') || sessionStorage.getItem('refresh_token');
+      if (!refreshToken) return false;
+
+      // Call server endpoint to refresh token
+      const response = await axios.post<AuthResponse>(`${API_URL}/refresh`, { refreshToken });
+      this.storeAuthData(response.data, localStorage.getItem('refresh_token') ? true : false);
+      return true;
     } catch {
+      // Refresh failed, user needs to login again
+      this.clearAuthData();
       return false;
     }
   }
@@ -160,6 +182,15 @@ class AuthService {
 
       return response.data.user;
     } catch (error: any) {
+      // If token expired, try to refresh before clearing
+      if (error.response?.status === 401) {
+        const refreshed = await this.attemptTokenRefresh();
+        if (refreshed) {
+          // Retry the request with new token
+          return this.getCurrentUser();
+        }
+      }
+      // Only clear auth if refresh failed
       this.clearAuthData();
       const message = error.response?.data?.error || 'Failed to get user';
       throw new Error(message);
@@ -200,11 +231,52 @@ class AuthService {
     // Handle 401 responses
     axios.interceptors.response.use(
       (response) => response,
-      (error) => {
+      async (error) => {
         if (error.response?.status === 401) {
-          // Only clear auth and redirect if we're not already on auth page
+          const url = error.config?.url || '';
+          const isPublicEndpoint = (url.includes('/posts/') || url.includes('/posts?') || url === '/posts') && 
+                                   !url.includes('/vote') &&
+                                   !url.includes('/create') &&
+                                   !url.includes('/update') &&
+                                   !url.includes('/delete');
+          
+          // For public endpoints, don't try to refresh - just let the request proceed
+          // The server's optionalAuth will handle it
+          if (isPublicEndpoint) {
+            // Remove the Authorization header and retry without token
+            const originalRequest = error.config;
+            if (originalRequest) {
+              delete originalRequest.headers.Authorization;
+              return axios(originalRequest);
+            }
+          }
+
+          // Check if this is a token expired error that we can refresh
+          const isTokenExpired = error.response?.data?.code === 'TOKEN_EXPIRED' ||
+                                 error.response?.data?.error?.includes('Token expired') ||
+                                 error.response?.data?.error?.includes('Token expired or invalid');
+
+          if (isTokenExpired) {
+            // Try to refresh the token
+            const refreshSuccess = await this.attemptTokenRefresh();
+            if (refreshSuccess) {
+              // Retry the original request with new token
+              const originalRequest = error.config;
+              const newToken = this.getToken();
+              if (newToken && originalRequest) {
+                originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                return axios(originalRequest);
+              }
+            }
+          }
+
+          // Only clear auth and redirect if refresh failed AND we're not already on auth page
+          // Don't redirect for optional auth endpoints (like viewing posts)
           const currentPath = window.location.pathname;
-          if (!currentPath.includes('/auth') && !currentPath.includes('/login')) {
+          const isAuthEndpoint = currentPath.includes('/auth') || currentPath.includes('/login');
+          
+          // Only redirect to login for authenticated endpoints, not public content
+          if (!isAuthEndpoint && !isPublicEndpoint) {
             this.clearAuthData();
             // Store the attempted URL to redirect after login
             sessionStorage.setItem('redirectAfterLogin', currentPath);
@@ -240,4 +312,15 @@ export const authService = new AuthService();
 
 // Setup interceptor on import
 authService.setupAxiosInterceptor();
+
+// Periodic token validation (every 15 minutes)
+setInterval(async () => {
+  if (authService.isAuthenticated()) {
+    try {
+      await authService.validateAuth();
+    } catch (error) {
+      console.log('Periodic auth validation failed:', error);
+    }
+  }
+}, 15 * 60 * 1000); // 15 minutes
 

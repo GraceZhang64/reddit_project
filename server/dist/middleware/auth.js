@@ -11,9 +11,15 @@ async function authenticateToken(req, res, next) {
             return res.status(401).json({ error: 'Authentication required' });
         }
         const supabase = (0, supabase_1.getSupabaseClient)();
-        const { data: { user }, error } = await supabase.auth.getUser(token);
+        // First try to validate the current token
+        let { data: { user }, error } = await supabase.auth.getUser(token);
+        // If token is expired or invalid, return specific error for client to handle refresh
         if (error || !user) {
-            return res.status(401).json({ error: 'Invalid or expired token' });
+            console.log('Access token expired or invalid');
+            return res.status(401).json({
+                error: 'Token expired',
+                code: 'TOKEN_EXPIRED'
+            });
         }
         req.user = {
             id: user.id,

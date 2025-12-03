@@ -22,7 +22,7 @@ const markdownSchema = {
     code: ['className'],
     pre: ['className'],
     // Block dangerous attributes
-    '*': defaultSchema.attributes ? defaultSchema.attributes['*'].filter(attr => !['onclick', 'onload', 'onerror', 'style'].includes(attr)) : []
+    '*': defaultSchema.attributes ? (defaultSchema.attributes['*'] as string[]).filter(attr => !['onclick', 'onload', 'onerror', 'style'].includes(attr)) : []
   },
   // Allow safe elements
   tagNames: [

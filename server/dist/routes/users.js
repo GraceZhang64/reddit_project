@@ -6,6 +6,27 @@ const auth_1 = require("../middleware/auth");
 const supabase_1 = require("../config/supabase");
 const router = (0, express_1.Router)();
 /**
+ * GET /api/users/check-username/:username
+ * Public endpoint to check if a username is available
+ */
+router.get('/check-username/:username', async (req, res) => {
+    try {
+        const { username } = req.params;
+        if (!username || username.length < 3 || username.length > 20) {
+            return res.status(400).json({ error: 'Username must be 3-20 characters' });
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            return res.status(400).json({ error: 'Only letters, numbers, and underscores allowed' });
+        }
+        const existing = await prisma_1.prisma.user.findUnique({ where: { username } });
+        return res.json({ available: !existing });
+    }
+    catch (error) {
+        console.error('Error checking username:', error);
+        res.status(500).json({ error: 'Failed to check username' });
+    }
+});
+/**
  * GET /api/users/:username
  * Get user profile by username
  */
@@ -225,6 +246,9 @@ router.put('/profile', auth_1.authenticateToken, async (req, res) => {
     try {
         const { bio, avatar_url } = req.body;
         const userId = req.user.id;
+        if (bio && bio.length > 500) {
+            return res.status(400).json({ error: 'Bio must be 500 characters or less' });
+        }
         // Update user profile
         const updatedUser = await prisma_1.prisma.user.update({
             where: { id: userId },

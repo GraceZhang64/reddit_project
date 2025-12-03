@@ -36,15 +36,10 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, disabled = fal
     setVoteCount(voteCount + voteDiff);
 
     try {
-      if (newVote === 0) {
-        await votesApi.remove('comment', comment.id);
-      } else {
-        await votesApi.cast({
-          target_type: 'comment',
-          target_id: comment.id,
-          value: newVote as 1 | -1,
-        });
-      }
+      const result = await votesApi.voteComment(comment.id, newVote as 1 | -1 | 0);
+      // Update with server response
+      setUserVote(result.user_vote ?? 0);
+      setVoteCount(result.voteCount);
     } catch (err: any) {
       console.error('Error voting on comment:', err);
       // Revert on error
@@ -125,7 +120,6 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, disabled = fal
               >
                 Reply
               </button>
-              <button className="comment-action-btn">Share</button>
               <button className="comment-action-btn">Report</button>
             </div>
 

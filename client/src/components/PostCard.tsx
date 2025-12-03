@@ -43,17 +43,9 @@ function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveTogg
     }
   };
 
-  const handleUpvote = () => {
+  const handleVote = (value: number) => {
     if (onVote) {
-      // Toggle upvote: if already upvoted, remove vote; otherwise upvote
-      onVote(post.id, userVote === 1 ? 0 : 1);
-    }
-  };
-
-  const handleDownvote = () => {
-    if (onVote) {
-      // Toggle downvote: if already downvoted, remove vote; otherwise downvote
-      onVote(post.id, userVote === -1 ? 0 : -1);
+      onVote(post.id, value);
     }
   };
 
@@ -117,8 +109,7 @@ function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveTogg
     <div className="post-card">
       <VoteButtons
         voteCount={post.voteCount || 0}
-        onUpvote={handleUpvote}
-        onDownvote={handleDownvote}
+        onVote={handleVote}
         userVote={userVote}
       />
       <div className="post-content">
@@ -174,15 +165,6 @@ function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveTogg
           <Link to={`/p/${post.slug || post.id}`} className="action-button">
             💬 {post.commentCount} Comments
           </Link>
-          <button className="action-button" onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const url = `${window.location.origin}/p/${post.slug || post.id}`;
-            navigator.clipboard.writeText(url);
-            alert('Link copied to clipboard!');
-          }}>
-            🔗 Share
-          </button>
           <button 
             className={`action-button save-button ${isSaved ? 'saved' : ''}`}
             onClick={handleSaveToggle}

@@ -316,7 +316,7 @@ exports.postService = {
         const commentsMap = new Map();
         const topLevelComments = [];
         // First pass: Get vote data for all comments
-        for (const comment of post.comments) {
+        for (const comment of (post.comments || [])) {
             const commentVoteCount = await getVoteCount('comment', comment.id);
             const commentUserVote = userId ? await getUserVote(userId, 'comment', comment.id) : null;
             commentsMap.set(comment.id, {
@@ -344,7 +344,7 @@ exports.postService = {
             ...post,
             vote_count: voteCount,
             user_vote: userVote,
-            comment_count: post.comments.length,
+            comment_count: post.comments?.length || 0,
             comments: topLevelComments,
         };
     },

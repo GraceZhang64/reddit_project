@@ -43,7 +43,7 @@ const router = (0, express_1.Router)();
  * GET /api/comments/search
  * Search comments by keyword
  */
-router.get('/search', auth_1.optionalAuth, async (req, res) => {
+router.get('/search', auth_1.authenticateToken, async (req, res) => {
     try {
         const query = req.query.q;
         if (!query) {
@@ -145,7 +145,7 @@ router.get('/search', auth_1.optionalAuth, async (req, res) => {
  * GET /api/comments/post/:postId
  * Get all comments for a post (cached for performance)
  */
-router.get('/post/:postId', auth_1.optionalAuth, async (req, res) => {
+router.get('/post/:postId', auth_1.authenticateToken, async (req, res) => {
     try {
         const postId = parseInt(req.params.postId);
         const userId = req.user?.id;
@@ -284,7 +284,7 @@ router.get('/post/:postId', auth_1.optionalAuth, async (req, res) => {
  * GET /api/comments/:id
  * Get a specific comment with its replies
  */
-router.get('/:id', auth_1.optionalAuth, async (req, res) => {
+router.get('/:id', auth_1.authenticateToken, async (req, res) => {
     try {
         const commentId = parseInt(req.params.id);
         if (isNaN(commentId)) {

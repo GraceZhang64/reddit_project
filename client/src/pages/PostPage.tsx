@@ -23,7 +23,6 @@ function PostPage() {
   const [userVote, setUserVote] = useState<number>(0);
   const [commentBody, setCommentBody] = useState('');
   const [loading, setLoading] = useState(true);
-  const [loadingSummary, setLoadingSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const currentUser = localStorage.getItem('username') || sessionStorage.getItem('username');
 
@@ -36,8 +35,8 @@ function PostPage() {
       setError(null);
       
       try {
-        // Fetch post immediately (doesn't wait for AI summary)
-        const data = await postsApi.getByIdOrSlug(id!);
+        // Fetch post with AI summary (waits for generation if needed)
+        const data = await postsApi.getWithSummaryByIdOrSlug(id!);
 
         // Transform post data - backend returns nested objects
         const apiData = data as any; // Type assertion to handle API response
@@ -78,21 +77,12 @@ function PostPage() {
         
         setPost(transformedPost);
         setComments(commentsData);
-        
-        // If no AI summary exists, set loading state and poll for it
-        if (!apiData.ai_summary) {
-          setLoadingSummary(true);
-          pollForAISummary(id!);
-        } else {
-          setLoadingSummary(false);
-        }
       } catch (err: any) {
         console.error('Error fetching post:', err);
         const errorMsg = err.response?.status === 404 
           ? 'Post not found. It may have been deleted or the ID is invalid.'
           : 'Failed to load post. Make sure the backend server is running.';
         setError(errorMsg);
-        setLoadingSummary(false);
       } finally {
         setLoading(false);
       }
@@ -101,40 +91,6 @@ function PostPage() {
     fetchPost();
   }, [id]);
 
-  // Poll for AI summary when it's being generated
-  const pollForAISummary = async (postId: string) => {
-    let attempts = 0;
-    const maxAttempts = 30; // Poll for up to 30 seconds (30 attempts * 1 second)
-    
-    const poll = async () => {
-      try {
-        const data = await postsApi.getByIdOrSlug(postId);
-        const apiData = data as any;
-        
-        if (apiData.ai_summary) {
-          // Summary is ready, update the post
-          setPost(prev => prev ? { ...prev, summary: apiData.ai_summary } : null);
-          setLoadingSummary(false);
-          return;
-        }
-        
-        attempts++;
-        if (attempts < maxAttempts) {
-          // Poll again after 1 second
-          setTimeout(poll, 1000);
-        } else {
-          // Give up after max attempts
-          setLoadingSummary(false);
-        }
-      } catch (err) {
-        console.error('Error polling for AI summary:', err);
-        setLoadingSummary(false);
-      }
-    };
-    
-    // Start polling after 2 seconds (give AI service time to generate)
-    setTimeout(poll, 2000);
-  };
 
   const handleVote = async (value: number) => {
     if (!post) return;
@@ -312,9 +268,7 @@ function PostPage() {
                   <AISummaryContent content={post.summary} />
                 ) : (
                   <p style={{ color: '#666', fontStyle: 'italic' }}>
-                    {loadingSummary 
-                      ? 'Loading AI summary...' 
-                      : 'AI summary not available. Make sure your OpenAI API key is configured.'}
+                    AI summary not available. Make sure your OpenAI API key is configured.
                   </p>
                 )}
               </div>
@@ -323,16 +277,6 @@ function PostPage() {
             <div className="post-actions">
               <button className="action-button">
                 💬 {post.commentCount} Comments
-              </button>
-              <button 
-                className="action-button"
-                onClick={() => {
-                  const url = `${window.location.origin}/p/${post.slug || post.id}`;
-                  navigator.clipboard.writeText(url);
-                  alert('Link copied to clipboard!');
-                }}
-              >
-                🔗 Share
               </button>
             </div>
           </div>

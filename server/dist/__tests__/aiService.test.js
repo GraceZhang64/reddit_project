@@ -128,105 +128,106 @@ describe('AIService', () => {
             await aiService.generatePostSummary(postData);
             const callArgs = mockCreate.mock.calls[0][0];
             const prompt = callArgs.messages[1].content;
-            // Should include Comment 0 through Comment 9 (top 10)
-            expect(prompt).toContain('Comment 0');
-            expect(prompt).toContain('Comment 9');
-            // Count should be exactly 10
-            const commentMatches = prompt.match(/Comment \d+/g);
+            // Should include Comment 1 through Comment 10 (top 10 headers)
+            expect(prompt).toContain('Comment 1 (15 votes)');
+            expect(prompt).toContain('Comment 10 (6 votes)');
+            // Count comment headers (should be exactly 10)
+            const commentMatches = prompt.match(/Comment \d+ \(\d+ votes\)/g);
             expect(commentMatches).toHaveLength(10);
         });
-        it('should handle post without body', async () => {
-            const postData = {
-                title: 'Test Post',
-                body: '',
-                voteCount: 10,
-                comments: [],
-            };
-            mockCreate.mockResolvedValue({
-                choices: [{ message: { content: 'Summary' } }],
-            });
-            const summary = await aiService.generatePostSummary(postData);
-            expect(summary).toBe('Summary');
-            const callArgs = mockCreate.mock.calls[0][0];
-            const prompt = callArgs.messages[1].content;
-            expect(prompt).toContain('POST TITLE:');
+    });
+    it('should handle post without body', async () => {
+        const postData = {
+            title: 'Test Post',
+            body: '',
+            voteCount: 10,
+            comments: [],
+        };
+        mockCreate.mockResolvedValue({
+            choices: [{ message: { content: 'Summary' } }],
         });
-        it('should handle post without comments', async () => {
-            const postData = {
-                title: 'Test Post',
-                body: 'Test body',
-                voteCount: 10,
-                comments: [],
-            };
-            mockCreate.mockResolvedValue({
-                choices: [{ message: { content: 'Summary' } }],
-            });
-            await aiService.generatePostSummary(postData);
-            const callArgs = mockCreate.mock.calls[0][0];
-            const prompt = callArgs.messages[1].content;
-            expect(prompt).toContain('No comments yet');
+        const summary = await aiService.generatePostSummary(postData);
+        expect(summary).toBe('Summary');
+        const callArgs = mockCreate.mock.calls[0][0];
+        const prompt = callArgs.messages[1].content;
+        expect(prompt).toContain('POST TITLE:');
+    });
+    it('should handle post without comments', async () => {
+        const postData = {
+            title: 'Test Post',
+            body: 'Test body',
+            voteCount: 10,
+            comments: [],
+        };
+        mockCreate.mockResolvedValue({
+            choices: [{ message: { content: 'Summary' } }],
         });
-        it('should return default message if API returns empty content', async () => {
-            const postData = {
-                title: 'Test Post',
-                body: 'Test body',
-                voteCount: 10,
-                comments: [],
-            };
-            mockCreate.mockResolvedValue({
-                choices: [{ message: { content: '' } }],
-            });
-            const summary = await aiService.generatePostSummary(postData);
-            expect(summary).toBe('Unable to generate summary');
+        await aiService.generatePostSummary(postData);
+        const callArgs = mockCreate.mock.calls[0][0];
+        const prompt = callArgs.messages[1].content;
+        expect(prompt).toContain('No comments yet');
+    });
+    it('should return default message if API returns empty content', async () => {
+        const postData = {
+            title: 'Test Post',
+            body: 'Test body',
+            voteCount: 10,
+            comments: [],
+        };
+        mockCreate.mockResolvedValue({
+            choices: [{ message: { content: '' } }],
         });
-        it('should throw error if API call fails', async () => {
-            const postData = {
-                title: 'Test Post',
-                body: 'Test body',
-                voteCount: 10,
-                comments: [],
-            };
-            mockCreate.mockRejectedValue(new Error('API Error'));
-            await expect(aiService.generatePostSummary(postData)).rejects.toThrow('Failed to generate AI summary');
+        const summary = await aiService.generatePostSummary(postData);
+        expect(summary).toBe('Unable to generate summary');
+    });
+    it('should throw error if API call fails', async () => {
+        const postData = {
+            title: 'Test Post',
+            body: 'Test body',
+            voteCount: 10,
+            comments: [],
+        };
+        mockCreate.mockRejectedValue(new Error('API Error'));
+        await expect(aiService.generatePostSummary(postData)).rejects.toThrow('Failed to generate AI summary');
+    });
+    it('should include vote context in prompt', async () => {
+        const postData = {
+            title: 'Test Post',
+            body: 'Test body',
+            voteCount: 50,
+            comments: [
+                {
+                    body: 'Comment with votes',
+                    author: 'user1',
+                    voteCount: 25,
+                    createdAt: new Date(),
+                },
+            ],
+        };
+        mockCreate.mockResolvedValue({
+            choices: [{ message: { content: 'Summary' } }],
         });
-        it('should include vote context in prompt', async () => {
-            const postData = {
-                title: 'Test Post',
-                body: 'Test body',
-                voteCount: 50,
-                comments: [
-                    {
-                        body: 'Comment with votes',
-                        author: 'user1',
-                        voteCount: 25,
-                        createdAt: new Date(),
-                    },
-                ],
-            };
-            mockCreate.mockResolvedValue({
-                choices: [{ message: { content: 'Summary' } }],
-            });
-            await aiService.generatePostSummary(postData);
-            const callArgs = mockCreate.mock.calls[0][0];
-            const prompt = callArgs.messages[1].content;
-            expect(prompt).toContain('50');
-            expect(prompt).toContain('25 votes');
-            expect(prompt).toContain('positive reception');
+        await aiService.generatePostSummary(postData);
+        const callArgs = mockCreate.mock.calls[0][0];
+        const prompt = callArgs.messages[1].content;
+        expect(prompt).toContain('50');
+        expect(prompt).toContain('25 votes');
+        expect(prompt).toContain('positive reception');
+    });
+    it('should handle negative vote counts', async () => {
+        const postData = {
+            title: 'Test Post',
+            body: 'Test body',
+            voteCount: -10,
+            comments: [],
+        };
+        mockCreate.mockResolvedValue({
+            choices: [{ message: { content: 'Summary' } }],
         });
-        it('should handle negative vote counts', async () => {
-            const postData = {
-                title: 'Test Post',
-                body: 'Test body',
-                voteCount: -10,
-                comments: [],
-            };
-            mockCreate.mockResolvedValue({
-                choices: [{ message: { content: 'Summary' } }],
-            });
-            await aiService.generatePostSummary(postData);
-            const callArgs = mockCreate.mock.calls[0][0];
-            const prompt = callArgs.messages[1].content;
-            expect(prompt).toContain('negative reception');
-        });
+        await aiService.generatePostSummary(postData);
+        const callArgs = mockCreate.mock.calls[0][0];
+        const prompt = callArgs.messages[1].content;
+        expect(prompt).toContain('negative reception');
     });
 });
+;

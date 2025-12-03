@@ -147,11 +147,11 @@ describe('AIService', () => {
       const callArgs = mockCreate.mock.calls[0][0];
       const prompt = callArgs.messages[1].content;
 
-      // Should include Comment 0 through Comment 9 (top 10)
-      expect(prompt).toContain('Comment 0');
-      expect(prompt).toContain('Comment 9');
-      // Count should be exactly 10
-      const commentMatches = prompt.match(/Comment \d+/g);
+      // Should include Comment 1 through Comment 10 (top 10 headers)
+      expect(prompt).toContain('Comment 1 (15 votes)');
+      expect(prompt).toContain('Comment 10 (6 votes)');
+      // Count comment headers (should be exactly 10)
+      const commentMatches = prompt.match(/Comment \d+ \(\d+ votes\)/g);
       expect(commentMatches).toHaveLength(10);
     });
 
@@ -276,4 +276,3 @@ describe('AIService', () => {
     });
   });
 });
-

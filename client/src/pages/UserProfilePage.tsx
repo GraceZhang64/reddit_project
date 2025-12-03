@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { usersApi, followsApi, Community, Post as ApiPost, Comment as ApiComment } from '../services/api';
+import { usersApi, followsApi, votesApi, Community, Post as ApiPost, Comment as ApiComment } from '../services/api';
 import FollowButton from '../components/FollowButton';
 import PostCard from '../components/PostCard';
 import { Post } from '../types';
@@ -42,7 +42,8 @@ function UserProfilePage() {
   const [followingCount, setFollowingCount] = useState(0);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [comments, setComments] = useState<ApiComment[]>([]);
+  const [comments, setComments] = useState<(ApiComment & { post?: { id: number; title: string; community?: { slug: string } } })[]>([]);
+  const [userVotes, setUserVotes] = useState<Record<number, number>>({});
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
@@ -113,7 +114,22 @@ function UserProfilePage() {
     try {
       const data = await usersApi.getPosts(username!, 1, 50);
       const apiPosts: ApiPost[] = (data.posts || []) as any;
-      setPosts(apiPosts.map(mapUserApiPost));
+      const mappedPosts = apiPosts.map(mapUserApiPost);
+      setPosts(mappedPosts);
+
+      // Fetch user votes for these posts
+      const votesMap: Record<number, number> = {};
+      for (const post of mappedPosts) {
+        try {
+          const voteData = await votesApi.getUserVote('post', post.id);
+          if (voteData.userVote !== null) {
+            votesMap[post.id] = voteData.userVote;
+          }
+        } catch (err) {
+          // Ignore vote fetch errors, user might not be logged in
+        }
+      }
+      setUserVotes(votesMap);
     } catch (err) {
       console.error('Error fetching user posts:', err);
       setPosts([]);
@@ -133,6 +149,39 @@ function UserProfilePage() {
       setComments([]);
     } finally {
       setCommentsLoading(false);
+    }
+  };
+
+  const handleVote = async (postId: number, value: number) => {
+    const oldVote = userVotes[postId] || 0;
+    const newVote = oldVote === value ? 0 : value;
+    const voteDiff = newVote - oldVote;
+
+    // Optimistic update
+    setUserVotes({ ...userVotes, [postId]: newVote });
+    setPosts(
+      posts.map((p) =>
+        p.id === postId ? { ...p, voteCount: (p.voteCount || 0) + voteDiff } : p
+      )
+    );
+
+    try {
+      const result = await votesApi.votePost(postId, newVote as 1 | -1 | 0);
+      setUserVotes({ ...userVotes, [postId]: result.user_vote ?? 0 });
+      setPosts(
+        posts.map((p) =>
+          p.id === postId ? { ...p, voteCount: result.vote_count } : p
+        )
+      );
+    } catch (err: any) {
+      console.error('Error voting:', err);
+      // Revert on error
+      setUserVotes({ ...userVotes, [postId]: oldVote });
+      setPosts(
+        posts.map((p) =>
+          p.id === postId ? { ...p, voteCount: (p.voteCount || 0) - voteDiff } : p
+        )
+      );
     }
   };
 
@@ -268,7 +317,12 @@ function UserProfilePage() {
             ) : (
               <div className="profile-posts-list">
                 {posts.map((post) => (
-                  <PostCard key={post.id} post={post} />
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onVote={handleVote}
+                    userVote={userVotes[post.id] || 0}
+                  />
                 ))}
               </div>
             )
@@ -283,17 +337,23 @@ function UserProfilePage() {
               {comments.map((comment) => (
                 <div key={comment.id} className="profile-comment-card">
                   <div className="profile-comment-meta">
-                    <span>
-                      In{' '}
-                      <Link to={`/c/${comment.post.community?.slug}`}>
-                        c/{comment.post.community?.slug}
-                      </Link>
-                    </span>
-                    <span> • {new Date(comment.createdAt).toLocaleDateString()}</span>
+                    {comment.post && (
+                      <>
+                        <span>
+                          In{' '}
+                          <Link to={`/c/${comment.post.community?.slug || ''}`}>
+                            c/{comment.post.community?.slug || 'unknown'}
+                          </Link>
+                        </span>
+                        <span> • {new Date(comment.createdAt).toLocaleDateString()}</span>
+                      </>
+                    )}
                   </div>
-                  <Link to={`/p/${comment.post.id}`} className="profile-comment-post-title">
-                    {comment.post.title}
-                  </Link>
+                  {comment.post && (
+                    <Link to={`/p/${comment.post.id}`} className="profile-comment-post-title">
+                      {comment.post.title}
+                    </Link>
+                  )}
                   <p className="profile-comment-body">{comment.body}</p>
                 </div>
               ))}
