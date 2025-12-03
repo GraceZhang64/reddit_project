@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { savedPostsApi } from '../services/api';
 import { Post } from '../types';
 import PostCard from '../components/PostCard';

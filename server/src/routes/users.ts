@@ -6,6 +6,30 @@ import { getSupabaseClient } from '../config/supabase';
 const router = Router();
 
 /**
+ * GET /api/users/check-username/:username
+ * Public endpoint to check if a username is available
+ */
+router.get('/check-username/:username', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+
+    if (!username || username.length < 3 || username.length > 20) {
+      return res.status(400).json({ error: 'Username must be 3-20 characters' });
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({ error: 'Only letters, numbers, and underscores allowed' });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { username } });
+    return res.json({ available: !existing });
+  } catch (error) {
+    console.error('Error checking username:', error);
+    res.status(500).json({ error: 'Failed to check username' });
+  }
+});
+
+/**
  * GET /api/users/:username
  * Get user profile by username
  */
@@ -245,8 +269,12 @@ router.get('/:username/comments', authenticateToken, async (req: Request, res: R
  */
 router.put('/profile', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { bio, avatar_url } = req.body;
+    const { bio, avatar_url } = req.body as { bio?: string; avatar_url?: string };
     const userId = req.user!.id;
+
+    if (bio && bio.length > 500) {
+      return res.status(400).json({ error: 'Bio must be 500 characters or less' });
+    }
 
     // Update user profile
     const updatedUser = await prisma.user.update({

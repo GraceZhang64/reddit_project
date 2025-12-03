@@ -16,6 +16,8 @@ export default function SettingsPage() {
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [usernameError, setUsernameError] = useState<string>('');
+  const [bio, setBio] = useState<string>('');
+  const [bioError, setBioError] = useState<string>('');
   const [message, setMessage] = useState<string>('');
 
   const [postCount, setPostCount] = useState<number>(0);
@@ -37,6 +39,7 @@ export default function SettingsPage() {
         const prof = await usersApi.getProfile(me.username);
         setPostCount(prof._count?.posts ?? 0);
         setCommentCount(prof._count?.comments ?? 0);
+        setBio(prof.bio || '');
       } catch (e) {
         console.error(e);
       } finally {
@@ -71,9 +74,20 @@ export default function SettingsPage() {
       setUsernameError(err);
       return;
     }
+    if (newUsername.trim() === username) {
+      setUsernameError('New username must be different');
+      return;
+    }
     setSaving(true);
     setMessage('');
     try {
+      // Optional pre-check so we can give a clear message before attempting update
+      const check = await usersApi.checkUsernameAvailability(newUsername.trim());
+      if (!check.available) {
+        setUsernameError('Username already taken');
+        return;
+      }
+
       const res = await usersApi.updateUsername(newUsername.trim());
       setUsername(res.user.username);
       authService.setUser({ ...authService.getUser(), username: res.user.username });
@@ -154,6 +168,50 @@ export default function SettingsPage() {
             <div className="value">{email}</div>
           </div>
 
+          <div className="row bio-row">
+            <div className="label" />
+            <div className="edit-group">
+              <textarea
+                className={`input bio-input ${bioError ? 'input-error' : ''}`}
+                value={bio}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.length > 500) {
+                    setBioError('Bio must be 500 characters or less');
+                  } else {
+                    setBioError('');
+                  }
+                  setBio(value);
+                }}
+                placeholder="Tell others about yourself (max 500 characters)"
+                maxLength={500}
+                rows={4}
+              />
+              {bioError && <div className="error-text">{bioError}</div>}
+              <div className="edit-actions">
+                <button
+                  className="btn primary"
+                  disabled={saving || !!bioError}
+                  onClick={async () => {
+                    setSaving(true);
+                    setMessage('');
+                    try {
+                      const updated = await usersApi.updateProfile({ bio: bio.trim() || null });
+                      authService.setUser({ ...authService.getUser(), bio: updated.bio });
+                      setMessage('Bio updated successfully');
+                    } catch (e: any) {
+                      setMessage(e?.response?.data?.error || 'Failed to update bio');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                >
+                  {saving ? 'Saving...' : 'Save Bio'}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="row stats">
             <div className="stat">
               <div className="stat-value">{new Date(createdAt).toLocaleDateString()}</div>
@@ -172,33 +230,6 @@ export default function SettingsPage() {
 
         <section className="card">
           <h2 className="section-title">Account Actions</h2>
-          {/* Change Email */}
-          <div className="row" style={{ alignItems: 'flex-start' }}>
-            <div className="label">Change Email</div>
-            <div className="edit-group">
-              <input
-                className="input"
-                type="email"
-                placeholder={email}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <div className="edit-actions">
-                <button className="btn primary" disabled={saving} onClick={async () => {
-                  setSaving(true); setMessage('');
-                  try {
-                    const res = await authService.updateEmail(email);
-                    setMessage(res.message);
-                  } catch (e: any) {
-                    setMessage(e?.response?.data?.error || 'Failed to update email');
-                  } finally { setSaving(false); }
-                }}>
-                  {saving ? 'Saving...' : 'Save Email'}
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Change Password */}
           <div className="row" style={{ alignItems: 'flex-start' }}>
             <div className="label">Change Password</div>

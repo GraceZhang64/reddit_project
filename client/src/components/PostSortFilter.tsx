@@ -1,3 +1,4 @@
+import React from 'react';
 import './PostSortFilter.css';
 
 export type SortOption = 'hot' | 'new' | 'downvotes' | 'controversial' | 'oldest';

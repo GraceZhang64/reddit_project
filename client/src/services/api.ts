@@ -296,6 +296,11 @@ export const usersApi = {
     return response.data;
   },
 
+  async checkUsernameAvailability(username: string): Promise<{ available: boolean }> {
+    const response = await api.get(`/users/check-username/${username}`);
+    return response.data;
+  },
+
   async getPosts(username: string, page = 1, limit = 20): Promise<PaginationResponse<Post>> {
     const response = await api.get(`/users/${username}/posts`, {
       params: { page, limit }
@@ -315,7 +320,7 @@ export const usersApi = {
     return response.data;
   },
 
-  async updateProfile(data: { bio?: string; avatar_url?: string }): Promise<any> {
+  async updateProfile(data: { bio?: string | null; avatar_url?: string | null }): Promise<any> {
     const response = await api.put('/users/profile', data);
     return response.data;
   },

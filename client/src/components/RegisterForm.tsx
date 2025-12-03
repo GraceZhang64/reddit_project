@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import React, { useState, FormEvent } from 'react';
 import { authService } from '../services/auth';
 import './RegisterForm.css';
 
@@ -74,6 +74,18 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     setIsLoading(true);
 
     try {
+      // Optional pre-check so we can show a clearer "username taken" error
+      try {
+        const { usersApi } = await import('../services/api');
+        const check = await usersApi.checkUsernameAvailability(username.trim());
+        if (!check.available) {
+          setError('Username already taken');
+          return;
+        }
+      } catch {
+        // If the availability check fails, fall back to server-side validation
+      }
+
       // Call real API through auth service
       await authService.register({ username, email, password });
 

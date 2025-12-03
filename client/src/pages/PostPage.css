@@ -12,12 +12,17 @@
 
 .post-detail {
   display: flex;
-  gap: 0;
+  gap: 1.5rem;
   background: var(--blueit-card-bg);
   border: 1px solid var(--blueit-border);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 1rem;
+}
+
+.post-main {
+  flex: 1;
+  padding: 1rem 1.5rem 1.5rem 0;
 }
 
 .post-content {

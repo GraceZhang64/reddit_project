@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
 import CommentItem from '../components/CommentItem';
@@ -25,7 +25,7 @@ function PostPage() {
   const [loading, setLoading] = useState(true);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const currentUser = localStorage.getItem('username');
+  const currentUser = localStorage.getItem('username') || sessionStorage.getItem('username');
 
   // Fetch post data (loads immediately, AI summary loads async)
   useEffect(() => {
@@ -261,10 +261,9 @@ function PostPage() {
         <div className="post-detail">
           <VoteButtons
             voteCount={post.voteCount || 0}
-            onUpvote={currentUser ? () => handleVote(1) : undefined}
-            onDownvote={currentUser ? () => handleVote(-1) : undefined}
+            onUpvote={() => handleVote(1)}
+            onDownvote={() => handleVote(-1)}
             userVote={userVote}
-            disabled={!currentUser}
           />
           
           <div className="post-main">
@@ -342,30 +341,24 @@ function PostPage() {
         <div className="comments-section">
           <h2>Comments ({comments.length})</h2>
 
-          {currentUser ? (
-            <form className="comment-form" onSubmit={handleCommentSubmit}>
-              <textarea
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-                placeholder="What are your thoughts?"
-                rows={4}
-                className="comment-textarea"
-              />
-              <div className="comment-actions">
-                <button type="submit" className="comment-submit" disabled={!commentBody.trim()}>
-                  Comment
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="auth-required-message">
-              <p>Please <Link to="/auth">log in</Link> to comment.</p>
+          <form className="comment-form" onSubmit={handleCommentSubmit}>
+            <textarea
+              value={commentBody}
+              onChange={(e) => setCommentBody(e.target.value)}
+              placeholder="What are your thoughts?"
+              rows={4}
+              className="comment-textarea"
+            />
+            <div className="comment-actions">
+              <button type="submit" className="comment-submit" disabled={!commentBody.trim()}>
+                Comment
+              </button>
             </div>
-          )}
+          </form>
 
           <div className="comments-list">
             {comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} onReply={currentUser ? handleReply : undefined} disabled={!currentUser} />
+              <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
             ))}
           </div>
         </div>

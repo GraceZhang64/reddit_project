@@ -121,8 +121,12 @@ function App() {
             element={isAuthenticated ? <CommunityPage /> : <Navigate to="/auth" />}
           />
           <Route
+            path="/communities/:slug"
+            element={isAuthenticated ? <CommunityPage /> : <Navigate to="/auth" />}
+          />
+          <Route
             path="/p/:id"
-            element={<PostPage />}
+            element={isAuthenticated ? <PostPage /> : <Navigate to="/auth" />}
           />
           <Route
             path="/search"

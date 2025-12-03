@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Poll } from '../types';
 import axios from 'axios';
 import './PollWidget.css';

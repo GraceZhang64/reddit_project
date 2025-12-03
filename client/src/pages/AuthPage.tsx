@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginForm from '../components/LoginForm';
 import RegisterForm from '../components/RegisterForm';
@@ -10,18 +10,20 @@ export default function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If already logged in, redirect to intended destination or communities
-    if (localStorage.getItem('isAuthenticated') === 'true' || 
-        sessionStorage.getItem('isAuthenticated') === 'true') {
-      const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/communities';
+    // If already logged in with valid auth, redirect to intended destination or home
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+    const user = localStorage.getItem('user') || sessionStorage.getItem('user');
+    
+    if (token && user) {
+      const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/';
       sessionStorage.removeItem('redirectAfterLogin');
       navigate(redirectTo);
     }
   }, [navigate]);
 
   const handleAuthSuccess = () => {
-    // Redirect to intended destination or communities
-    const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/communities';
+    // Full page reload to trigger App.tsx auth check with new credentials
+    const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/';
     sessionStorage.removeItem('redirectAfterLogin');
     window.location.href = redirectTo;
   };

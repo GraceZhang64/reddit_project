@@ -5,7 +5,7 @@
 }
 
 .settings-page .container {
-  max-width: 820px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 0 1rem;
 }
@@ -72,7 +72,7 @@
 
 .input {
   width: 100%;
-  max-width: 360px;
+  max-width: 520px;
   padding: 0.5rem 0.625rem;
   border: 1px solid var(--blueit-border);
   border-radius: 6px;
@@ -84,6 +84,27 @@
 .input:focus { outline: none; border-color: var(--blueit-primary); box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.15); }
 .input-error { border-color: var(--blueit-error); }
 .error-text { color: var(--blueit-error); font-size: 0.85rem; margin-top: 0.375rem; }
+
+.bio-row {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.bio-row .label {
+  display: none;
+}
+
+.bio-row .edit-group {
+  max-width: 100%;
+  text-align: left;
+}
+
+.bio-input {
+  max-width: 100%;
+  min-height: 120px;
+  text-align: left;
+  resize: none;
+}
 
 .btn {
   background: var(--blueit-hover);

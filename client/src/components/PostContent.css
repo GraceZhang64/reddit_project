@@ -13,6 +13,110 @@
   margin: 0.75rem 0;
 }
 
+/* Markdown content styling */
+.post-markdown-full,
+.post-markdown-preview {
+  color: var(--blueit-text);
+}
+
+.post-markdown-full ul,
+.post-markdown-full ol,
+.post-markdown-preview ul,
+.post-markdown-preview ol {
+  margin: 0.5rem 0;
+  padding-left: 0;
+  margin-left: 0;
+  list-style-position: inside;
+}
+
+.post-markdown-full li,
+.post-markdown-preview li {
+  margin: 0.25rem 0;
+  text-indent: 0;
+}
+
+.post-markdown-full strong,
+.post-markdown-preview strong {
+  font-weight: 700;
+}
+
+.post-markdown-full code,
+.post-markdown-preview code {
+  background: var(--blueit-hover);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.9em;
+}
+
+.post-markdown-full pre,
+.post-markdown-preview pre {
+  background: var(--blueit-hover);
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.post-markdown-full pre code,
+.post-markdown-preview pre code {
+  background: none;
+  padding: 0;
+}
+
+.post-markdown-full blockquote,
+.post-markdown-preview blockquote {
+  border-left: 3px solid var(--blueit-primary);
+  padding-left: 1rem;
+  margin: 0.75rem 0;
+  color: var(--blueit-text-secondary);
+}
+
+.post-markdown-full table,
+.post-markdown-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+
+.post-markdown-full th,
+.post-markdown-full td,
+.post-markdown-preview th,
+.post-markdown-preview td {
+  border: 1px solid var(--blueit-border);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.post-markdown-full th,
+.post-markdown-preview th {
+  background: var(--blueit-hover);
+  font-weight: 600;
+}
+
+.post-markdown-full h1,
+.post-markdown-full h2,
+.post-markdown-full h3,
+.post-markdown-full h4,
+.post-markdown-preview h1,
+.post-markdown-preview h2,
+.post-markdown-preview h3,
+.post-markdown-preview h4 {
+  margin: 1rem 0 0.5rem 0;
+  font-weight: 700;
+}
+
+.post-markdown-full a,
+.post-markdown-preview a {
+  color: var(--blueit-primary);
+  text-decoration: none;
+}
+
+.post-markdown-full a:hover,
+.post-markdown-preview a:hover {
+  text-decoration: underline;
+}
+
 /* Link Post */
 .post-link-content {
   margin-top: 0.75rem;

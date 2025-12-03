@@ -20,7 +20,7 @@ function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveTogg
   const [followLoading, setFollowLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(initialSaved);
   const [isSaving, setIsSaving] = useState(false);
-  const currentUser = localStorage.getItem('username');
+  const currentUser = localStorage.getItem('username') || sessionStorage.getItem('username');
   const isOwnPost = currentUser === post.author;
 
   // Check follow status on mount

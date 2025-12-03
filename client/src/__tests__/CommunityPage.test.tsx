@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import CommunityPage from '../pages/CommunityPage';
-import { communitiesApi, postsApi } from '../services/api';
+import { communitiesApi, postsApi, votesApi } from '../services/api';
 
 // Mock the API
 jest.mock('../services/api', () => ({
@@ -15,7 +15,20 @@ jest.mock('../services/api', () => ({
   postsApi: {
     create: jest.fn(),
   },
+  votesApi: {
+    getUserVote: jest.fn().mockResolvedValue({ userVote: 0 }),
+    votePost: jest.fn().mockResolvedValue({ postId: 1, vote_count: 10, user_vote: 0 }),
+  },
 }));
+
+// Mock react-router useParams so CommunityPage always sees a slug
+jest.mock('react-router-dom', () => {
+  const actual = jest.requireActual('react-router-dom');
+  return {
+    ...actual,
+    useParams: () => ({ slug: 'testcommunity' }),
+  };
+});
 
 // Mock localStorage
 const localStorageMock = {
@@ -53,8 +66,7 @@ const mockPosts = [
   },
 ];
 
-const renderWithRouter = (ui: React.ReactElement, { route = '/r/testcommunity' } = {}) => {
-  window.history.pushState({}, 'Test page', route);
+const renderWithRouter = (ui: React.ReactElement) => {
   return render(<BrowserRouter>{ui}</BrowserRouter>);
 };
 
@@ -172,12 +184,13 @@ describe('CommunityPage Component', () => {
   it('should display post information correctly', async () => {
     renderWithRouter(<CommunityPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Test Post')).toBeInTheDocument();
-      expect(screen.getByText('Test content')).toBeInTheDocument();
-      expect(screen.getByText('10')).toBeInTheDocument(); // vote count
-      expect(screen.getByText('5')).toBeInTheDocument(); // comment count
-    });
+    // Wait for the post title to appear
+    await screen.findByText('Test Post');
+
+    expect(screen.getByText('Test Post')).toBeInTheDocument();
+    expect(screen.getByText('Test content')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument(); // vote count
+    expect(screen.getByText(/5\s+Comments/)).toBeInTheDocument(); // comment count
   });
 
   it('should show sidebar with community stats', async () => {
@@ -193,12 +206,11 @@ describe('CommunityPage Component', () => {
   it('should handle sort changes', async () => {
     renderWithRouter(<CommunityPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Posts')).toBeInTheDocument();
-    });
+    const postsHeading = await screen.findByRole('heading', { name: 'Posts' });
+    expect(postsHeading).toBeInTheDocument();
 
-    // Sort functionality is handled by PostSortFilter component
-    // This tests that the component renders correctly
+    // Sort functionality is handled by PostSortFilter component.
+    // This tests that the component renders correctly and posts are visible.
     expect(screen.getByText('Test Post')).toBeInTheDocument();
   });
 });

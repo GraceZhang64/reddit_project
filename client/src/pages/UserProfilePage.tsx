@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { usersApi, followsApi, Community } from '../services/api';
+import { usersApi, followsApi, Community, Post as ApiPost, Comment as ApiComment } from '../services/api';
 import FollowButton from '../components/FollowButton';
+import PostCard from '../components/PostCard';
+import { Post } from '../types';
 import './UserProfilePage.css';
 
 interface UserProfile {
@@ -13,15 +15,40 @@ interface UserProfile {
   createdAt: string;
 }
 
+type ProfileTab = 'posts' | 'comments';
+
+// Map API post (from /users/:username/posts) into shared Post type
+const mapUserApiPost = (apiPost: any): Post => ({
+  id: apiPost.id,
+  slug: apiPost.slug || undefined,
+  title: apiPost.title,
+  body: apiPost.body || undefined,
+  post_type: apiPost.post_type || apiPost.postType || 'text',
+  link_url: apiPost.link_url || apiPost.linkUrl || undefined,
+  author: apiPost.author?.username || 'Unknown',
+  communityId: apiPost.community?.id || 0,
+  communityName: apiPost.community?.name || 'Unknown',
+  communitySlug: apiPost.community?.slug,
+  voteCount: apiPost.voteCount || apiPost.vote_count || 0,
+  commentCount: apiPost.commentCount || apiPost.comment_count || 0,
+  createdAt: apiPost.createdAt || apiPost.created_at,
+  aiSummary: apiPost.ai_summary || undefined,
+});
+
 function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [communities, setCommunities] = useState<Community[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [comments, setComments] = useState<ApiComment[]>([]);
+  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [loading, setLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const currentUser = localStorage.getItem('username');
+  const currentUser = localStorage.getItem('username') || sessionStorage.getItem('username');
   const isOwnProfile = currentUser === username;
 
   useEffect(() => {
@@ -29,15 +56,15 @@ function UserProfilePage() {
       fetchUserProfile();
       fetchFollowCounts();
       fetchUserCommunities();
+      fetchUserPosts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username]);
 
   const fetchUserProfile = async () => {
     try {
       const data = await usersApi.getProfile(username!);
-      console.log('Profile data received:', data);
-      
-      // Ensure we have the required fields
+
       if (data && data.username) {
         setProfile({
           id: data.id,
@@ -81,8 +108,46 @@ function UserProfilePage() {
     }
   };
 
+  const fetchUserPosts = async () => {
+    setPostsLoading(true);
+    try {
+      const data = await usersApi.getPosts(username!, 1, 50);
+      const apiPosts: ApiPost[] = (data.posts || []) as any;
+      setPosts(apiPosts.map(mapUserApiPost));
+    } catch (err) {
+      console.error('Error fetching user posts:', err);
+      setPosts([]);
+    } finally {
+      setPostsLoading(false);
+    }
+  };
+
+  const fetchUserComments = async () => {
+    setCommentsLoading(true);
+    try {
+      const data = await usersApi.getComments(username!, 1, 50);
+      const apiComments: ApiComment[] = (data.comments || []) as any;
+      setComments(apiComments);
+    } catch (err) {
+      console.error('Error fetching user comments:', err);
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
   const handleFollowChange = (isFollowing: boolean) => {
-    setFollowerCount((prev) => (isFollowing ? prev + 1 : prev - 1));
+    setFollowerCount((prev) => (isFollowing ? prev + 1 : Math.max(prev - 1, 0)));
+  };
+
+  const handleTabChange = (tab: ProfileTab) => {
+    setActiveTab(tab);
+    if (tab === 'posts' && posts.length === 0 && !postsLoading) {
+      fetchUserPosts();
+    }
+    if (tab === 'comments' && comments.length === 0 && !commentsLoading) {
+      fetchUserComments();
+    }
   };
 
   if (loading) {
@@ -121,7 +186,9 @@ function UserProfilePage() {
           <div className="profile-info">
             <div className="profile-title-row">
               <h1>u/{profile.username}</h1>
-              {!isOwnProfile && <FollowButton username={profile.username} onFollowChange={handleFollowChange} />}
+              {!isOwnProfile && (
+                <FollowButton username={profile.username} onFollowChange={handleFollowChange} />
+              )}
             </div>
             {profile.bio && <p className="profile-bio">{profile.bio}</p>}
             <div className="profile-stats">
@@ -176,14 +243,62 @@ function UserProfilePage() {
         </div>
 
         <div className="profile-tabs">
-          <button className="profile-tab active">Posts</button>
-          <button className="profile-tab">Comments</button>
+          <button
+            className={`profile-tab ${activeTab === 'posts' ? 'active' : ''}`}
+            onClick={() => handleTabChange('posts')}
+          >
+            Posts
+          </button>
+          <button
+            className={`profile-tab ${activeTab === 'comments' ? 'active' : ''}`}
+            onClick={() => handleTabChange('comments')}
+          >
+            Comments
+          </button>
         </div>
 
         <div className="profile-content">
-          <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--blueit-text-secondary)' }}>
-            Post and comment history coming soon...
-          </p>
+          {activeTab === 'posts' ? (
+            postsLoading ? (
+              <p style={{ textAlign: 'center', padding: '2rem' }}>Loading posts...</p>
+            ) : posts.length === 0 ? (
+              <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--blueit-text-secondary)' }}>
+                No posts yet
+              </p>
+            ) : (
+              <div className="profile-posts-list">
+                {posts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+              </div>
+            )
+          ) : commentsLoading ? (
+            <p style={{ textAlign: 'center', padding: '2rem' }}>Loading comments...</p>
+          ) : comments.length === 0 ? (
+            <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--blueit-text-secondary)' }}>
+              No comments yet
+            </p>
+          ) : (
+            <div className="profile-comments-list">
+              {comments.map((comment) => (
+                <div key={comment.id} className="profile-comment-card">
+                  <div className="profile-comment-meta">
+                    <span>
+                      In{' '}
+                      <Link to={`/c/${comment.post.community?.slug}`}>
+                        c/{comment.post.community?.slug}
+                      </Link>
+                    </span>
+                    <span> • {new Date(comment.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <Link to={`/p/${comment.post.id}`} className="profile-comment-post-title">
+                    {comment.post.title}
+                  </Link>
+                  <p className="profile-comment-body">{comment.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -191,4 +306,5 @@ function UserProfilePage() {
 }
 
 export default UserProfilePage;
+
 

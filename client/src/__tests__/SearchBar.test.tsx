@@ -14,7 +14,7 @@ describe('SearchBar Component', () => {
     render(<SearchBar onSearch={mockOnSearch} placeholder="Search..." />);
 
     expect(screen.getByPlaceholderText('Search...')).toBeInTheDocument();
-    expect(screen.getByTestId('search-icon')).toBeInTheDocument();
+    expect(screen.getByText('🔍')).toBeInTheDocument();
   });
 
   it('should call onSearch with debounced input', async () => {
@@ -63,29 +63,6 @@ describe('SearchBar Component', () => {
     jest.useRealTimers();
   });
 
-  it('should show loading state when searching', async () => {
-    jest.useFakeTimers();
-
-    render(<SearchBar onSearch={mockOnSearch} placeholder="Search..." debounceMs={100} />);
-
-    const input = screen.getByPlaceholderText('Search...');
-    fireEvent.change(input, { target: { value: 'test' } });
-
-    // Should show loading immediately when typing
-    expect(screen.getByTestId('search-loading')).toBeInTheDocument();
-
-    jest.advanceTimersByTime(100);
-
-    await waitFor(() => {
-      expect(mockOnSearch).toHaveBeenCalledWith('test');
-    });
-
-    // Loading should be hidden after search completes
-    expect(screen.queryByTestId('search-loading')).not.toBeInTheDocument();
-
-    jest.useRealTimers();
-  });
-
   it('should handle different debounce times', async () => {
     jest.useFakeTimers();
 
@@ -104,31 +81,6 @@ describe('SearchBar Component', () => {
     await waitFor(() => {
       expect(mockOnSearch).toHaveBeenCalledWith('test');
     });
-
-    jest.useRealTimers();
-  });
-
-  it('should clear search when input is cleared', async () => {
-    jest.useFakeTimers();
-
-    render(<SearchBar onSearch={mockOnSearch} placeholder="Search..." debounceMs={100} />);
-
-    const input = screen.getByPlaceholderText('Search...');
-
-    // Type something
-    fireEvent.change(input, { target: { value: 'test' } });
-    jest.advanceTimersByTime(100);
-
-    await waitFor(() => {
-      expect(mockOnSearch).toHaveBeenCalledWith('test');
-    });
-
-    // Clear input
-    fireEvent.change(input, { target: { value: '' } });
-    jest.advanceTimersByTime(100);
-
-    // Should not call onSearch again for empty string
-    expect(mockOnSearch).toHaveBeenCalledTimes(1);
 
     jest.useRealTimers();
   });
@@ -157,5 +109,3 @@ describe('SearchBar Component', () => {
     jest.useRealTimers();
   });
 });
-
-

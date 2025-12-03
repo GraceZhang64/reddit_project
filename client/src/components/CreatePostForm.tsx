@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Community } from '../types';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import './CreatePostForm.css';
 
 interface CreatePostFormProps {
@@ -29,6 +32,7 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollExpires, setPollExpires] = useState<string>('72');
   const [communityId, setCommunityId] = useState(defaultCommunityId || communities[0]?.id || 1);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,17 +154,52 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
       {/* Type-specific fields */}
       {postType === 'text' && (
         <div className="form-group">
-          <label htmlFor="post-body">Body (optional)</label>
-          <textarea
-            id="post-body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Text (optional)"
-            rows={10}
-            maxLength={10000}
-            className="post-body-textarea"
-          />
-          <small>{body.length}/10,000 characters</small>
+          <div className="textarea-header">
+            <label htmlFor="post-body">Body (optional)</label>
+            <button
+              type="button"
+              className={`preview-toggle ${showPreview ? 'active' : ''}`}
+              onClick={() => setShowPreview(!showPreview)}
+            >
+              {showPreview ? '✏️ Edit' : '👁️ Preview'}
+            </button>
+          </div>
+          {showPreview ? (
+            <div className="markdown-preview">
+              <div className="preview-header">
+                <small>Markdown Preview</small>
+              </div>
+              <div className="preview-content">
+                {body.trim() ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeSanitize]}
+                  >
+                    {body}
+                  </ReactMarkdown>
+                ) : (
+                  <em className="preview-placeholder">Nothing to preview</em>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <textarea
+                id="post-body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Text (optional) - Markdown supported"
+                rows={10}
+                maxLength={10000}
+                className="post-body-textarea"
+              />
+              <div className="markdown-help">
+                <small>
+                  {body.length}/10,000 characters • <a href="https://commonmark.org/help/" target="_blank" rel="noopener noreferrer">Markdown help</a>
+                </small>
+              </div>
+            </>
+          )}
         </div>
       )}
 

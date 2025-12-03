@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import CommunityList from '../components/CommunityList';
 import CreateCommunityModal from '../components/CreateCommunityModal';
 import SearchBar from '../components/SearchBar';

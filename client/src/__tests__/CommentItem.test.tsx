@@ -13,9 +13,9 @@ jest.mock('../services/api', () => ({
   },
 }));
 
-// Mock formatMentions
+// Mock formatMentions - must return an array since the component calls .map() on it
 jest.mock('../utils/formatMentions', () => ({
-  formatMentions: (text: string) => text,
+  formatMentions: (text: string) => [text],
 }));
 
 const mockComment = {
@@ -71,7 +71,7 @@ describe('CommentItem Component', () => {
     const replyBtn = screen.getByText('Reply');
     fireEvent.click(replyBtn);
     
-    expect(screen.getByPlaceholderText('Write your reply...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('What are your thoughts?')).toBeInTheDocument();
   });
 
   it('should hide reply form when cancel is clicked', () => {
@@ -80,7 +80,7 @@ describe('CommentItem Component', () => {
     fireEvent.click(screen.getByText('Reply'));
     fireEvent.click(screen.getByText('Cancel'));
     
-    expect(screen.queryByPlaceholderText('Write your reply...')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('What are your thoughts?')).not.toBeInTheDocument();
   });
 
   it('should call onReply with correct data', () => {
@@ -89,10 +89,10 @@ describe('CommentItem Component', () => {
     
     fireEvent.click(screen.getByText('Reply'));
     
-    const textarea = screen.getByPlaceholderText('Write your reply...');
+    const textarea = screen.getByPlaceholderText('What are your thoughts?');
     fireEvent.change(textarea, { target: { value: 'My reply' } });
     
-    fireEvent.click(screen.getByText('Submit'));
+    fireEvent.click(screen.getByText('Comment'));
     
     expect(onReply).toHaveBeenCalledWith(1, 'My reply');
   });
@@ -197,7 +197,7 @@ describe('CommentItem Component', () => {
     
     renderWithRouter(<CommentItem comment={deepComment} depth={3} maxDepth={3} />);
     
-    expect(screen.getByText(/Continue thread/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Continue this thread/ })).toBeInTheDocument();
   });
 
   it('should format relative time correctly', () => {

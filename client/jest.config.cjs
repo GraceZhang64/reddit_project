@@ -7,6 +7,9 @@ module.exports = {
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/src/__mocks__/fileMock.js',
+    '^react-markdown$': '<rootDir>/src/__mocks__/reactMarkdownMock.js',
+    '^remark-gfm$': '<rootDir>/src/__mocks__/remarkGfmMock.js',
+    '^rehype-sanitize$': '<rootDir>/src/__mocks__/rehypeSanitizeMock.js',
   },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

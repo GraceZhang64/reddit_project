@@ -50,10 +50,9 @@ describe('CommunitiesPage Component', () => {
   it('should render communities list', async () => {
     renderWithRouter(<CommunitiesPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('fitness')).toBeInTheDocument();
-      expect(screen.getByText('javascript')).toBeInTheDocument();
-    });
+    await screen.findByText('fitness');
+    expect(screen.getByText('fitness')).toBeInTheDocument();
+    expect(screen.getByText('javascript')).toBeInTheDocument();
 
     expect(communitiesApi.getAll).toHaveBeenCalledWith(1, 1000);
   });
@@ -61,10 +60,9 @@ describe('CommunitiesPage Component', () => {
   it('should display member counts correctly', async () => {
     renderWithRouter(<CommunitiesPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('23 members')).toBeInTheDocument();
-      expect(screen.getByText('21 members')).toBeInTheDocument();
-    });
+    await screen.findByText('23 members');
+    expect(screen.getByText('23 members')).toBeInTheDocument();
+    expect(screen.getByText('21 members')).toBeInTheDocument();
   });
 
   it('should handle search functionality', async () => {
@@ -76,9 +74,7 @@ describe('CommunitiesPage Component', () => {
     renderWithRouter(<CommunitiesPage />);
 
     // Wait for initial load
-    await waitFor(() => {
-      expect(screen.getByText('fitness')).toBeInTheDocument();
-    });
+    await screen.findByText('fitness');
 
     // Find and use search input
     const searchInput = screen.getByPlaceholderText('Search communities...');
@@ -134,20 +130,16 @@ describe('CommunitiesPage Component', () => {
 
     renderWithRouter(<CommunitiesPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Create Community')).toBeInTheDocument();
-    });
-
-    // Click create button
-    const createButton = screen.getByText('Create Community');
+    const createButton = await screen.findByText('+ Create Community');
     fireEvent.click(createButton);
 
     // Modal should open
-    expect(screen.getByText('Create New Community')).toBeInTheDocument();
+    const modalHeading = await screen.findByText('Create a Community');
+    expect(modalHeading).toBeInTheDocument();
 
     // Fill form
-    const nameInput = screen.getByPlaceholderText('Community name');
-    const descInput = screen.getByPlaceholderText('Community description');
+    const nameInput = screen.getByPlaceholderText('programming');
+    const descInput = screen.getByPlaceholderText('What is your community about?');
 
     fireEvent.change(nameInput, { target: { value: 'New Community' } });
     fireEvent.change(descInput, { target: { value: 'A new community' } });

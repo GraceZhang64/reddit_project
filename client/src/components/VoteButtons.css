@@ -3,11 +3,11 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 12px 8px;
+  padding: 12px 16px;
   background: var(--blueit-hover);
-  border-right: 1px solid var(--blueit-border);
   min-width: 48px;
   border-radius: 12px 0 0 12px;
+  margin-right: 0.5rem;
 }
 
 .vote-btn {
