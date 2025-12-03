@@ -157,3 +157,4 @@ describe('SearchBar Component', () => {
     jest.useRealTimers();
   });
 });
+

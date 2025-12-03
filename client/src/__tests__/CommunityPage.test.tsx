@@ -202,3 +202,4 @@ describe('CommunityPage Component', () => {
     expect(screen.getByText('Test Post')).toBeInTheDocument();
   });
 });
+

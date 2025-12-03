@@ -181,3 +181,4 @@ describe('CommunitiesPage Component', () => {
     expect(screen.getByText('Loading communities...')).toBeInTheDocument();
   });
 });
+
