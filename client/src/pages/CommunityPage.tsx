@@ -19,24 +19,32 @@ function CommunityPage() {
   const [error, setError] = useState<string | null>(null);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [sortOption, setSortOption] = useState<SortOption>('hot');
-
-  // Initialize isJoined from localStorage
-  const [isJoined, setIsJoined] = useState(() => {
-    if (!slug) return false;
-    const stored = localStorage.getItem('joinedCommunities');
-    if (stored) {
-      const joined = JSON.parse(stored);
-      return joined.includes(slug);
-    }
-    return false;
-  });
+  const [isJoined, setIsJoined] = useState(false);
+  const [isJoinLoading, setIsJoinLoading] = useState(false);
 
   useEffect(() => {
     if (slug) {
       fetchCommunityData();
       fetchAllCommunities();
+      checkMembershipStatus();
     }
   }, [slug]);
+
+  const checkMembershipStatus = async () => {
+    if (!slug) return;
+    try {
+      const { isMember } = await communitiesApi.checkMembership(slug);
+      setIsJoined(isMember);
+    } catch (err) {
+      console.error('Error checking membership:', err);
+      // Fall back to localStorage if API fails
+      const stored = localStorage.getItem('joinedCommunities');
+      if (stored) {
+        const joined = JSON.parse(stored);
+        setIsJoined(joined.includes(slug));
+      }
+    }
+  };
 
   const fetchAllCommunities = async () => {
     try {
@@ -163,31 +171,52 @@ function CommunityPage() {
     );
   }
 
-  const handleJoinToggle = () => {
-    if (!slug) return;
+  const handleJoinToggle = async () => {
+    if (!slug || isJoinLoading) return;
     
-    const newIsJoined = !isJoined;
-    setIsJoined(newIsJoined);
-    setMemberCount(newIsJoined ? memberCount + 1 : memberCount - 1);
+    setIsJoinLoading(true);
+    const previousIsJoined = isJoined;
+    const previousMemberCount = memberCount;
+    
+    // Optimistic update
+    setIsJoined(!isJoined);
+    setMemberCount(isJoined ? memberCount - 1 : memberCount + 1);
 
-    // Update localStorage
-    const stored = localStorage.getItem('joinedCommunities');
-    let joinedCommunities: string[] = stored ? JSON.parse(stored) : [];
-    
-    if (newIsJoined) {
-      // Add community
-      if (!joinedCommunities.includes(slug)) {
-        joinedCommunities.push(slug);
+    try {
+      if (previousIsJoined) {
+        // Leave community
+        const result = await communitiesApi.leave(slug);
+        setMemberCount(result.memberCount);
+      } else {
+        // Join community
+        const result = await communitiesApi.join(slug);
+        setMemberCount(result.memberCount);
       }
-    } else {
-      // Remove community
-      joinedCommunities = joinedCommunities.filter(id => id !== slug);
+      
+      // Update localStorage for backward compatibility
+      const stored = localStorage.getItem('joinedCommunities');
+      let joinedCommunities: string[] = stored ? JSON.parse(stored) : [];
+      
+      if (!previousIsJoined) {
+        if (!joinedCommunities.includes(slug)) {
+          joinedCommunities.push(slug);
+        }
+      } else {
+        joinedCommunities = joinedCommunities.filter(id => id !== slug);
+      }
+      
+      localStorage.setItem('joinedCommunities', JSON.stringify(joinedCommunities));
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('joinedCommunitiesChanged'));
+    } catch (err) {
+      console.error('Error toggling membership:', err);
+      // Revert optimistic update on error
+      setIsJoined(previousIsJoined);
+      setMemberCount(previousMemberCount);
+    } finally {
+      setIsJoinLoading(false);
     }
-    
-    localStorage.setItem('joinedCommunities', JSON.stringify(joinedCommunities));
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new Event('joinedCommunitiesChanged'));
   };
 
   const handleVote = async (postId: number, value: number) => {
@@ -283,8 +312,9 @@ function CommunityPage() {
           <button 
             className={`join-toggle-button ${isJoined ? 'joined' : 'not-joined'}`}
             onClick={handleJoinToggle}
+            disabled={isJoinLoading}
           >
-            {isJoined ? '✓ Joined' : 'Join'}
+            {isJoinLoading ? '...' : isJoined ? '✓ Joined' : 'Join'}
           </button>
         </div>
       </div>

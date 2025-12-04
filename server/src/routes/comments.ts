@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middleware/auth';
 import { optionalAuth } from '../middleware/auth';
 import { cache, CACHE_TTL } from '../lib/cache';
-import { apiLimiter } from '../middleware/rateLimiter';
+import { contentCreationLimiter } from '../middleware/rateLimiter';
 import { validateCommentCreation } from '../middleware/requestValidator';
 import { updateCommunityMemberCount } from '../utils/communityMemberCount';
 import { createMentionNotifications } from '../utils/mentions';
@@ -363,7 +363,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
  * POST /api/comments
  * Create a new comment or reply
  */
-router.post('/', authenticateToken, validateCommentCreation, async (req: Request, res: Response) => {
+router.post('/', authenticateToken, contentCreationLimiter.middleware(), validateCommentCreation, async (req: Request, res: Response) => {
   try {
     const { body, postId, parentCommentId } = req.body;
     const authorId = req.user!.id;

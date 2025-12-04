@@ -231,6 +231,21 @@ export const communitiesApi = {
       params: { page, limit }
     });
     return response.data;
+  },
+
+  async join(slug: string): Promise<{ success: boolean; message: string; memberCount: number }> {
+    const response = await api.post<{ success: boolean; message: string; memberCount: number }>(`/communities/${slug}/join`);
+    return response.data;
+  },
+
+  async leave(slug: string): Promise<{ success: boolean; message: string; memberCount: number }> {
+    const response = await api.post<{ success: boolean; message: string; memberCount: number }>(`/communities/${slug}/leave`);
+    return response.data;
+  },
+
+  async checkMembership(slug: string): Promise<{ isMember: boolean; joinedAt: string | null }> {
+    const response = await api.get<{ isMember: boolean; joinedAt: string | null }>(`/communities/${slug}/membership`);
+    return response.data;
   }
 };
 

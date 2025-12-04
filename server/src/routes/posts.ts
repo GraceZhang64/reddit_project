@@ -5,7 +5,7 @@ import { getAIService } from '../services/aiService';
 import { getSupabaseClient } from '../config/supabase';
 import { prisma } from '../lib/prisma';
 import { cache, CACHE_TTL } from '../lib/cache';
-import { apiLimiter, postCreationLimiter } from '../middleware/rateLimiter';
+import { contentCreationLimiter, voteLimiter } from '../middleware/rateLimiter';
 import { validatePostCreation } from '../middleware/requestValidator';
 
 const router = Router();
@@ -351,7 +351,7 @@ async function generateAISummaryAsync(postId: number, post: any) {
  * POST /api/posts
  * Create a new post (supports text, link, poll)
  */
-router.post('/', authenticateToken, postCreationLimiter.middleware(), validatePostCreation, async (req: Request, res: Response) => {
+router.post('/', authenticateToken, contentCreationLimiter.middleware(), validatePostCreation, async (req: Request, res: Response) => {
   try {
     const { 
       title, 
@@ -483,7 +483,7 @@ export default router;
  * Upvote, downvote, or remove vote for a post
  * Body: { value: 1 | -1 | 0 }
  */
-router.post('/:id/vote', authenticateToken, async (req: Request, res: Response) => {
+router.post('/:id/vote', authenticateToken, voteLimiter.middleware(), async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id);
     const userId = req.user?.id;

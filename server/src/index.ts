@@ -10,6 +10,7 @@ import usersRouter from './routes/users';
 import pollsRouter from './routes/polls';
 import followsRouter from './routes/follows';
 import savedPostsRouter from './routes/savedPosts';
+import { globalLimiter } from './middleware/rateLimiter';
 
 dotenv.config();
 
@@ -22,6 +23,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Global rate limiter: 300 requests per 5 minutes
+app.use('/api', globalLimiter.middleware());
 
 // Routes
 app.get('/', (req: Request, res: Response) => {
@@ -40,7 +44,10 @@ app.get('/', (req: Request, res: Response) => {
         list: 'GET /api/communities',
         get: 'GET /api/communities/:slug',
         create: 'POST /api/communities',
-        posts: 'GET /api/communities/:slug/posts'
+        posts: 'GET /api/communities/:slug/posts',
+        join: 'POST /api/communities/:slug/join',
+        leave: 'POST /api/communities/:slug/leave',
+        membership: 'GET /api/communities/:slug/membership'
       },
       posts: {
         list: 'GET /api/posts',

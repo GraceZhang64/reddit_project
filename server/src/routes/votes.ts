@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middleware/auth';
+import { voteLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -8,7 +9,7 @@ const router = Router();
  * POST /api/votes
  * Cast or update a vote
  */
-router.post('/', authenticateToken, async (req: Request, res: Response) => {
+router.post('/', authenticateToken, voteLimiter.middleware(), async (req: Request, res: Response) => {
   try {
     const { target_type, target_id, value } = req.body;
     const userId = req.user!.id;
@@ -95,7 +96,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
  * DELETE /api/votes
  * Remove a vote
  */
-router.delete('/', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/', authenticateToken, voteLimiter.middleware(), async (req: Request, res: Response) => {
   try {
     const { target_type, target_id } = req.body;
     const userId = req.user!.id;

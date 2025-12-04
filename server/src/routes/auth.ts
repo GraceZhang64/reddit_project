@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { getSupabaseClient, getSupabaseAdminClient } from '../config/supabase';
 import { authenticateToken } from '../middleware/auth';
+import { loginLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -9,7 +10,7 @@ const router = Router();
  * POST /api/auth/register
  * Register a new user with Supabase Auth and create user profile
  */
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', loginLimiter.middleware(), async (req: Request, res: Response) => {
   try {
     const { email, password, username } = req.body;
 
@@ -155,7 +156,7 @@ router.post('/register', async (req: Request, res: Response) => {
  * POST /api/auth/login
  * Login with email and password
  */
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter.middleware(), async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
 
