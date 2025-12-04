@@ -26,6 +26,13 @@ function PostPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const currentUser = localStorage.getItem('username') || sessionStorage.getItem('username');
+  
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch post data (loads immediately, AI summary loads async)
   useEffect(() => {
@@ -179,6 +186,63 @@ function PostPage() {
     }
   };
 
+  // Edit handlers
+  const handleEditClick = () => {
+    if (!post) return;
+    setEditTitle(post.title);
+    setEditBody(post.body || '');
+    setIsEditing(true);
+  };
+
+  const handleEditCancel = () => {
+    setIsEditing(false);
+    setEditTitle('');
+    setEditBody('');
+  };
+
+  const handleEditSave = async () => {
+    if (!post || !editTitle.trim()) return;
+    
+    setEditSaving(true);
+    try {
+      const updatedPost = await postsApi.update(post.id, {
+        title: editTitle.trim(),
+        body: editBody.trim() || undefined,
+      });
+      
+      // Update the post state with the edited values
+      setPost({
+        ...post,
+        title: updatedPost.title || editTitle.trim(),
+        body: updatedPost.body || editBody.trim(),
+      });
+      setIsEditing(false);
+    } catch (err: any) {
+      console.error('Error updating post:', err);
+      alert(err.response?.data?.error || 'Failed to update post');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  // Delete handler
+  const handleDelete = async () => {
+    if (!post) return;
+    
+    const confirmed = window.confirm('Are you sure you want to delete this post? This action cannot be undone.');
+    if (!confirmed) return;
+    
+    setIsDeleting(true);
+    try {
+      await postsApi.delete(post.id);
+      navigate(-1); // Go back after deletion
+    } catch (err: any) {
+      console.error('Error deleting post:', err);
+      alert(err.response?.data?.error || 'Failed to delete post');
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="post-page">
@@ -244,15 +308,72 @@ function PostPage() {
                 )}
                 <span className="separator">•</span>
                 <span className="time">{new Date(post.createdAt).toLocaleDateString()}</span>
+                {/* Edit/Delete buttons - only for post author */}
+                {currentUser && currentUser === post.author && !isEditing && (
+                  <>
+                    <button 
+                      className="edit-post-button"
+                      onClick={handleEditClick}
+                      title="Edit post"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button 
+                      className="delete-post-button"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                      title="Delete post"
+                    >
+                      {isDeleting ? '🗑️ Deleting...' : '🗑️ Delete'}
+                    </button>
+                  </>
+                )}
               </div>
-              <h1 className="post-title">
-                {post.post_type === 'poll' && '📊 '}
-                {post.title}
-              </h1>
+              
+              {/* Edit form or regular title display */}
+              {isEditing ? (
+                <div className="edit-post-form">
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="edit-title-input"
+                    placeholder="Post title"
+                  />
+                  <textarea
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
+                    className="edit-body-input"
+                    placeholder="Post content (optional)"
+                    rows={6}
+                  />
+                  <div className="edit-actions">
+                    <button 
+                      className="edit-save-button" 
+                      onClick={handleEditSave}
+                      disabled={editSaving || !editTitle.trim()}
+                    >
+                      {editSaving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button 
+                      className="edit-cancel-button" 
+                      onClick={handleEditCancel}
+                      disabled={editSaving}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <h1 className="post-title">
+                  {post.post_type === 'poll' && '📊 '}
+                  {post.title}
+                </h1>
+              )}
             </div>
             
-            {/* Post Content based on type */}
-            <PostContent post={post} isFullView={true} />
+            {/* Post Content based on type - only show when not editing */}
+            {!isEditing && <PostContent post={post} isFullView={true} />}
             
             {/* Poll Widget for poll posts */}
             {post.post_type === 'poll' && <PollWidget postId={post.id} />}

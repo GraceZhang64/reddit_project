@@ -352,3 +352,130 @@
     flex-direction: column;
   }
 }
+
+/* Post Edit Styles */
+.edit-post-button {
+  background: none;
+  border: 1px solid var(--blueit-border);
+  color: var(--blueit-primary);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  transition: all 0.2s;
+}
+
+.edit-post-button:hover {
+  background: var(--blueit-primary);
+  color: white;
+}
+
+.edit-post-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.edit-title-input {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border: 1px solid var(--blueit-border);
+  border-radius: 4px;
+  background: var(--blueit-bg);
+  color: var(--blueit-text);
+}
+
+.edit-title-input:focus {
+  outline: none;
+  border-color: var(--blueit-primary);
+}
+
+.edit-body-input {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid var(--blueit-border);
+  border-radius: 4px;
+  background: var(--blueit-bg);
+  color: var(--blueit-text);
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+}
+
+.edit-body-input:focus {
+  outline: none;
+  border-color: var(--blueit-primary);
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-save-button {
+  background: var(--blueit-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.edit-save-button:hover:not(:disabled) {
+  background: var(--blueit-primary-dark, #0056b3);
+}
+
+.edit-save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.edit-cancel-button {
+  background: none;
+  border: 1px solid var(--blueit-border);
+  color: var(--blueit-text-muted);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.edit-cancel-button:hover:not(:disabled) {
+  background: var(--blueit-hover);
+  color: var(--blueit-text);
+}
+
+.edit-cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.delete-post-button {
+  background: none;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  transition: all 0.2s;
+}
+
+.delete-post-button:hover:not(:disabled) {
+  background: #dc3545;
+  color: white;
+}
+
+.delete-post-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

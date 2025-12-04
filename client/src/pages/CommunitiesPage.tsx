@@ -6,6 +6,8 @@ import { Community } from '../types';
 import { communitiesApi } from '../services/api';
 import './CommunitiesPage.css';
 
+type FilterTab = 'all' | 'joined';
+
 function CommunitiesPage() {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [filteredCommunities, setFilteredCommunities] = useState<Community[]>([]);
@@ -13,18 +15,48 @@ function CommunitiesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [joinedSlugs, setJoinedSlugs] = useState<string[]>([]);
 
   useEffect(() => {
     fetchCommunities();
+    loadJoinedCommunities();
+    
+    // Listen for changes to joined communities
+    const handleJoinedChange = () => loadJoinedCommunities();
+    window.addEventListener('joinedCommunitiesChanged', handleJoinedChange);
+    return () => window.removeEventListener('joinedCommunitiesChanged', handleJoinedChange);
   }, []);
 
-  // When no search query, show all loaded communities
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredCommunities(communities);
+  const loadJoinedCommunities = () => {
+    const stored = localStorage.getItem('joinedCommunities');
+    if (stored) {
+      setJoinedSlugs(JSON.parse(stored));
+    } else {
+      setJoinedSlugs([]);
     }
-    // When there's a search query, filteredCommunities is set by handleSearch
-  }, [searchQuery, communities]);
+  };
+
+  // Filter communities based on active tab and search query
+  useEffect(() => {
+    let filtered = communities;
+    
+    // Filter by tab
+    if (activeTab === 'joined') {
+      filtered = communities.filter(c => c.slug && joinedSlugs.includes(c.slug));
+    }
+    
+    // Filter by search (if not using server-side search)
+    if (searchQuery.trim() && activeTab === 'joined') {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(c => 
+        c.name.toLowerCase().includes(query) || 
+        c.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    setFilteredCommunities(filtered);
+  }, [searchQuery, communities, activeTab, joinedSlugs]);
 
   const fetchCommunities = async () => {
     setIsLoading(true);
@@ -59,13 +91,18 @@ function CommunitiesPage() {
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
 
+    // For joined tab, use client-side filtering (already handled in useEffect)
+    if (activeTab === 'joined') {
+      return;
+    }
+
     if (!query.trim()) {
       // If search is cleared, reload all communities
       await fetchCommunities();
       return;
     }
 
-    // Perform server-side search
+    // Perform server-side search for all communities
     setIsLoading(true);
     setError(null);
     try {
@@ -90,6 +127,14 @@ function CommunitiesPage() {
       setFilteredCommunities([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTabChange = (tab: FilterTab) => {
+    setActiveTab(tab);
+    setSearchQuery('');
+    if (tab === 'all') {
+      fetchCommunities();
     }
   };
 
@@ -120,11 +165,26 @@ function CommunitiesPage() {
           + Create Community
         </button>
       </div>
+
+      <div className="communities-tabs">
+        <button 
+          className={`tab-button ${activeTab === 'all' ? 'active' : ''}`}
+          onClick={() => handleTabChange('all')}
+        >
+          All Communities
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'joined' ? 'active' : ''}`}
+          onClick={() => handleTabChange('joined')}
+        >
+          Joined ({joinedSlugs.length})
+        </button>
+      </div>
       
       <div className="search-section">
         <SearchBar
           onSearch={handleSearch}
-          placeholder="Search communities by name or description..."
+          placeholder={activeTab === 'joined' ? "Search your joined communities..." : "Search communities by name or description..."}
           showResultCount={searchQuery.length > 0}
           resultCount={filteredCommunities.length}
         />
@@ -143,12 +203,35 @@ function CommunitiesPage() {
         </div>
       ) : (
         <>
-          {filteredCommunities.length === 0 && searchQuery ? (
+          {filteredCommunities.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--blueit-text-secondary)' }}>
-              <p>No communities found matching "{searchQuery}"</p>
-              <button onClick={() => setSearchQuery('')} style={{ marginTop: '1rem' }}>
-                Clear search
-              </button>
+              {activeTab === 'joined' ? (
+                searchQuery ? (
+                  <>
+                    <p>No joined communities found matching "{searchQuery}"</p>
+                    <button onClick={() => setSearchQuery('')} style={{ marginTop: '1rem' }}>
+                      Clear search
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p>You haven't joined any communities yet.</p>
+                    <p style={{ marginTop: '0.5rem' }}>Browse all communities and click "Join" to add them here!</p>
+                    <button onClick={() => handleTabChange('all')} style={{ marginTop: '1rem' }}>
+                      Browse Communities
+                    </button>
+                  </>
+                )
+              ) : searchQuery ? (
+                <>
+                  <p>No communities found matching "{searchQuery}"</p>
+                  <button onClick={() => setSearchQuery('')} style={{ marginTop: '1rem' }}>
+                    Clear search
+                  </button>
+                </>
+              ) : (
+                <p>No communities available.</p>
+              )}
             </div>
           ) : (
             <CommunityList communities={filteredCommunities} />
