@@ -4,7 +4,7 @@
   background: var(--blueit-card-bg);
   border: 1px solid var(--blueit-border);
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   transition: all 0.3s ease;
   margin-bottom: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
@@ -141,6 +141,8 @@
   padding: 16px;
   margin: 16px 0;
   box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+  overflow: visible;
+  min-height: auto;
 }
 
 .ai-summary-header {
@@ -173,6 +175,13 @@
 }
 
 /* Markdown content styling inside AI summary (PostCard) */
+.ai-summary .ai-summary-content {
+  overflow: visible;
+  max-height: none;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 .ai-summary .ai-summary-content h3,
 .ai-summary .ai-summary-content h4 {
   font-size: 0.9rem;
@@ -186,18 +195,24 @@
   color: var(--blueit-text-secondary);
   font-size: 0.9rem;
   line-height: 1.5;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .ai-summary .ai-summary-content ul,
 .ai-summary .ai-summary-content ol {
   margin: 0.25rem 0 0.75rem 1.25rem;
   color: var(--blueit-text-secondary);
+  overflow: visible;
 }
 
 .ai-summary .ai-summary-content li {
   margin: 0.25rem 0;
   font-size: 0.9rem;
   line-height: 1.4;
+  overflow: visible;
+  word-wrap: break-word;
 }
 
 .post-actions {

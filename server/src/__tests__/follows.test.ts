@@ -188,7 +188,6 @@ describe('Follows API', () => {
             id: 'user-2',
             username: 'follower1',
             avatar_url: null,
-            karma: 100,
             createdAt: new Date(),
           },
         },

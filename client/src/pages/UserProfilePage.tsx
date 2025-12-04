@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { usersApi, followsApi, votesApi, Community, Post as ApiPost, Comment as ApiComment } from '../services/api';
+import { usersApi, followsApi, votesApi, savedPostsApi, Community, Post as ApiPost, Comment as ApiComment } from '../services/api';
 import FollowButton from '../components/FollowButton';
 import PostCard from '../components/PostCard';
 import { Post } from '../types';
@@ -11,7 +11,6 @@ interface UserProfile {
   username: string;
   avatar_url?: string;
   bio?: string;
-  karma: number;
   createdAt: string;
 }
 
@@ -44,6 +43,7 @@ function UserProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<(ApiComment & { post?: { id: number; title: string; community?: { slug: string } } })[]>([]);
   const [userVotes, setUserVotes] = useState<Record<number, number>>({});
+  const [savedStatuses, setSavedStatuses] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
@@ -72,7 +72,6 @@ function UserProfilePage() {
           username: data.username,
           avatar_url: data.avatar_url,
           bio: data.bio,
-          karma: data.karma || 0,
           createdAt: data.createdAt,
         });
       } else {
@@ -130,6 +129,23 @@ function UserProfilePage() {
         }
       }
       setUserVotes(votesMap);
+
+      // Fetch saved statuses for posts
+      try {
+        const postIds = mappedPosts.map(p => p.id);
+        if (postIds.length > 0) {
+          const statuses = await savedPostsApi.checkMultipleSaved(postIds);
+          setSavedStatuses(statuses);
+        }
+      } catch (err: any) {
+        console.warn('Error fetching saved statuses:', err);
+        // Silently fail - set all to false
+        const emptyStatuses: Record<number, boolean> = {};
+        mappedPosts.forEach(p => {
+          emptyStatuses[p.id] = false;
+        });
+        setSavedStatuses(emptyStatuses);
+      }
     } catch (err) {
       console.error('Error fetching user posts:', err);
       setPosts([]);
@@ -189,6 +205,10 @@ function UserProfilePage() {
     setFollowerCount((prev) => (isFollowing ? prev + 1 : Math.max(prev - 1, 0)));
   };
 
+  const handleSaveToggle = (postId: number, saved: boolean) => {
+    setSavedStatuses(prev => ({ ...prev, [postId]: saved }));
+  };
+
   const handleTabChange = (tab: ProfileTab) => {
     setActiveTab(tab);
     if (tab === 'posts' && posts.length === 0 && !postsLoading) {
@@ -241,10 +261,6 @@ function UserProfilePage() {
             </div>
             {profile.bio && <p className="profile-bio">{profile.bio}</p>}
             <div className="profile-stats">
-              <div className="stat">
-                <strong>{profile.karma.toLocaleString()}</strong>
-                <span>Karma</span>
-              </div>
               <div className="stat">
                 <strong>{followerCount.toLocaleString()}</strong>
                 <span>Followers</span>
@@ -322,6 +338,8 @@ function UserProfilePage() {
                     post={post}
                     onVote={handleVote}
                     userVote={userVotes[post.id] || 0}
+                    initialSaved={savedStatuses[post.id] ?? false}
+                    onSaveToggle={handleSaveToggle}
                   />
                 ))}
               </div>

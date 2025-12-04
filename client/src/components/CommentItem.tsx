@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Comment } from '../types';
 import VoteButtons from './VoteButtons';
@@ -20,7 +20,7 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, onDelete, disa
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState('');
-  const [userVote, setUserVote] = useState(comment.voteCount || 0);
+  const [userVote, setUserVote] = useState((comment as any).user_vote || 0);
   const [voteCount, setVoteCount] = useState(comment.voteCount || 0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -83,29 +83,64 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, onDelete, disa
   const shouldShowContinueThread = depth >= maxDepth && hasReplies;
   const canShowReplies = depth < maxDepth && hasReplies;
 
+  const voteTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const pendingVoteRef = React.useRef<{ value: number; oldVote: number; oldCount: number } | null>(null);
+  const isVotingRef = React.useRef(false);
+
   const handleVote = async (value: number) => {
-    if (disabled) return;
+    if (disabled || isVotingRef.current) return;
+    
+    // Clear any pending vote timeout
+    if (voteTimeoutRef.current) {
+      clearTimeout(voteTimeoutRef.current);
+      voteTimeoutRef.current = null;
+    }
+
     const oldVote = userVote;
     const newVote = oldVote === value ? 0 : value;
     const voteDiff = newVote - oldVote;
     
-    // Optimistic update
+    // Store pending vote
+    pendingVoteRef.current = { value: newVote, oldVote, oldCount: voteCount };
+    
+    // Optimistic update immediately
     setUserVote(newVote);
     setVoteCount(voteCount + voteDiff);
 
-    try {
-      const result = await votesApi.voteComment(comment.id, newVote as 1 | -1 | 0);
-      // Update with server response
-      setUserVote(result.user_vote ?? 0);
-      setVoteCount(result.voteCount);
-    } catch (err: any) {
-      console.error('Error voting on comment:', err);
-      // Revert on error
-      setUserVote(oldVote);
-      setVoteCount(voteCount - voteDiff);
-      alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
-    }
+    // Debounce the API call - only execute after 200ms of no new clicks
+    voteTimeoutRef.current = setTimeout(async () => {
+      if (!pendingVoteRef.current) return;
+      
+      isVotingRef.current = true;
+      const { value: finalVote, oldVote: originalVote, oldCount: originalCount } = pendingVoteRef.current;
+      pendingVoteRef.current = null;
+
+      try {
+        const result = await votesApi.voteComment(comment.id, finalVote as 1 | -1 | 0);
+        // Update with server response
+        setUserVote(result.user_vote ?? 0);
+        setVoteCount(result.voteCount);
+      } catch (err: any) {
+        console.error('Error voting on comment:', err);
+        // Revert on error
+        const revertDiff = finalVote - originalVote;
+        setUserVote(originalVote);
+        setVoteCount(originalCount);
+        alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
+      } finally {
+        isVotingRef.current = false;
+      }
+    }, 200);
   };
+
+  // Cleanup vote timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (voteTimeoutRef.current) {
+        clearTimeout(voteTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleReplySubmit = (e: React.FormEvent) => {
     e.preventDefault();

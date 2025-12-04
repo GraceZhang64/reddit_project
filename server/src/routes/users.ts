@@ -45,7 +45,6 @@ router.get('/:username', authenticateToken, async (req: Request, res: Response) 
         email: false, // Don't expose email publicly
         avatar_url: true,
         bio: true,
-        karma: true,
         createdAt: true,
         _count: {
           select: {

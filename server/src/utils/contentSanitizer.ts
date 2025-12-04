@@ -168,31 +168,36 @@ export function detectSuspiciousContent(content: string): {
   }
 
   // Check for excessive special characters (potential obfuscation)
+  // Increased threshold from 0.3 to 0.5 to allow more normal content
   const specialCharRatio = (content.match(/[^\w\s]/g) || []).length / content.length;
-  if (specialCharRatio > 0.3) {
+  if (specialCharRatio > 0.5) {
     reasons.push('High ratio of special characters');
   }
 
-  // Check for encoded content
-  if (content.includes('%3C') || content.includes('&lt;') || content.includes('&#x')) {
-    reasons.push('Contains encoded HTML');
+  // Check for encoded content - only flag if it's clearly malicious
+  // Removed &lt; check as it's common in normal text, only check for URL encoding
+  if (content.includes('%3C') || content.includes('%3E') || content.includes('%27') || content.includes('%22')) {
+    // Only flag if there are multiple encoded characters suggesting intentional obfuscation
+    const encodedCount = (content.match(/%[0-9A-Fa-f]{2}/g) || []).length;
+    if (encodedCount > 5) {
+      reasons.push('Contains encoded HTML');
+    }
   }
 
-  // Check for SQL injection patterns
-  const sqlPatterns = [
-    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE)\b)/gi,
-    /('|(\\')|(;)|(--)|(\/\*)|(\*\/))/g,
-  ];
-  for (const pattern of sqlPatterns) {
-    if (pattern.test(content)) {
+  // Check for SQL injection patterns - only flag if multiple SQL keywords together
+  const sqlKeywords = content.match(/\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE)\b/gi);
+  if (sqlKeywords && sqlKeywords.length >= 2) {
+    // Check for SQL syntax patterns only if SQL keywords are present
+    const sqlSyntaxPattern = /('|(\\')|(;)|(--)|(\/\*)|(\*\/))/g;
+    if (sqlSyntaxPattern.test(content)) {
       reasons.push('Contains SQL-like patterns');
-      break;
     }
   }
 
   // Check for excessive line breaks (potential DoS)
+  // Increased threshold from 1000 to 2000 to allow longer formatted content
   const lineBreakCount = (content.match(/\n/g) || []).length;
-  if (lineBreakCount > 1000) {
+  if (lineBreakCount > 2000) {
     reasons.push('Excessive line breaks');
   }
 

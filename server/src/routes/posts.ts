@@ -133,14 +133,14 @@ router.get('/:idOrSlug/summary', optionalAuth, async (req: Request, res: Respons
     const cachedCommentCount = (post as any).ai_summary_comment_count || 0;
     const newCommentsCount = currentCommentCount - cachedCommentCount;
 
-    // Only generate summaries if there are 4 or more comments
-    if (currentCommentCount < 4) {
+    // Only generate summaries if there are 3 or more comments
+    if (currentCommentCount < 3) {
       return res.json({
         ...post,
         ai_summary: null,
         ai_summary_error: currentCommentCount === 0 
-          ? 'Not enough comments yet. AI summaries require at least 4 comments.' 
-          : `Not enough comments yet. Need ${4 - currentCommentCount} more comment${4 - currentCommentCount === 1 ? '' : 's'} for AI summary.`
+          ? 'Not enough comments yet. AI summaries require at least 3 comments.' 
+          : `Not enough comments yet. Need ${3 - currentCommentCount} more comment${3 - currentCommentCount === 1 ? '' : 's'} for AI summary.`
       });
     }
 
@@ -154,75 +154,42 @@ router.get('/:idOrSlug/summary', optionalAuth, async (req: Request, res: Respons
       new Date().getTime() - new Date(post.ai_summary_generated_at).getTime() > 24 * 60 * 60 * 1000 ||
       newCommentsCount >= 3;
 
-    if (shouldRegenerate) {
-      try {
-        // Prepare post data for AI summary
-        const postData: {
-          title: string;
-          body: string;
-          voteCount: number;
-          comments: Array<{
-            body: string;
-            author: string;
-            voteCount: number;
-            createdAt: Date;
-          }>;
-        } = {
-          title: post.title,
-          body: post.body || '',
-          voteCount: post.vote_count || 0,
-          comments: [] // Will fetch below
-        };
-        
-        // Fetch comments for the post
-        const supabase = getSupabaseClient();
-        const { data: commentsData } = await supabase
-          .from('comments')
-          .select('body, author_id, vote_count, created_at')
-          .eq('post_id', actualPostId)
-          .order('vote_count', { ascending: false });
-        
-        if (commentsData && commentsData.length > 0) {
-          postData.comments = commentsData.map((c: any) => ({
-            body: c.body,
-            author: c.author_id, // Using UUID for now
-            voteCount: c.vote_count || 0,
-            createdAt: new Date(c.created_at)
-          }));
-        };
-        summary = await aiService.generatePostSummary(postData);
-        
-        // Update the post with the new summary and current comment count
-        const { prisma } = await import('../lib/prisma');
-        try {
-          // Use raw query since Prisma client may not be regenerated yet
-          await prisma.$executeRaw`
-            UPDATE posts 
-            SET ai_summary = ${summary},
-                ai_summary_generated_at = NOW(),
-                ai_summary_comment_count = ${currentCommentCount}
-            WHERE id = ${actualPostId}
-          `;
-          console.log(`✅ AI summary cached for post ${actualPostId} (${currentCommentCount} comments)`);
-        } catch (updateError) {
-          console.error('Failed to cache AI summary:', updateError);
-        } finally {
-          await prisma.$disconnect();
-        }
-      } catch (error) {
-        console.error('Failed to generate AI summary:', error);
-        // Set error message but don't fail the request
-        summary = null;
-      }
+    // Return immediately with cached summary if available
+    // If summary needs regeneration, trigger async generation in background
+    if (shouldRegenerate && !summary) {
+      // Trigger async generation in background (fire and forget)
+      generateAISummaryAsync(actualPostId, post).catch(err => {
+        console.error('Background AI summary generation failed:', err);
+      });
+      
+      // Return immediately without waiting
+      return res.json({
+        ...post,
+        ai_summary: null,
+        ai_summary_error: 'AI Summary is being generated. Please refresh in a moment.'
+      });
+    } else if (shouldRegenerate && summary) {
+      // Summary exists but needs refresh - trigger async regeneration
+      generateAISummaryAsync(actualPostId, post).catch(err => {
+        console.error('Background AI summary regeneration failed:', err);
+      });
+      
+      // Return cached summary immediately while new one generates in background
+      console.log(`📦 Returning cached AI summary for post ${actualPostId} (regenerating in background)`);
+      return res.json({
+        ...post,
+        ai_summary: summary,
+        ai_summary_error: undefined
+      });
     } else {
+      // Using cached summary
       console.log(`📦 Using cached AI summary for post ${actualPostId} (age: ${Math.round((new Date().getTime() - new Date(post.ai_summary_generated_at!).getTime()) / 3600000)}h, new comments: ${newCommentsCount})`);
+      return res.json({
+        ...post,
+        ai_summary: summary || null,
+        ai_summary_error: undefined
+      });
     }
-
-    res.json({
-      ...post,
-      ai_summary: summary || null,
-      ai_summary_error: !summary && shouldRegenerate ? 'AI Summary Unavailable' : undefined
-    });
   } catch (error) {
     console.error('Error fetching post with summary:', error);
     res.status(500).json({ error: 'Failed to fetch post' });
@@ -270,17 +237,17 @@ router.get('/:idOrSlug', optionalAuth, async (req: Request, res: Response) => {
     // Determine error message if no summary
     let aiSummaryError: string | undefined = undefined;
     if (!postWithSummary?.ai_summary) {
-      if (currentCommentCount < 4) {
+      if (currentCommentCount < 3) {
         aiSummaryError = currentCommentCount === 0 
-          ? 'Not enough comments yet. AI summaries require at least 4 comments.' 
-          : `Not enough comments yet. Need ${4 - currentCommentCount} more comment${4 - currentCommentCount === 1 ? '' : 's'} for AI summary.`;
+          ? 'Not enough comments yet. AI summaries require at least 3 comments.' 
+          : `Not enough comments yet. Need ${3 - currentCommentCount} more comment${3 - currentCommentCount === 1 ? '' : 's'} for AI summary.`;
       } else {
         aiSummaryError = 'AI Summary Unavailable';
       }
     }
 
-    // Trigger async AI summary generation if it doesn't exist and has 4 or more comments (fire and forget)
-    if (!postWithSummary?.ai_summary && currentCommentCount >= 4) {
+    // Trigger async AI summary generation if it doesn't exist and has 3 or more comments (fire and forget)
+    if (!postWithSummary?.ai_summary && currentCommentCount >= 3) {
       // Don't await - let it generate in background
       generateAISummaryAsync(actualPostId, post).catch(err => {
         console.error('Background AI summary generation failed:', err);
@@ -309,8 +276,8 @@ async function generateAISummaryAsync(postId: number, post: any) {
     const aiService = getAIService();
     const currentCommentCount = post.comment_count || 0;
     
-    // Only generate summaries if there are 4 or more comments
-    if (currentCommentCount < 4) {
+    // Only generate summaries if there are 3 or more comments
+    if (currentCommentCount < 3) {
       return;
     }
     

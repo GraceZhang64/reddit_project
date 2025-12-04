@@ -42,42 +42,42 @@ async function main() {
 
   // Users
   const userProfiles = [
-    { name: 'alice', bio: 'Senior software engineer at Google. 8+ years building scalable systems.', karma: 12450 },
-    { name: 'bob', bio: 'Full-stack developer specializing in React and Node.js.', karma: 8920 },
-    { name: 'charlie', bio: 'Cybersecurity researcher and ethical hacker.', karma: 15670 },
-    { name: 'diana', bio: 'Data scientist with PhD in Machine Learning.', karma: 11200 },
-    { name: 'eve', bio: 'UI/UX designer with 6 years experience.', karma: 7890 },
-    { name: 'frank', bio: 'DevOps engineer. Kubernetes and cloud infrastructure expert.', karma: 9320 },
-    { name: 'grace', bio: 'Mobile developer. Flutter enthusiast.', karma: 11890 },
-    { name: 'henry', bio: 'Backend engineer specializing in Go and Rust.', karma: 14560 },
-    { name: 'ivy', bio: 'Frontend architect passionate about React and TypeScript.', karma: 9870 },
-    { name: 'jack', bio: 'Game developer. Unity and Unreal specialist.', karma: 6780 },
-    { name: 'kate', bio: 'Product manager with 10+ years experience.', karma: 13450 },
-    { name: 'liam', bio: 'Technical writer making complex systems accessible.', karma: 7230 },
-    { name: 'mia', bio: 'AI researcher working on neural networks.', karma: 10200 },
-    { name: 'noah', bio: 'Database administrator. PostgreSQL expert.', karma: 8760 },
-    { name: 'olivia', bio: 'System administrator managing infrastructure at scale.', karma: 9450 },
-    { name: 'paul', bio: 'Embedded systems engineer working with IoT.', karma: 8120 },
-    { name: 'quinn', bio: 'Cloud architect on AWS, GCP, and Azure.', karma: 13890 },
-    { name: 'ruby', bio: 'Security researcher and penetration tester.', karma: 11560 },
-    { name: 'sam', bio: 'Blockchain developer exploring DeFi.', karma: 9340 },
-    { name: 'tina', bio: 'QA engineer ensuring quality through automation.', karma: 7560 },
-    { name: 'eric', bio: 'Professional chef turned food blogger.', karma: 8920 },
-    { name: 'fiona', bio: 'Travel photographer. Nat Geo published.', karma: 7340 },
-    { name: 'george', bio: 'Book reviewer and literary critic.', karma: 6780 },
-    { name: 'hannah', bio: 'Film critic and movie enthusiast.', karma: 8230 },
-    { name: 'ian', bio: 'Music producer and audio engineer.', karma: 7560 },
-    { name: 'julia', bio: 'Personal finance advisor.', karma: 9450 },
-    { name: 'kevin', bio: 'Research scientist in quantum computing.', karma: 11200 },
-    { name: 'rachel', bio: 'Astrophysicist studying exoplanets.', karma: 10340 },
-    { name: 'steve', bio: 'Esports coach and competitive gamer.', karma: 7560 },
-    { name: 'dana', bio: 'Fitness trainer and nutritionist.', karma: 5670 },
+    { name: 'alice', bio: 'Senior software engineer at Google. 8+ years building scalable systems.' },
+    { name: 'bob', bio: 'Full-stack developer specializing in React and Node.js.' },
+    { name: 'charlie', bio: 'Cybersecurity researcher and ethical hacker.' },
+    { name: 'diana', bio: 'Data scientist with PhD in Machine Learning.' },
+    { name: 'eve', bio: 'UI/UX designer with 6 years experience.' },
+    { name: 'frank', bio: 'DevOps engineer. Kubernetes and cloud infrastructure expert.' },
+    { name: 'grace', bio: 'Mobile developer. Flutter enthusiast.' },
+    { name: 'henry', bio: 'Backend engineer specializing in Go and Rust.' },
+    { name: 'ivy', bio: 'Frontend architect passionate about React and TypeScript.' },
+    { name: 'jack', bio: 'Game developer. Unity and Unreal specialist.' },
+    { name: 'kate', bio: 'Product manager with 10+ years experience.' },
+    { name: 'liam', bio: 'Technical writer making complex systems accessible.' },
+    { name: 'mia', bio: 'AI researcher working on neural networks.' },
+    { name: 'noah', bio: 'Database administrator. PostgreSQL expert.' },
+    { name: 'olivia', bio: 'System administrator managing infrastructure at scale.' },
+    { name: 'paul', bio: 'Embedded systems engineer working with IoT.' },
+    { name: 'quinn', bio: 'Cloud architect on AWS, GCP, and Azure.' },
+    { name: 'ruby', bio: 'Security researcher and penetration tester.' },
+    { name: 'sam', bio: 'Blockchain developer exploring DeFi.' },
+    { name: 'tina', bio: 'QA engineer ensuring quality through automation.' },
+    { name: 'eric', bio: 'Professional chef turned food blogger.' },
+    { name: 'fiona', bio: 'Travel photographer. Nat Geo published.' },
+    { name: 'george', bio: 'Book reviewer and literary critic.' },
+    { name: 'hannah', bio: 'Film critic and movie enthusiast.' },
+    { name: 'ian', bio: 'Music producer and audio engineer.' },
+    { name: 'julia', bio: 'Personal finance advisor.' },
+    { name: 'kevin', bio: 'Research scientist in quantum computing.' },
+    { name: 'rachel', bio: 'Astrophysicist studying exoplanets.' },
+    { name: 'steve', bio: 'Esports coach and competitive gamer.' },
+    { name: 'dana', bio: 'Fitness trainer and nutritionist.' },
   ];
 
   const users = [];
   for (const profile of userProfiles) {
     const user = await prisma.user.create({
-      data: { username: profile.name, email: `${profile.name}@example.com`, bio: profile.bio, karma: profile.karma },
+      data: { username: profile.name, email: `${profile.name}@example.com`, bio: profile.bio },
     });
     users.push(user);
   }
@@ -3005,6 +3005,7 @@ Where do you stand on Right to Repair?`,
   ];
 
   const posts = [];
+  const postsWithData: Array<{ post: any; title: string; community: string }> = [];
   for (const postData of qualityPosts) {
     const community = communities.find(c => c.name === postData.community);
     if (community) {
@@ -3020,11 +3021,229 @@ Where do you stand on Right to Repair?`,
         },
       });
       posts.push(post);
+      postsWithData.push({ post, title: postData.title, community: postData.community });
     }
   }
   console.log(`✅ Created ${posts.length} high-quality posts`);
 
-  // High-quality comments (5+ per post)
+  // Post-specific comments mapped by title
+  const postSpecificComments: { [key: string]: string[] } = {
+    // PROGRAMMING POSTS
+    'The Art of Writing Clean Code: Lessons from 10 Years of Software Development': [
+      "This is exactly what I needed to read. I've been struggling with code reviews at my company - we tend to nitpick style issues while missing actual bugs. The distinction between blocking issues and preferences is crucial. We're implementing a 'MUST/SHOULD/COULD' labeling system for review comments now.",
+      "The point about naming being the hardest problem resonates deeply. I spent 30 minutes yesterday debating whether to call a function `validateUser` or `checkUserValidity`. Ended up with `ensureUserIsValid` which I think captures the intent better.",
+      "I'd add that pair programming can replace some code reviews entirely. When two people write the code together, you get real-time review and knowledge sharing. We've reduced our review backlog significantly since adopting this.",
+      "The 'comments should explain why, not what' principle changed how I write code. I used to comment every function, now I only comment when there's actual business logic or a non-obvious decision.",
+      "The refactoring continuously tip is gold. I used to wait for 'refactoring sprints' but by then the technical debt was overwhelming. Small refactors during feature work keeps the codebase healthy.",
+      "Deleting dead code is so underrated. I cleaned out 2000 lines of unused code last month and the codebase is so much easier to navigate. Dead code is worse than no code.",
+    ],
+    'Understanding Big O Notation: A Practical Guide for Everyday Coding': [
+      "Great breakdown of Big O! One thing I'd add: in practice, constants matter. An O(n) algorithm with a large constant can be slower than O(n log n) for realistic input sizes. Always benchmark with real data.",
+      "The real-world application example is perfect. I had a similar experience optimizing a search feature from O(n²) to O(n log n). The difference was going from 5 seconds to 50ms on large datasets.",
+      "The 'when NOT to obsess' section is important. I see junior devs over-optimizing simple loops that run once. Premature optimization is still the root of all evil.",
+      "Binary search is such a powerful tool. I use it all the time for range queries and finding insertion points. The logarithmic complexity makes it perfect for large sorted datasets.",
+      "The HashMap lookup example is spot on. I always tell new devs: if you're doing nested loops, there's probably a HashMap solution that's faster.",
+    ],
+    'Git Workflow Strategies: From Solo Projects to Enterprise Teams': [
+      "The Git workflow section is gold. We switched from GitFlow to trunk-based development last year and our deployment frequency went from monthly to daily. The key was investing in feature flags first.",
+      "Feature branches vs trunk-based is such a hot debate. We use short-lived feature branches (max 2 days) and it's been a game changer. Less merge conflicts, faster feedback.",
+      "The rebase vs merge discussion never ends. I prefer rebase for cleaner history, but I know teams that swear by merge commits for traceability. Both work if you're consistent.",
+      "Git hooks for pre-commit checks saved our team. We run linters, tests, and type checks before any commit. Catches issues before they hit CI.",
+    ],
+    'Debugging Like a Detective: Systematic Approaches to Finding Bugs': [
+      "Debugging like a detective is such an apt metaphor. I keep a 'debugging journal' where I write down my hypotheses before testing them. It prevents me from going in circles and helps me learn from each bug.",
+      "The rubber duck method saved my sanity. I have a literal rubber duck on my desk. My colleagues thought I was crazy until they tried it themselves. Now we have a whole flock.",
+      "One addition to the debugging section: `git bisect` is incredibly powerful for finding regression bugs. It binary searches through commits to find exactly when a bug was introduced.",
+      "Systematic debugging beats random guessing every time. I follow a strict process: reproduce, isolate, hypothesize, test, fix. It's slower at first but much faster overall.",
+    ],
+    // GAMING POSTS
+    'The Evolution of Open World Games: From GTA III to Elden Ring': [
+      "The evolution from GTA III to modern open worlds is fascinating. I remember being blown away that you could just... go anywhere. Now I take it for granted. Elden Ring reminded me of that wonder by hiding so much off the beaten path.",
+      "Elden Ring's approach to open world design is brilliant. No map markers, no quest logs telling you exactly where to go. You discover things organically. It's how open worlds should be.",
+      "The comparison to older games really highlights how far we've come. GTA III felt massive at the time, but by today's standards it's tiny. Yet it felt more alive somehow.",
+      "The open world fatigue is real. I bounced off Assassin's Creed Valhalla after 20 hours because every icon on the map felt like a chore. Then I played Outer Wilds with zero icons and it was magical.",
+    ],
+    'Building a Gaming PC in 2024: Complete Guide for Every Budget': [
+      "Your budget build recommendations are spot on. I built almost exactly this for my nephew and he's running everything at 1080p without issues. The 6650 XT is criminally underrated for the price.",
+      "The used GPU market is wild right now. Got a 3070 for $300 last month. If you're patient, you can build a high-end rig for mid-range prices.",
+      "One thing I'd add: don't cheap out on the PSU. A bad PSU can kill your entire system. Spend the extra $30-50 for a quality unit with proper protections.",
+      "Building my first PC was terrifying but so rewarding. Following a guide step-by-step made it manageable. Now I've built 5 systems and it's like Legos for adults.",
+    ],
+    'Why Indie Games Are Having a Renaissance: My Top 10 Hidden Gems': [
+      "Hollow Knight for $15 gave me more enjoyment than most $60 games. The amount of content is absurd. I'm at 80 hours and still finding new areas. Silksong can't come soon enough.",
+      "Great point about indie games taking risks AAA can't. When you have a $200M budget, you can't experiment. Indies can fail and try again. That's where innovation happens.",
+      "The hidden gems list is solid. I'd add Outer Wilds to that list - it's a masterpiece that could only exist as an indie game. No AAA studio would greenlight that concept.",
+      "Indie games prove that gameplay > graphics. Some of my favorite games have pixel art or simple 3D. It's about the experience, not the fidelity.",
+    ],
+    'The Psychology of Game Design: Why Some Games Are Impossible to Put Down': [
+      "The psychology section explains why I have 200 hours in Vampire Survivors. It's pure dopamine manipulation and I'm not even mad about it. At least it only cost $5.",
+      "As a game developer, the section on ethical design really resonates. We had heated debates about adding a battle pass to our game. Ultimately decided against it because it would change the player experience negatively.",
+      "The variable reward schedule is so powerful. Loot boxes, random drops, critical hits - they all tap into the same psychological mechanism. It's why slot machines are addictive.",
+      "Flow state in games is real. When you hit that perfect difficulty curve where you're challenged but not frustrated, time just disappears. That's peak game design.",
+    ],
+    // COOKING POSTS
+    'The Science of Perfect Pasta: Why Italians Are Right About Everything': [
+      "The pasta water tip changed my cooking. I used to drain it all and wonder why my sauce never stuck. Now I save a cup and my carbonara is actually creamy instead of clumpy.",
+      "The cacio e pepe technique took me 10 attempts to get right. The key is really having the pasta water at the right temperature - too hot and the cheese clumps, too cold and it doesn't emulsify.",
+      "Al dente is everything. I used to overcook pasta because I thought it was 'safer'. Now I time it exactly and the texture difference is night and day.",
+      "The salt in pasta water rule is so important. I use a full tablespoon per liter. It should taste like the sea. Makes such a difference in the final dish.",
+    ],
+    'Knife Skills 101: The Foundation of Efficient Cooking': [
+      "The knife skills section should be required reading. I took a knife skills class and it transformed my prep time. What used to take 30 minutes now takes 10, and my cuts are actually uniform.",
+      "Learning proper knife technique changed everything. I used to be scared of sharp knives, but a sharp knife is actually safer - it cuts where you want it to, not where it slips.",
+      "The claw grip felt awkward at first but now it's second nature. Haven't cut myself in years since adopting it. Safety and speed in one technique.",
+      "Investing in a good chef's knife was the best kitchen purchase I've made. A $150 knife that lasts 20 years is cheaper than replacing $30 knives every year.",
+    ],
+    'Mastering the Maillard Reaction: The Science of Delicious Browning': [
+      "I've been making bread for 5 years and still learned something from the Maillard reaction post. The baking soda tip for browning is genius - I'm trying it on my next batch of roasted vegetables.",
+      "Understanding the Maillard reaction made me a better cook. I used to flip steaks constantly, now I let them develop that proper crust. The difference in flavor is incredible.",
+      "The temperature control section is key. Too hot and you burn, too low and you steam. Finding that sweet spot where Maillard happens but burning doesn't is the skill.",
+    ],
+    'Fermentation at Home: From Sauerkraut to Sourdough': [
+      "Fermentation is addictive once you start. I began with sauerkraut, now I have kimchi, kombucha, and three sourdough starters going. My fridge is a science experiment.",
+      "Sourdough starter maintenance is a commitment but so worth it. The flavor difference between sourdough and commercial yeast bread is massive. Plus it's alive - feels like a pet.",
+      "The health benefits of fermented foods are real. My digestion improved dramatically after adding fermented foods to my diet. Plus they taste amazing.",
+    ],
+    // SCIENCE POSTS
+    'CRISPR Explained: How Gene Editing Is Changing Medicine': [
+      "The CRISPR explanation is the clearest I've read. The 'molecular scissors with GPS' analogy is perfect. I'm going to use that when explaining it to my students.",
+      "I work on CAR-T therapy research. CRISPR has accelerated our work tremendously. The ability to precisely edit T cells to target cancer is revolutionary.",
+      "The ethical considerations are crucial. CRISPR is powerful but we need to be careful. Germline editing especially - once you change the gene pool, there's no going back.",
+    ],
+    'The James Webb Space Telescope: What We\'ve Learned in Two Years': [
+      "JWST findings are mind-blowing. The early universe galaxies being more mature than expected could mean we need to revise the standard model. Exciting times for cosmology.",
+      "The image quality from JWST is stunning. Seeing those first deep field images gave me chills. We're literally looking back in time billions of years.",
+      "The exoplanet atmosphere analysis is fascinating. Finding water, carbon dioxide, and other molecules in atmospheres light-years away is incredible. We're getting closer to finding signs of life.",
+    ],
+    'Quantum Computing: Separating Hype from Reality': [
+      "As someone working in quantum computing, I appreciate the realistic timeline. The hype cycle is frustrating - we're making real progress, but it's decades away from breaking encryption.",
+      "The quantum computing section on error correction is key. People don't realize how fragile qubits are. We need maybe 1000 physical qubits per logical qubit with current technology.",
+      "Quantum supremacy was a milestone but it's not practical yet. We solved a problem that would take classical computers forever, but it's not a useful problem. Still, progress is progress.",
+    ],
+    'Climate Science 101: Understanding the Data Behind Global Warming': [
+      "The climate science post is exactly what we need more of - data-driven, clear, and not alarmist. The evidence is overwhelming when you actually look at it objectively.",
+      "The ice core data is what convinced me climate change was real. 800,000 years of atmospheric history in frozen bubbles is incredible. And current CO2 levels are literally off the chart.",
+      "The correlation between CO2 and temperature over geological time is undeniable. We're doing an uncontrolled experiment on the only planet we have.",
+    ],
+    // FITNESS POSTS
+    'Progressive Overload: The Only Principle You Need for Strength Gains': [
+      "Progressive overload is the one principle I wish I understood earlier. I spent years 'working out' without a plan. Once I started tracking and progressively adding weight, gains came fast.",
+      "The linear progression approach works so well for beginners. Adding 5lbs per session seems small but compounds over months. I went from 135lb bench to 225lb in 6 months following this.",
+      "Deload weeks are crucial. I used to think more was always better. Now I deload every 4-6 weeks and I'm stronger than ever. Recovery is part of the process.",
+    ],
+    'Nutrition for Muscle Building: Protein, Calories, and Timing': [
+      "Your protein recommendations align with the research I've seen. So many people think they need 2g per pound. The science says 0.7-1g is optimal. More is just expensive pee.",
+      "Meal timing matters less than people think. I used to stress about eating protein within 30 minutes of workouts. Now I just hit my daily total and it works fine.",
+      "The calorie surplus for bulking is real. I was stuck at the same weight for months until I actually tracked calories and realized I wasn't eating enough. Added 500 calories and started growing.",
+    ],
+    'Recovery: The Missing Piece in Most Training Programs': [
+      "The recovery section is underrated. I was overtraining for years, wondering why I wasn't progressing. Added deload weeks and suddenly started getting stronger again.",
+      "The sleep section hit hard. I was training 6 days a week but only sleeping 5-6 hours. Cut back to 4 days and prioritized 8 hours of sleep. Stronger than ever.",
+      "Active recovery is a game changer. I used to do nothing on rest days. Now I do light walks or yoga and I feel better and recover faster.",
+    ],
+    'Home Gym Setup: Building an Effective Training Space on Any Budget': [
+      "Built my home gym during COVID for about $2000. Best investment I've ever made. No commute, no waiting, train whenever I want. Paid for itself in 2 years of saved gym fees.",
+      "The home gym flooring tip about horse stall mats is gold. $40 for a 4x6 mat that's basically indestructible. Way better than expensive 'gym flooring'.",
+      "You don't need everything at once. I started with a barbell, plates, and a squat rack. Added equipment over time. Now I have everything I need and more.",
+    ],
+    // MOVIES POSTS
+    'Why Practical Effects Still Matter in the Age of CGI': [
+      "The practical effects argument is spot on. I rewatched The Thing recently and it holds up better than most CGI from 10 years ago. There's a weight to practical effects that CGI struggles to replicate.",
+      "The point about practical effects aging better is so true. Original Star Wars vs. the special editions is proof. The practical stuff still looks real; the added CGI looks dated.",
+      "Mad Max: Fury Road is the perfect example. 80% practical effects, minimal CGI. It looks incredible and will age beautifully. Compare that to CGI-heavy films from the same era.",
+    ],
+    'The Art of the Long Take: Films That Master Unbroken Shots': [
+      "The long take analysis is fascinating. I never realized how much choreography goes into those shots. The car scene in Children of Men must have taken weeks to coordinate.",
+      "1917's one-shot gimmick worked perfectly for the story. The continuous take made you feel like you were right there with the characters. Technical achievement matched narrative purpose.",
+      "Long takes are so difficult to pull off. One mistake and you start over. The planning and rehearsal required is immense. When done well, it's pure cinema magic.",
+    ],
+    'Understanding Film Scores: How Music Shapes Your Emotional Experience': [
+      "As someone who studied film scoring, this breakdown is excellent. The Inception BRAAAM became a cliché precisely because it worked so well at creating a sense of importance and scale.",
+      "Film scores are the unsung heroes of cinema. Try watching a horror movie with the sound off - it's not scary at all. The music does most of the emotional heavy lifting.",
+      "John Williams' leitmotifs are masterful. You hear those two notes and instantly think of Jaws. That's the power of a well-crafted score - it becomes part of the cultural lexicon.",
+    ],
+    'The Rise of A24: How an Indie Studio Changed Hollywood': [
+      "A24 changed my relationship with movies. Before them, I mostly watched blockbusters. Now I seek out smaller, more ambitious films. Everything Everywhere All at Once deserved every Oscar.",
+      "The A24 aesthetic has become so recognizable that I can often identify their films from trailers alone. Whether that's good or bad is debatable.",
+      "A24 proves that audiences want more than just superhero movies. Mid-budget films with unique voices can still find success. They just need proper marketing and distribution.",
+    ],
+    // MUSIC POSTS
+    'Why Vinyl Is Making a Comeback: More Than Just Nostalgia': [
+      "The vinyl ritual is exactly why I got into it. Streaming is convenient, but there's something about choosing an album and committing to it. It changed how I listen to music.",
+      "Vinyl absolutely sounds different - whether 'better' is subjective. I notice it most in the bass and the overall warmth. Digital is technically more accurate, but analog feels more musical.",
+      "The physicality of vinyl is underrated. Holding the album art, reading the liner notes, flipping the record - it's an experience that streaming can't replicate.",
+    ],
+    'How Streaming Changed Music: The Good, Bad, and Complicated': [
+      "The streaming compensation issue is so frustrating. I use Bandcamp for artists I want to support directly. The difference in what artists receive is night and day.",
+      "The point about the album being dead is sad but true. I miss the days of listening to an album front to back as a complete artistic statement. Playlists have fragmented the experience.",
+      "Streaming's discovery algorithms are a double-edged sword. They help you find new music but also create echo chambers. I have to actively seek out different genres to break out.",
+    ],
+    'Music Theory Basics: Understanding Why Songs Work': [
+      "Music theory opened up a whole new way of listening for me. Once you understand why a chord progression works, you appreciate the craft behind songs you've heard a thousand times.",
+      "The music theory breakdown is the clearest I've seen. The I-V-vi-IV progression really is everywhere once you start listening for it. Pop music is more formulaic than people realize.",
+      "Learning basic music theory made me a better musician. I went from just playing songs to understanding why they work. It's like learning grammar after speaking a language your whole life.",
+    ],
+    'Building a Home Recording Studio: From Bedroom to Professional Sound': [
+      "Built my home studio for under $500 and recorded an EP that got playlist placement. The gear matters way less than people think. Skills and creativity beat expensive equipment.",
+      "Acoustic treatment is more important than expensive mics. I treated my room with DIY panels and the difference was night and day. Good room > expensive gear.",
+      "The DAW you use doesn't matter. I started with GarageBand, moved to Logic, tried Pro Tools. They all do the same thing. Pick one and learn it deeply.",
+    ],
+    // BOOKS POSTS
+    'How to Read More: Practical Strategies That Actually Work': [
+      "The advice to quit books without guilt was liberating. I used to force myself to finish everything. Now I'm reading more because I only read what I enjoy.",
+      "The 10-page rule is perfect. Most days I end up reading much more, but on tough days, 10 pages is still progress. Small consistent habits beat occasional marathons.",
+      "Audiobooks changed my reading life. I 'read' 30+ books a year now, mostly during commutes and workouts. They absolutely count as reading.",
+    ],
+    'The Art of Rereading: Why Returning to Books Matters': [
+      "Rereading is underrated. I've read Dune four times and notice different things each time. The book hasn't changed, but I have, and it reveals new layers.",
+      "Some books reveal themselves on the second read. The first time you're following the plot, the second time you see the themes and craft. It's a completely different experience.",
+    ],
+    'Building a Personal Library: Curation Over Collection': [
+      "The curation approach transformed my library. I donated 200 books last year and my remaining collection feels more meaningful. Quality over quantity applies to books too.",
+      "A personal library should reflect who you are, not just what you've read. I keep books that changed me, not just books I finished. Much more meaningful collection.",
+    ],
+    'Genre Fiction Deserves Respect: A Defense of "Popular" Literature': [
+      "Genre fiction absolutely deserves respect. Some of the most innovative writing is happening in sci-fi and fantasy. Literary fiction can be just as formulaic as any genre.",
+      "The defense of genre fiction needed to be said. Ursula K. Le Guin wrote some of the most profound literature of the 20th century, and it was 'just' science fiction.",
+      "The literary vs genre distinction is arbitrary. Good writing is good writing regardless of genre. Some of my favorite books are genre fiction that tackles deep themes.",
+    ],
+    // TRAVEL POSTS
+    'Slow Travel: Why Spending More Time in Fewer Places Changed Everything': [
+      "Slow travel changed everything for me. I spent a month in Oaxaca instead of rushing through Mexico. I learned basic Spanish, made local friends, and actually understood the culture.",
+      "The difference between slow travel and regular travel is night and day. Instead of checking off destinations, you actually experience places. Much more rewarding.",
+    ],
+    'Solo Travel: Overcoming Fear and Finding Freedom': [
+      "Solo travel was terrifying the first time and now it's my preference. The freedom is addictive. You meet more people traveling alone than you ever would with a companion.",
+      "The tip about eating at the bar when solo is game-changing. You're more likely to chat with the bartender and other diners. Some of my best travel memories started that way.",
+    ],
+    'Budget Travel Secrets: How I Travel Full-Time on $30/Day': [
+      "The budget breakdown is realistic. I traveled Southeast Asia for 6 months on less than $1000/month including flights. House sitting and cooking saved me thousands.",
+      "I lived the $30/day budget for two years. It's absolutely possible in the right destinations. Southeast Asia and Central America are incredibly affordable.",
+    ],
+    'Sustainable Travel: Reducing Your Impact Without Ruining Your Trip': [
+      "Sustainable travel is something I struggle with. I love travel but hate the environmental impact. The slow travel approach helps - fewer flights, longer stays.",
+      "The overtourism point is crucial. I visited Barcelona and it felt like a theme park. Then I went to lesser-known parts of Spain and had authentic experiences with locals.",
+    ],
+    // TECHNOLOGY POSTS
+    'The State of AI in 2024: What Actually Works and What\'s Hype': [
+      "The AI reality check is needed. I work in ML and the gap between headlines and actual capabilities is enormous. Current AI is impressive but nowhere near general intelligence.",
+      "The AI section on what actually works vs. hype is spot on. I use ChatGPT daily for writing and coding assistance. It's a tool, not magic - and it hallucinates constantly.",
+    ],
+    'Privacy in 2024: Practical Steps to Protect Yourself Online': [
+      "Privacy is a losing battle but worth fighting. I've implemented most of these suggestions. The password manager alone is life-changing - no more password reuse.",
+      "Privacy recommendations are solid. I switched to Firefox and DuckDuckGo years ago. The convenience loss is minimal and the tracking reduction is significant.",
+    ],
+    'Mechanical Keyboards: Why People Spend $300 on Typing': [
+      "Mechanical keyboards seem crazy until you try one. I got a cheap one to see what the fuss was about. Now I have three and can't go back to membrane.",
+      "The mechanical keyboard rabbit hole is real. Started with a $50 Keychron. Now I'm lubing switches at midnight. It's a hobby that happens to be useful.",
+    ],
+    'Right to Repair: Why You Should Care About Fixing Your Own Stuff': [
+      "Right to Repair affects everyone. My dishwasher died and the manufacturer wanted $400 for a $20 part. Found a third-party supplier and fixed it myself for $30.",
+      "The environmental impact of right to repair is huge. We throw away so many devices that could be fixed. Repair extends device life and reduces e-waste significantly.",
+    ],
+  };
+
+  // Fallback to community-based comments if post-specific ones don't exist
   const commentTemplates: { [key: string]: string[] } = {
     programming: [
       "This is exactly what I needed to read. I've been struggling with code reviews at my company - we tend to nitpick style issues while missing actual bugs. The distinction between blocking issues and preferences is crucial. We're implementing a 'MUST/SHOULD/COULD' labeling system for review comments now.",
@@ -3120,9 +3339,19 @@ Where do you stand on Right to Repair?`,
   };
 
   let commentCount = 0;
-  for (const post of posts) {
-    const community = communities.find(c => c.id === post.communityId);
-    const templates = commentTemplates[community?.name || 'programming'] || commentTemplates.programming;
+  const allComments = [];
+  for (const postWithData of postsWithData) {
+    const post = postWithData.post;
+    const postTitle = postWithData.title;
+    
+    // Try to get post-specific comments first, fall back to community-based
+    let templates = postSpecificComments[postTitle];
+    if (!templates || templates.length === 0) {
+      const community = communities.find(c => c.id === post.communityId);
+      templates = commentTemplates[community?.name || 'programming'] || commentTemplates.programming;
+    }
+    
+    if (!templates || templates.length === 0) continue;
     
     // 5-8 comments per post
     const numComments = 5 + Math.floor(Math.random() * 4);
@@ -3136,7 +3365,7 @@ Where do you stand on Right to Repair?`,
       usedTemplates.add(templateIndex);
       
       const author = randomElement(users);
-      await prisma.comment.create({
+      const comment = await prisma.comment.create({
         data: {
           body: templates[templateIndex],
           authorId: author.id,
@@ -3144,12 +3373,13 @@ Where do you stand on Right to Repair?`,
           createdAt: randomDate(25),
         },
       });
+      allComments.push(comment);
       commentCount++;
     }
   }
   console.log(`✅ Created ${commentCount} high-quality comments`);
 
-  // Votes
+  // Votes for posts
   let voteCount = 0;
   for (const post of posts) {
     const voterCount = 10 + Math.floor(Math.random() * 20);
@@ -3163,25 +3393,55 @@ Where do you stand on Right to Repair?`,
       } catch (e) { /* duplicate */ }
     }
   }
-  console.log(`✅ Created ${voteCount} votes`);
+  console.log(`✅ Created ${voteCount} votes for posts`);
 
-  // Update member counts
+  // Votes for comments
+  let commentVoteCount = 0;
+  for (const comment of allComments) {
+    const voterCount = 3 + Math.floor(Math.random() * 12);
+    for (let i = 0; i < voterCount; i++) {
+      const user = randomElement(users);
+      try {
+        await prisma.vote.create({
+          data: { userId: user.id, target_type: 'comment', target_id: comment.id, value: Math.random() > 0.15 ? 1 : -1 },
+        });
+        commentVoteCount++;
+      } catch (e) { /* duplicate */ }
+    }
+  }
+  console.log(`✅ Created ${commentVoteCount} votes for comments`);
+
+  // Create community memberships and update member counts
   for (const community of communities) {
     const [postAuthors, commentAuthors] = await Promise.all([
       prisma.post.groupBy({ by: ['authorId'], where: { communityId: community.id } }),
       prisma.$queryRaw<{ authorId: string }[]>`SELECT DISTINCT author_id as "authorId" FROM comments WHERE post_id IN (SELECT id FROM posts WHERE community_id = ${community.id})`,
     ]);
     const uniqueMembers = new Set([...postAuthors.map(p => p.authorId), ...commentAuthors.map(c => c.authorId)]);
+    
+    // Create CommunityMembership records for all members
+    for (const userId of uniqueMembers) {
+      try {
+        await prisma.communityMembership.create({
+          data: {
+            userId: userId,
+            communityId: community.id,
+            joinedAt: randomDate(60),
+          },
+        });
+      } catch (e) { /* duplicate membership */ }
+    }
+    
     await prisma.$executeRaw`UPDATE communities SET member_count = ${uniqueMembers.size} WHERE id = ${community.id}`;
   }
-  console.log('✅ Updated community member counts');
+  console.log('✅ Created community memberships and updated member counts');
 
   console.log('\n🎉 High-quality seed completed!');
   console.log(`   👥 Users: ${users.length}`);
   console.log(`   🏘️  Communities: ${communities.length}`);
   console.log(`   📝 Posts: ${posts.length} (4 per community)`);
   console.log(`   💬 Comments: ${commentCount} (5+ per post)`);
-  console.log(`   👍 Votes: ${voteCount}`);
+  console.log(`   👍 Votes: ${voteCount} (posts) + ${commentVoteCount} (comments)`);
 }
 
 main()

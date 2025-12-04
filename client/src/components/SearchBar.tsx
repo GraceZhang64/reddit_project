@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './SearchBar.css';
 
 interface SearchBarProps {
@@ -18,6 +18,12 @@ function SearchBar({
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const onSearchRef = useRef(onSearch);
+
+  // Keep the ref updated with the latest onSearch callback
+  useEffect(() => {
+    onSearchRef.current = onSearch;
+  }, [onSearch]);
 
   // Debounced search - only trigger when there's actual content
   useEffect(() => {
@@ -29,17 +35,12 @@ function SearchBar({
 
     setIsSearching(true);
     const timer = setTimeout(() => {
-      onSearch(query.trim());
+      onSearchRef.current(query.trim());
       setIsSearching(false);
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [query, debounceMs, onSearch]);
-
-  const handleClear = () => {
-    setQuery('');
-    onSearch('');
-  };
+  }, [query, debounceMs]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,16 +59,6 @@ function SearchBar({
           className="search-input"
         />
         {isSearching && <span className="search-loading">⏳</span>}
-        {query && !isSearching && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="search-clear"
-            aria-label="Clear search"
-          >
-            ✕
-          </button>
-        )}
       </form>
       {showResultCount && query && (
         <div className="search-result-count">

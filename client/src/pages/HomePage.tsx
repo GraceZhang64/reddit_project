@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
 import SearchBar from '../components/SearchBar';
@@ -144,12 +144,28 @@ function HomePage() {
     }
   };
 
+  const voteTimeoutsRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
+  const pendingVotesRef = useRef<Map<number, { value: number; oldVote: number }>>(new Map());
+  const isVotingRef = useRef<Map<number, boolean>>(new Map());
+
   const handleVote = useCallback(async (postId: number, value: number) => {
+    if (isVotingRef.current.get(postId)) return;
+    
+    // Clear any pending vote timeout for this post
+    const existingTimeout = voteTimeoutsRef.current.get(postId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      voteTimeoutsRef.current.delete(postId);
+    }
+
     const oldVote = userVotes[postId] || 0;
     const newVote = oldVote === value ? 0 : value;
     const voteDiff = newVote - oldVote;
     
-    // Optimistic update
+    // Store pending vote
+    pendingVotesRef.current.set(postId, { value: newVote, oldVote });
+    
+    // Optimistic update immediately
     setUserVotes({ ...userVotes, [postId]: newVote });
     setPosts(
       posts.map((p) =>
@@ -157,26 +173,42 @@ function HomePage() {
       )
     );
 
+    // Debounce the API call - only execute after 200ms of no new clicks
+    const timeout = setTimeout(async () => {
+      const pendingVote = pendingVotesRef.current.get(postId);
+      if (!pendingVote) return;
+      
+      isVotingRef.current.set(postId, true);
+      const { value: finalVote, oldVote: originalVote } = pendingVote;
+      pendingVotesRef.current.delete(postId);
+      voteTimeoutsRef.current.delete(postId);
+
     try {
       // Use new backend vote endpoint
-      const result = await votesApi.votePost(postId, newVote as 1 | -1 | 0);
-      setUserVotes({ ...userVotes, [postId]: result.user_vote ?? 0 });
-      setPosts(
-        posts.map((p) =>
+        const result = await votesApi.votePost(postId, finalVote as 1 | -1 | 0);
+        setUserVotes(prev => ({ ...prev, [postId]: result.user_vote ?? 0 }));
+        setPosts(prevPosts =>
+          prevPosts.map((p) =>
           p.id === postId ? { ...p, voteCount: result.vote_count } : p
         )
       );
     } catch (err: any) {
       console.error('Error voting:', err);
       // Revert on error
-      setUserVotes({ ...userVotes, [postId]: oldVote });
-      setPosts(
-        posts.map((p) =>
-          p.id === postId ? { ...p, voteCount: (p.voteCount || 0) - voteDiff } : p
+        const revertDiff = finalVote - originalVote;
+        setUserVotes(prev => ({ ...prev, [postId]: originalVote }));
+        setPosts(prevPosts =>
+          prevPosts.map((p) =>
+            p.id === postId ? { ...p, voteCount: (p.voteCount || 0) - revertDiff } : p
         )
       );
       alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
+      } finally {
+        isVotingRef.current.delete(postId);
     }
+    }, 200);
+    
+    voteTimeoutsRef.current.set(postId, timeout);
   }, [posts, userVotes]);
 
   return (

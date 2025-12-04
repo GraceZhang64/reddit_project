@@ -264,10 +264,27 @@ router.get('/post/:postId', authenticateToken, async (req: Request, res: Respons
       }
     }
 
-    // Sort top-level comments by creation date (newest first)
-    topLevelComments.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    // Sort top-level comments by vote count (highest first), then by creation date (newest first) as tiebreaker
+    topLevelComments.sort((a, b) => {
+      const voteDiff = (b.vote_count || 0) - (a.vote_count || 0);
+      if (voteDiff !== 0) return voteDiff;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    
+    // Also sort replies by vote count
+    const sortCommentsRecursive = (comments: any[]) => {
+      for (const comment of comments) {
+        if (comment.replies && comment.replies.length > 0) {
+          comment.replies.sort((a: any, b: any) => {
+            const voteDiff = (b.vote_count || 0) - (a.vote_count || 0);
+            if (voteDiff !== 0) return voteDiff;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+          sortCommentsRecursive(comment.replies);
+        }
+      }
+    };
+    sortCommentsRecursive(topLevelComments);
 
     const result = { comments: topLevelComments };
 

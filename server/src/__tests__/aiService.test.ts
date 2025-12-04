@@ -76,7 +76,7 @@ describe('AIService', () => {
         expect.objectContaining({
           model: 'gpt-4o-mini',
           temperature: 0.7,
-          max_tokens: 300,
+          max_tokens: 500,
         })
       );
     });

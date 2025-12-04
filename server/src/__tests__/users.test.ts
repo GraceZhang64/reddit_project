@@ -53,7 +53,6 @@ describe('Users API', () => {
         username: 'testuser',
         avatar_url: 'https://example.com/avatar.png',
         bio: 'Test bio',
-        karma: 100,
         createdAt: new Date(),
         _count: {
           posts: 5,
@@ -68,7 +67,6 @@ describe('Users API', () => {
         .expect(200);
 
       expect(response.body.username).toBe('testuser');
-      expect(response.body.karma).toBe(100);
       expect(response.body._count.posts).toBe(5);
       expect(response.body).not.toHaveProperty('email');
     });

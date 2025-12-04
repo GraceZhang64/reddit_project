@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VoteButtons from '../components/VoteButtons';
 import CommentItem from '../components/CommentItem';
@@ -66,6 +66,10 @@ function PostPage() {
           summaryError: apiData.ai_summary_error || undefined,
         };
         
+        // Extract user vote from API response
+        const userVoteValue = apiData.user_vote ?? apiData.userVote ?? 0;
+        setUserVote(userVoteValue);
+        
         // Recursive mapper for comments (handles nested replies)
         const mapApiComment = (c: any): Comment => ({
           id: c.id,
@@ -100,30 +104,126 @@ function PostPage() {
     fetchPost();
   }, [id]);
 
+  // Poll for AI summary updates when it's being generated
+  useEffect(() => {
+    if (!post || !id) return;
+    
+    // Only poll if summary is missing and error indicates it's being generated
+    // Also poll if summary is missing but there are enough comments (3+) for generation
+    const shouldPoll = !post.summary && 
+                       post.summaryError && 
+                       (post.summaryError.includes('being generated') || 
+                        post.summaryError.includes('AI Summary Unavailable'));
+    
+    if (!shouldPoll) return;
 
-  const handleVote = async (value: number) => {
-    if (!post) return;
+    let pollCount = 0;
+    const maxPolls = 40; // Stop after 2 minutes (40 * 3 seconds)
+
+    const pollInterval = setInterval(async () => {
+      pollCount++;
+      
+      // Stop polling after max attempts
+      if (pollCount > maxPolls) {
+        clearInterval(pollInterval);
+        return;
+      }
+
+      try {
+        const data = await postsApi.getWithSummaryByIdOrSlug(id);
+        const apiData = data as any;
+        
+        if (apiData.ai_summary) {
+          // Summary is ready, update the post
+          setPost(prevPost => prevPost ? {
+            ...prevPost,
+            summary: apiData.ai_summary,
+            summaryError: undefined
+          } : null);
+          // Stop polling once we have the summary
+          clearInterval(pollInterval);
+        } else if (apiData.ai_summary_error && 
+                   !apiData.ai_summary_error.includes('being generated') &&
+                   !apiData.ai_summary_error.includes('AI Summary Unavailable')) {
+          // Error indicates summary can't be generated (e.g., not enough comments)
+          // Stop polling
+          clearInterval(pollInterval);
+        }
+      } catch (err) {
+        console.error('Error polling for AI summary:', err);
+        // Continue polling on network errors, but stop after max attempts
+        if (pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+        }
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [post, id]);
+
+  // Cleanup vote timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (voteTimeoutRef.current) {
+        clearTimeout(voteTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const voteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingVoteRef = useRef<{ value: number; oldVote: number } | null>(null);
+  const isVotingRef = useRef(false);
+
+  const handleVote = useCallback(async (value: number) => {
+    if (!post || isVotingRef.current) return;
+    
+    // Clear any pending vote timeout
+    if (voteTimeoutRef.current) {
+      clearTimeout(voteTimeoutRef.current);
+      voteTimeoutRef.current = null;
+    }
+
     const oldVote = userVote;
     const newVote = oldVote === value ? 0 : value;
     const voteDiff = newVote - oldVote;
     
-    // Optimistic update
+    // Store pending vote
+    pendingVoteRef.current = { value: newVote, oldVote };
+    
+    // Optimistic update immediately
     setUserVote(newVote);
     setPost({ ...post, voteCount: (post.voteCount || 0) + voteDiff });
 
-    try {
-      // Use new backend vote endpoint
-      const result = await votesApi.votePost(post.id, newVote as 1 | -1 | 0);
-      setUserVote(result.user_vote ?? 0);
-      setPost({ ...post, voteCount: result.vote_count });
-    } catch (err: any) {
-      console.error('Error voting:', err);
-      // Revert on error
-      setUserVote(oldVote);
-      setPost({ ...post, voteCount: (post.voteCount || 0) - voteDiff });
-      alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
-    }
-  };
+    // Debounce the API call - only execute after 200ms of no new clicks
+    voteTimeoutRef.current = setTimeout(async () => {
+      if (!pendingVoteRef.current || !post) return;
+      
+      isVotingRef.current = true;
+      const { value: finalVote, oldVote: originalVote } = pendingVoteRef.current;
+      pendingVoteRef.current = null;
+
+      try {
+        // Use new backend vote endpoint
+        const result = await votesApi.votePost(post.id, finalVote as 1 | -1 | 0);
+        setUserVote(result.user_vote ?? 0);
+        setPost(prevPost => prevPost ? { ...prevPost, voteCount: result.vote_count } : null);
+      } catch (err: any) {
+        console.error('Error voting:', err);
+        // Revert on error
+        const revertDiff = finalVote - originalVote;
+        setUserVote(originalVote);
+        setPost(prevPost => prevPost ? { 
+          ...prevPost, 
+          voteCount: (prevPost.voteCount || 0) - revertDiff 
+        } : null);
+        alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
+      } finally {
+        isVotingRef.current = false;
+      }
+    }, 200);
+  }, [post, userVote]);
 
   const handleReply = async (parentCommentId: number, body: string) => {
     if (!post) return;
