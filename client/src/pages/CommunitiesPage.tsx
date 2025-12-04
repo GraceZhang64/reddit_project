@@ -177,7 +177,7 @@ function CommunitiesPage() {
           className={`tab-button ${activeTab === 'joined' ? 'active' : ''}`}
           onClick={() => handleTabChange('joined')}
         >
-          Joined ({joinedSlugs.length})
+          Joined
         </button>
       </div>
       
