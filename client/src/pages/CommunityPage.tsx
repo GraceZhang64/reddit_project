@@ -19,32 +19,33 @@ function CommunityPage() {
   const [error, setError] = useState<string | null>(null);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [sortOption, setSortOption] = useState<SortOption>('hot');
-  const [isJoined, setIsJoined] = useState(false);
   const [isJoinLoading, setIsJoinLoading] = useState(false);
+
+  // Initialize isJoined from localStorage
+  const [isJoined, setIsJoined] = useState(() => {
+    if (!slug) return false;
+    const stored = localStorage.getItem('joinedCommunities');
+    if (stored) {
+      const joined = JSON.parse(stored);
+      return joined.includes(slug);
+    }
+    return false;
+  });
 
   useEffect(() => {
     if (slug) {
       fetchCommunityData();
       fetchAllCommunities();
-      checkMembershipStatus();
-    }
-  }, [slug]);
-
-  const checkMembershipStatus = async () => {
-    if (!slug) return;
-    try {
-      const { isMember } = await communitiesApi.checkMembership(slug);
-      setIsJoined(isMember);
-    } catch (err) {
-      console.error('Error checking membership:', err);
-      // Fall back to localStorage if API fails
+      // Update isJoined when slug changes
       const stored = localStorage.getItem('joinedCommunities');
       if (stored) {
         const joined = JSON.parse(stored);
         setIsJoined(joined.includes(slug));
+      } else {
+        setIsJoined(false);
       }
     }
-  };
+  }, [slug]);
 
   const fetchAllCommunities = async () => {
     try {

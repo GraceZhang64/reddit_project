@@ -324,12 +324,11 @@ router.delete('/:slug', authenticateToken, async (req: Request, res: Response) =
 
 /**
  * POST /api/communities/:slug/join
- * Join a community (creates membership and increments member count)
+ * Join a community (increments member count)
  */
 router.post('/:slug/join', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
-    const userId = req.user!.id;
 
     // Find community
     const community = await prisma.community.findUnique({
@@ -340,72 +339,20 @@ router.post('/:slug/join', authenticateToken, async (req: Request, res: Response
       return res.status(404).json({ error: 'Community not found' });
     }
 
-    try {
-      // Check if already a member
-      const existingMembership = await prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId,
-            communityId: community.id
-          }
-        }
-      });
+    // Increment member count
+    const updatedCommunity = await prisma.community.update({
+      where: { id: community.id },
+      data: {
+        memberCount: { increment: 1 }
+      },
+      select: { memberCount: true }
+    });
 
-      if (existingMembership) {
-        return res.status(400).json({ error: 'Already a member of this community' });
-      }
-
-      // Create membership and increment member count in a transaction
-      await prisma.$transaction([
-        prisma.communityMembership.create({
-          data: {
-            userId,
-            communityId: community.id
-          }
-        }),
-        prisma.community.update({
-          where: { id: community.id },
-          data: {
-            memberCount: { increment: 1 }
-          }
-        })
-      ]);
-
-      // Get updated community with new member count
-      const updatedCommunity = await prisma.community.findUnique({
-        where: { slug },
-        select: {
-          id: true,
-          memberCount: true
-        }
-      });
-
-      res.json({
-        success: true,
-        message: 'Successfully joined community',
-        memberCount: updatedCommunity?.memberCount || community.memberCount + 1
-      });
-    } catch (dbError: any) {
-      // If table doesn't exist, just update the member count
-      console.error('Membership table error, falling back to count update:', dbError.message);
-      await prisma.community.update({
-        where: { id: community.id },
-        data: {
-          memberCount: { increment: 1 }
-        }
-      });
-      
-      const updatedCommunity = await prisma.community.findUnique({
-        where: { slug },
-        select: { memberCount: true }
-      });
-      
-      res.json({
-        success: true,
-        message: 'Successfully joined community',
-        memberCount: updatedCommunity?.memberCount || community.memberCount + 1
-      });
-    }
+    res.json({
+      success: true,
+      message: 'Successfully joined community',
+      memberCount: updatedCommunity.memberCount
+    });
 
   } catch (error) {
     console.error('Error joining community:', error);
@@ -415,12 +362,11 @@ router.post('/:slug/join', authenticateToken, async (req: Request, res: Response
 
 /**
  * POST /api/communities/:slug/leave
- * Leave a community (removes membership and decrements member count)
+ * Leave a community (decrements member count)
  */
 router.post('/:slug/leave', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
-    const userId = req.user!.id;
 
     // Find community
     const community = await prisma.community.findUnique({
@@ -431,143 +377,24 @@ router.post('/:slug/leave', authenticateToken, async (req: Request, res: Respons
       return res.status(404).json({ error: 'Community not found' });
     }
 
-    try {
-      // Check if a member
-      const existingMembership = await prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId,
-            communityId: community.id
-          }
-        }
-      });
+    // Decrement member count (minimum 0)
+    const updatedCommunity = await prisma.community.update({
+      where: { id: community.id },
+      data: {
+        memberCount: community.memberCount > 0 ? { decrement: 1 } : { set: 0 }
+      },
+      select: { memberCount: true }
+    });
 
-      if (!existingMembership) {
-        // Not in membership table, just decrement the count
-        await prisma.community.update({
-          where: { id: community.id },
-          data: {
-            memberCount: { decrement: 1 }
-          }
-        });
-        
-        const updatedCommunity = await prisma.community.findUnique({
-          where: { slug },
-          select: { memberCount: true }
-        });
-        
-        return res.json({
-          success: true,
-          message: 'Successfully left community',
-          memberCount: Math.max(0, updatedCommunity?.memberCount || community.memberCount - 1)
-        });
-      }
-
-      // Delete membership and decrement member count in a transaction
-      await prisma.$transaction([
-        prisma.communityMembership.delete({
-          where: {
-            userId_communityId: {
-              userId,
-              communityId: community.id
-            }
-          }
-        }),
-        prisma.community.update({
-          where: { id: community.id },
-          data: {
-            memberCount: { decrement: 1 }
-          }
-        })
-      ]);
-
-      // Get updated community with new member count
-      const updatedCommunity = await prisma.community.findUnique({
-        where: { slug },
-        select: {
-          id: true,
-          memberCount: true
-        }
-      });
-
-      res.json({
-        success: true,
-        message: 'Successfully left community',
-        memberCount: Math.max(0, updatedCommunity?.memberCount || community.memberCount - 1)
-      });
-    } catch (dbError: any) {
-      // If table doesn't exist, just update the member count
-      console.error('Membership table error, falling back to count update:', dbError.message);
-      await prisma.community.update({
-        where: { id: community.id },
-        data: {
-          memberCount: { decrement: 1 }
-        }
-      });
-      
-      const updatedCommunity = await prisma.community.findUnique({
-        where: { slug },
-        select: { memberCount: true }
-      });
-      
-      res.json({
-        success: true,
-        message: 'Successfully left community',
-        memberCount: Math.max(0, updatedCommunity?.memberCount || community.memberCount - 1)
-      });
-    }
+    res.json({
+      success: true,
+      message: 'Successfully left community',
+      memberCount: updatedCommunity.memberCount
+    });
 
   } catch (error) {
     console.error('Error leaving community:', error);
     res.status(500).json({ error: 'Failed to leave community' });
-  }
-});
-
-/**
- * GET /api/communities/:slug/membership
- * Check if current user is a member of the community
- */
-router.get('/:slug/membership', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const { slug } = req.params;
-    const userId = req.user!.id;
-
-    // Find community
-    const community = await prisma.community.findUnique({
-      where: { slug }
-    });
-
-    if (!community) {
-      return res.status(404).json({ error: 'Community not found' });
-    }
-
-    // Check membership using raw SQL to handle case where table might not exist
-    try {
-      const membership = await prisma.communityMembership.findUnique({
-        where: {
-          userId_communityId: {
-            userId,
-            communityId: community.id
-          }
-        }
-      });
-
-      res.json({
-        isMember: !!membership,
-        joinedAt: membership?.joinedAt || null
-      });
-    } catch (dbError: any) {
-      // Table might not exist yet, return not a member
-      console.error('Membership check failed (table may not exist):', dbError.message);
-      res.json({
-        isMember: false,
-        joinedAt: null
-      });
-    }
-
-  } catch (error) {
-    console.error('Error checking membership:', error);
-    res.status(500).json({ error: 'Failed to check membership' });
   }
 });
 
