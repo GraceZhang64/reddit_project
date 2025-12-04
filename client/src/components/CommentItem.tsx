@@ -120,7 +120,6 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, disabled = fal
               >
                 Reply
               </button>
-              <button className="comment-action-btn">Report</button>
             </div>
 
             {isReplying && (

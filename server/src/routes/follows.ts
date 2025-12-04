@@ -288,34 +288,57 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
       prisma.post.count({ where: { authorId: { in: followedUserIds } } }),
     ]);
 
-    // Get vote counts and comment counts
-    const postsWithCounts = await Promise.all(
-      posts.map(async (post) => {
-        const [voteCount, commentCount, userVote] = await Promise.all([
-          prisma.vote.aggregate({
-            where: { target_type: 'post', target_id: post.id },
-            _sum: { value: true },
-          }),
-          prisma.comment.count({ where: { postId: post.id } }),
-          // Get current user's vote if authenticated
-          prisma.vote.findFirst({
-            where: {
-              userId,
-              target_type: 'post',
-              target_id: post.id,
-            },
-            select: { value: true },
-          }),
-        ]);
+    // Batch fetch vote counts, user votes, and comment counts for all posts
+    const postIds = posts.map(p => p.id);
+    
+    const [voteCounts, userVotes, commentCounts] = await Promise.all([
+      // Batch vote counts
+      postIds.length > 0 ? prisma.vote.groupBy({
+        by: ['target_id'],
+        where: {
+          target_type: 'post',
+          target_id: { in: postIds }
+        },
+        _sum: {
+          value: true
+        }
+      }) : Promise.resolve([]),
+      // Batch user votes
+      userId && postIds.length > 0 ? prisma.vote.findMany({
+        where: {
+          userId,
+          target_type: 'post',
+          target_id: { in: postIds }
+        },
+        select: {
+          target_id: true,
+          value: true
+        }
+      }) : Promise.resolve([]),
+      // Batch comment counts
+      postIds.length > 0 ? prisma.comment.groupBy({
+        by: ['postId'],
+        where: {
+          postId: { in: postIds }
+        },
+        _count: {
+          id: true
+        }
+      }) : Promise.resolve([])
+    ]);
 
-        return {
-          ...post,
-          voteCount: voteCount._sum.value || 0,
-          commentCount: commentCount,
-          userVote: userVote?.value || null,
-        };
-      })
-    );
+    // Create maps for quick lookup
+    const voteCountMap = new Map(voteCounts.map(v => [v.target_id, v._sum.value || 0]));
+    const userVoteMap = new Map(userVotes.map(v => [v.target_id, v.value]));
+    const commentCountMap = new Map(commentCounts.map(c => [c.postId, c._count.id]));
+
+    // Enrich posts with vote counts, comment counts, and user votes
+    const postsWithCounts = posts.map(post => ({
+      ...post,
+      voteCount: voteCountMap.get(post.id) || 0,
+      commentCount: commentCountMap.get(post.id) || 0,
+      userVote: userVoteMap.get(post.id) ?? null,
+    }));
 
     res.json({
       posts: postsWithCounts,

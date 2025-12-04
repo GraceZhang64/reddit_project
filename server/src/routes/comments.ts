@@ -432,8 +432,9 @@ router.post('/', authenticateToken, validateCommentCreation, async (req: Request
     });
 
     // Update community member count if this is user's first interaction
+    // Exclude the current comment from the check since it was just created
     const { updateCommunityMemberCount } = await import('../utils/communityMemberCount');
-    await updateCommunityMemberCount(post.communityId, authorId);
+    await updateCommunityMemberCount(post.communityId, authorId, undefined, comment.id);
 
     // Create mention notifications
     const { createMentionNotifications } = await import('../utils/mentions');

@@ -92,53 +92,46 @@ function PostContent({ post, isFullView = false }: PostContentProps) {
     );
   }
 
-  // Link post
-  if (postType === 'link' && post.link_url) {
+  // Poll post - show description if available
+  if (postType === 'poll') {
+    if (!post.body) return null;
+
+    // For preview, truncate before processing markdown
+    const content = isFullView ? post.body : (
+      post.body.length > 300 ? `${post.body.substring(0, 300)}...` : post.body
+    );
+
     return (
-      <div className="post-link-content">
-        <a 
-          href={post.link_url} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="link-preview"
-        >
-          <div className="link-icon">🔗</div>
-          <div className="link-info">
-            <div className="link-url">{post.link_url}</div>
-            <div className="link-domain">{new URL(post.link_url).hostname}</div>
-          </div>
-          <div className="link-arrow">→</div>
-        </a>
-        {post.body && (
-          <div className="link-description">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[[rehypeSanitize, markdownSchema]]}
-              components={{
-                p: ({ children, ...props }) => (
-                  <p {...props}>
-                    {React.Children.map(children, (child) =>
-                      typeof child === 'string' ? formatMentions(child) : child
-                    )}
-                  </p>
-                ),
-                span: ({ children, ...props }) => (
-                  <span {...props}>
-                    {React.Children.map(children, (child) =>
-                      typeof child === 'string' ? formatMentions(child) : child
-                    )}
-                  </span>
-                )
-              }}
-            >
-              {post.body}
-            </ReactMarkdown>
-          </div>
-        )}
+      <div className="post-text-content">
+        <div className={isFullView ? "post-markdown-full" : "post-markdown-preview"}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[[rehypeSanitize, markdownSchema]]}
+            components={{
+              // Custom component to handle mentions within markdown
+              p: ({ children, ...props }) => (
+                <p {...props}>
+                  {React.Children.map(children, (child) =>
+                    typeof child === 'string' ? formatMentions(child) : child
+                  )}
+                </p>
+              ),
+              // Handle mentions in other elements too
+              span: ({ children, ...props }) => (
+                <span {...props}>
+                  {React.Children.map(children, (child) =>
+                    typeof child === 'string' ? formatMentions(child) : child
+                  )}
+                </span>
+              )
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
       </div>
     );
   }
-
 
   return null;
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import PostFeed from '../components/PostFeed';
 import SearchBar from '../components/SearchBar';
@@ -27,6 +27,11 @@ const mapApiPost = (apiPost: any): Post => ({
   aiSummary: apiPost.ai_summary || undefined,
 });
 
+// Extract user vote from API post
+const getUserVoteFromPost = (apiPost: any): number => {
+  return apiPost.user_vote ?? apiPost.userVote ?? 0;
+};
+
 function HomePage() {
   const [feed, setFeed] = useState<FeedType>('all');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -52,18 +57,11 @@ function HomePage() {
         const fetchedPosts = response.posts || [];
         setPosts(fetchedPosts.map(mapApiPost));
 
-        // Fetch user votes for each post
+        // Extract user votes from API response (already included, no need for separate calls)
         const votes: Record<number, number> = {};
-        await Promise.all(
-          fetchedPosts.map(async (p: any) => {
-            try {
-              const res = await votesApi.getUserVote('post', p.id);
-              votes[p.id] = res.userVote ?? 0;
-            } catch {
-              votes[p.id] = 0;
-            }
-          })
-        );
+        fetchedPosts.forEach((p: any) => {
+          votes[p.id] = getUserVoteFromPost(p);
+        });
         setUserVotes(votes);
       } catch (err: any) {
         setPosts([]);
@@ -90,8 +88,9 @@ function HomePage() {
     setSortOption(newSort);
   };
 
-  // Sort posts based on selected option
-  const sortedPosts = [...posts].sort((a, b) => {
+  // Sort posts based on selected option (memoized to prevent unnecessary re-sorting)
+  const sortedPosts = useMemo(() => {
+    return [...posts].sort((a, b) => {
     switch (sortOption) {
       case 'hot':
         // Sort by vote count descending (most upvotes first)
@@ -112,6 +111,7 @@ function HomePage() {
         return 0;
     }
   });
+  }, [posts, sortOption]);
 
   // Keyword search handler using API
   const handleSearch = async (query: string) => {
@@ -142,7 +142,7 @@ function HomePage() {
     }
   };
 
-  const handleVote = async (postId: number, value: number) => {
+  const handleVote = useCallback(async (postId: number, value: number) => {
     const oldVote = userVotes[postId] || 0;
     const newVote = oldVote === value ? 0 : value;
     const voteDiff = newVote - oldVote;
@@ -175,7 +175,7 @@ function HomePage() {
       );
       alert(err.response?.data?.error || 'Failed to vote. Please make sure you are logged in.');
     }
-  };
+  }, [posts, userVotes]);
 
   return (
     <div className="home-page">

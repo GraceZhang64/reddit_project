@@ -132,6 +132,14 @@ router.get('/:idOrSlug/summary', optionalAuth, async (req: Request, res: Respons
     const cachedCommentCount = (post as any).ai_summary_comment_count || 0;
     const newCommentsCount = currentCommentCount - cachedCommentCount;
 
+    // Only generate summaries if there are 4 or more comments
+    if (currentCommentCount < 4) {
+      return res.json({
+        ...post,
+        ai_summary: null
+      });
+    }
+
     // Smart cache invalidation: Regenerate if:
     // 1. No summary exists
     // 2. Summary is older than 24 hours
@@ -252,8 +260,8 @@ router.get('/:idOrSlug', optionalAuth, async (req: Request, res: Response) => {
       select: { ai_summary: true }
     });
 
-    // Trigger async AI summary generation if it doesn't exist (fire and forget)
-    if (!postWithSummary?.ai_summary) {
+    // Trigger async AI summary generation if it doesn't exist and has 4 or more comments (fire and forget)
+    if (!postWithSummary?.ai_summary && (post.comment_count || 0) >= 4) {
       // Don't await - let it generate in background
       generateAISummaryAsync(actualPostId, post).catch(err => {
         console.error('Background AI summary generation failed:', err);
@@ -280,6 +288,11 @@ async function generateAISummaryAsync(postId: number, post: any) {
   try {
     const aiService = getAIService();
     const currentCommentCount = post.comment_count || 0;
+    
+    // Only generate summaries if there are 4 or more comments
+    if (currentCommentCount < 4) {
+      return;
+    }
     
     // Prepare post data for AI summary
     const postData: {
@@ -344,7 +357,6 @@ router.post('/', authenticateToken, postCreationLimiter.middleware(), validatePo
       title, 
       body, 
       post_type = 'text',
-      link_url, 
       community_id,
       poll_options,
       poll_expires_hours
@@ -356,29 +368,20 @@ router.post('/', authenticateToken, postCreationLimiter.middleware(), validatePo
     }
 
     // Validate post type
-    const validTypes = ['text', 'link', 'poll'];
+    const validTypes = ['text', 'poll'];
     if (!validTypes.includes(post_type)) {
-      return res.status(400).json({ error: 'Invalid post_type. Allowed types: text, link, poll' });
+      return res.status(400).json({ error: 'Invalid post_type. Allowed types: text, poll' });
     }
 
     // Type-specific validation
-    if (post_type === 'link' && !link_url) {
-      return res.status(400).json({ error: 'link_url is required for link posts' });
-    }
     if (post_type === 'poll' && (!poll_options || poll_options.length < 2)) {
       return res.status(400).json({ error: 'At least 2 poll options are required for poll posts' });
-    }
-
-    // URL validation
-    if (link_url && !isValidUrl(link_url)) {
-      return res.status(400).json({ error: 'Invalid link_url format' });
     }
 
     const post = await postService.createPost({
       title,
       body: body || null,
       post_type,
-      link_url: link_url || null,
       community_id: parseInt(community_id),
       author_id: req.user!.id,
       poll_options: poll_options || null,

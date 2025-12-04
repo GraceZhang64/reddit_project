@@ -83,20 +83,57 @@ export const postService = {
       prisma.post.count(),
     ]);
 
-    // Get vote counts and user votes for all posts
-    const postsWithVotes = await Promise.all(
-      posts.map(async (post) => {
-        const voteCount = await getVoteCount('post', post.id);
-        const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
-        
-        return {
-          ...post,
-          vote_count: voteCount,
-          user_vote: userVote,
-          comment_count: await prisma.comment.count({ where: { postId: post.id } }),
-        };
-      })
-    );
+    // Batch fetch vote counts, user votes, and comment counts for all posts
+    const postIds = posts.map(p => p.id);
+    
+    const [voteCounts, userVotes, commentCounts] = await Promise.all([
+      // Batch vote counts
+      postIds.length > 0 ? prisma.vote.groupBy({
+        by: ['target_id'],
+        where: {
+          target_type: 'post',
+          target_id: { in: postIds }
+        },
+        _sum: {
+          value: true
+        }
+      }) : Promise.resolve([]),
+      // Batch user votes
+      userId && postIds.length > 0 ? prisma.vote.findMany({
+        where: {
+          userId,
+          target_type: 'post',
+          target_id: { in: postIds }
+        },
+        select: {
+          target_id: true,
+          value: true
+        }
+      }) : Promise.resolve([]),
+      // Batch comment counts
+      postIds.length > 0 ? prisma.comment.groupBy({
+        by: ['postId'],
+        where: {
+          postId: { in: postIds }
+        },
+        _count: {
+          id: true
+        }
+      }) : Promise.resolve([])
+    ]);
+
+    // Create maps for quick lookup
+    const voteCountMap = new Map(voteCounts.map(v => [v.target_id, v._sum.value || 0]));
+    const userVoteMap = new Map(userVotes.map(v => [v.target_id, v.value]));
+    const commentCountMap = new Map(commentCounts.map(c => [c.postId, c._count.id]));
+
+    // Enrich posts with vote_count, user_vote, and comment_count
+    const postsWithVotes = posts.map(post => ({
+      ...post,
+      vote_count: voteCountMap.get(post.id) || 0,
+      user_vote: userVoteMap.get(post.id) ?? null,
+      comment_count: commentCountMap.get(post.id) || 0,
+    }));
 
     return {
       posts: postsWithVotes,
@@ -143,23 +180,64 @@ export const postService = {
       },
     });
 
+    // Batch fetch vote counts, user votes, and comment counts for all posts
+    const postIds = posts.map(p => p.id);
+    
+    const [voteCounts, userVotes, commentCounts] = await Promise.all([
+      // Batch vote counts
+      postIds.length > 0 ? prisma.vote.groupBy({
+        by: ['target_id'],
+        where: {
+          target_type: 'post',
+          target_id: { in: postIds }
+        },
+        _sum: {
+          value: true
+        }
+      }) : Promise.resolve([]),
+      // Batch user votes
+      userId && postIds.length > 0 ? prisma.vote.findMany({
+        where: {
+          userId,
+          target_type: 'post',
+          target_id: { in: postIds }
+        },
+        select: {
+          target_id: true,
+          value: true
+        }
+      }) : Promise.resolve([]),
+      // Batch comment counts
+      postIds.length > 0 ? prisma.comment.groupBy({
+        by: ['postId'],
+        where: {
+          postId: { in: postIds }
+        },
+        _count: {
+          id: true
+        }
+      }) : Promise.resolve([])
+    ]);
+
+    // Create maps for quick lookup
+    const voteCountMap = new Map(voteCounts.map(v => [v.target_id, v._sum.value || 0]));
+    const userVoteMap = new Map(userVotes.map(v => [v.target_id, v.value]));
+    const commentCountMap = new Map(commentCounts.map(c => [c.postId, c._count.id]));
+
     // Calculate hot score (votes + comments * 0.5) and sort
-    const postsWithScores = await Promise.all(
-      posts.map(async (post) => {
-        const voteCount = await getVoteCount('post', post.id);
-        const commentCount = await prisma.comment.count({ where: { postId: post.id } });
-        const hotScore = voteCount + commentCount * 0.5;
-        const userVote = userId ? await getUserVote(userId, 'post', post.id) : null;
-        
-        return {
-          ...post,
-          vote_count: voteCount,
-          comment_count: commentCount,
-          hot_score: hotScore,
-          user_vote: userVote,
-        };
-      })
-    );
+    const postsWithScores = posts.map(post => {
+      const voteCount = voteCountMap.get(post.id) || 0;
+      const commentCount = commentCountMap.get(post.id) || 0;
+      const hotScore = voteCount + commentCount * 0.5;
+      
+      return {
+        ...post,
+        vote_count: voteCount,
+        comment_count: commentCount,
+        hot_score: hotScore,
+        user_vote: userVoteMap.get(post.id) ?? null,
+      };
+    });
 
     postsWithScores.sort((a, b) => b.hot_score - a.hot_score);
 
@@ -587,8 +665,9 @@ export const postService = {
     }
 
     // Update community member count if this is user's first interaction
+    // Exclude the current post from the check since it was just created
     const { updateCommunityMemberCount } = await import('../utils/communityMemberCount');
-    await updateCommunityMemberCount(data.community_id, data.author_id);
+    await updateCommunityMemberCount(data.community_id, data.author_id, post.id);
 
     // Create mention notifications for post body
     if (data.body) {

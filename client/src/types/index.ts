@@ -7,7 +7,7 @@ export interface Community {
   createdAt: string;
 }
 
-export type PostType = 'text' | 'link' | 'poll';
+export type PostType = 'text' | 'poll';
 
 export interface Post {
   id: number;

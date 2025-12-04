@@ -12,7 +12,6 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,7 +37,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
 
     try {
       // Call real API through auth service
-      await authService.login({ username, password }, rememberMe);
+      await authService.login({ username, password }, false);
 
       // Success
       if (onSuccess) {
@@ -95,20 +94,6 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
             />
           </div>
 
-          <div className="form-options">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                disabled={isLoading}
-              />
-              <span>Remember me</span>
-            </label>
-            <button type="button" className="link-button forgot-password">
-              Forgot password?
-            </button>
-          </div>
 
           <button 
             type="submit" 

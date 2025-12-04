@@ -12,13 +12,12 @@ interface CreatePostFormProps {
   defaultCommunityId?: number;
 }
 
-export type PostType = 'text' | 'link' | 'poll';
+export type PostType = 'text' | 'poll';
 
 export interface PostData {
   title: string;
   body?: string;
   post_type: PostType;
-  link_url?: string;
   poll_options?: string[];
   poll_expires_hours?: number;
   community_id: number;
@@ -28,7 +27,6 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
   const [postType, setPostType] = useState<PostType>('text');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [linkUrl, setLinkUrl] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollExpires, setPollExpires] = useState<string>('72');
   const [communityId, setCommunityId] = useState(defaultCommunityId || communities[0]?.id || 1);
@@ -47,9 +45,6 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
     // Add type-specific fields
     if (postType === 'text') {
       postData.body = body.trim();
-    } else if (postType === 'link') {
-      postData.link_url = linkUrl.trim();
-      postData.body = body.trim(); // Optional description
     } else if (postType === 'poll') {
       const validOptions = pollOptions.filter(opt => opt.trim());
       if (validOptions.length < 2) {
@@ -66,7 +61,6 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
     // Reset form
     setTitle('');
     setBody('');
-    setLinkUrl('');
     setPollOptions(['', '']);
     setPollExpires('72');
   };
@@ -101,13 +95,6 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
           onClick={() => setPostType('text')}
         >
           📝 Text
-        </button>
-        <button
-          type="button"
-          className={`tab ${postType === 'link' ? 'active' : ''}`}
-          onClick={() => setPostType('link')}
-        >
-          🔗 Link
         </button>
         <button
           type="button"
@@ -201,35 +188,6 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
             </>
           )}
         </div>
-      )}
-
-      {postType === 'link' && (
-        <>
-          <div className="form-group">
-            <label htmlFor="link-url">URL *</label>
-            <input
-              id="link-url"
-              type="url"
-              value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)}
-              placeholder="https://example.com"
-              required
-              className="post-input"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="post-body">Description (optional)</label>
-            <textarea
-              id="post-body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Add a description..."
-              rows={5}
-              maxLength={10000}
-              className="post-body-textarea"
-            />
-          </div>
-        </>
       )}
 
       {postType === 'poll' && (

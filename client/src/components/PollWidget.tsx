@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Poll } from '../types';
-import axios from 'axios';
+import { api } from '../services/api';
+import { authService } from '../services/auth';
 import './PollWidget.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
 
 interface PollWidgetProps {
   postId: number;
@@ -21,20 +20,17 @@ function PollWidget({ postId }: PollWidgetProps) {
 
   const fetchPoll = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/polls/post/${postId}`);
+      const response = await api.get(`/polls/post/${postId}`);
       setPoll(response.data);
 
       // Fetch user's vote if authenticated
-      const token = localStorage.getItem('token');
+      const token = authService.getToken();
       if (token && response.data.id) {
         try {
-          const voteResponse = await axios.get(
-            `${API_BASE}/polls/${response.data.id}/user-vote`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          const voteResponse = await api.get(`/polls/${response.data.id}/user-vote`);
           setSelectedOption(voteResponse.data.voted_option_id);
         } catch (err) {
-          // User hasn't voted yet or not authenticated
+          // User hasn't voted yet or not authenticated - ignore silently
         }
       }
     } catch (error) {
@@ -45,7 +41,7 @@ function PollWidget({ postId }: PollWidgetProps) {
   };
 
   const handleVote = async (optionId: number) => {
-    const token = localStorage.getItem('token');
+    const token = authService.getToken();
     if (!token) {
       alert('Please log in to vote');
       return;
@@ -53,11 +49,7 @@ function PollWidget({ postId }: PollWidgetProps) {
 
     setVoting(true);
     try {
-      await axios.post(
-        `${API_BASE}/polls/vote`,
-        { option_id: optionId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('/polls/vote', { option_id: optionId });
 
       // Update local state
       if (selectedOption === optionId) {
@@ -70,7 +62,11 @@ function PollWidget({ postId }: PollWidgetProps) {
       await fetchPoll();
     } catch (error: any) {
       console.error('Error voting:', error);
-      alert(error.response?.data?.error || 'Failed to vote');
+      if (error.response?.status === 401) {
+        alert('Please log in to vote');
+      } else {
+        alert(error.response?.data?.error || 'Failed to vote');
+      }
     } finally {
       setVoting(false);
     }

@@ -47,7 +47,7 @@ axiosInstance.interceptors.response.use(
 );
 
 // Use configured axios instance for all API calls
-const api = axiosInstance;
+export const api = axiosInstance;
 
 export interface Post {
   id: number;

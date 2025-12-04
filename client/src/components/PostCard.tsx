@@ -4,6 +4,7 @@ import { Post } from '../types';
 import VoteButtons from './VoteButtons';
 import PostContent from './PostContent';
 import AISummaryContent from './AISummaryContent';
+import PollWidget from './PollWidget';
 import { followsApi, savedPostsApi } from '../services/api';
 import './PostCard.css';
 
@@ -15,7 +16,7 @@ interface PostCardProps {
   onSaveToggle?: (postId: number, saved: boolean) => void;
 }
 
-function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveToggle }: PostCardProps) {
+const PostCard = React.memo(function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveToggle }: PostCardProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(initialSaved);
@@ -139,7 +140,6 @@ function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveTogg
         </div>
         <Link to={`/p/${post.slug || post.id}`} className="post-title-link">
           <h2 className="post-title">
-          {post.post_type === 'link' && '🔗 '}
           {post.post_type === 'poll' && '📊 '}
             {post.title}
           </h2>
@@ -147,6 +147,9 @@ function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveTogg
         
         {/* Post Content based on type */}
         <PostContent post={post} isFullView={false} />
+        
+        {/* Poll Widget for poll posts */}
+        {post.post_type === 'poll' && <PollWidget postId={post.id} />}
         
         {/* AI Summary Box - Only show if available */}
         {post.aiSummary && (
@@ -177,6 +180,6 @@ function PostCard({ post, onVote, userVote = 0, initialSaved = false, onSaveTogg
       </div>
     </div>
   );
-}
+});
 
 export default PostCard;

@@ -89,7 +89,7 @@ function App() {
               <div className="nav-links">
                 <Link to="/" className="nav-link">Home</Link>
                 <Link to="/communities" className="nav-link">Communities</Link>
-                <Link to="/saved" className="nav-link">📑 Saved</Link>
+                <Link to="/saved" className="nav-link">Saved</Link>
                 <Link to="/search" className="nav-link">Search</Link>
               </div>
               <div className="nav-actions">

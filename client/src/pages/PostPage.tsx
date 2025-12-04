@@ -244,7 +244,6 @@ function PostPage() {
                 <span className="time">{new Date(post.createdAt).toLocaleDateString()}</span>
               </div>
               <h1 className="post-title">
-                {post.post_type === 'link' && '🔗 '}
                 {post.post_type === 'poll' && '📊 '}
                 {post.title}
               </h1>
