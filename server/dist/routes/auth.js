@@ -4,12 +4,13 @@ const express_1 = require("express");
 const prisma_1 = require("../lib/prisma");
 const supabase_1 = require("../config/supabase");
 const auth_1 = require("../middleware/auth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
 /**
  * POST /api/auth/register
  * Register a new user with Supabase Auth and create user profile
  */
-router.post('/register', async (req, res) => {
+router.post('/register', rateLimiter_1.loginLimiter.middleware(), async (req, res) => {
     try {
         const { email, password, username } = req.body;
         // Validation
@@ -136,7 +137,7 @@ router.post('/register', async (req, res) => {
  * POST /api/auth/login
  * Login with email and password
  */
-router.post('/login', async (req, res) => {
+router.post('/login', rateLimiter_1.loginLimiter.middleware(), async (req, res) => {
     try {
         const { username, password } = req.body;
         if (!username || !password) {

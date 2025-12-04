@@ -7,7 +7,7 @@ import './CreatePostForm.css';
 
 interface CreatePostFormProps {
   communities: Community[];
-  onSubmit: (postData: PostData) => void;
+  onSubmit: (postData: PostData) => Promise<void>;
   onCancel?: () => void;
   defaultCommunityId?: number;
 }
@@ -31,10 +31,15 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
   const [pollExpires, setPollExpires] = useState<string>('72');
   const [communityId, setCommunityId] = useState(defaultCommunityId || communities[0]?.id || 1);
   const [showPreview, setShowPreview] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    setError(null);
+    setIsSubmitting(true);
 
     const postData: PostData = {
       title: title.trim(),
@@ -48,7 +53,8 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
     } else if (postType === 'poll') {
       const validOptions = pollOptions.filter(opt => opt.trim());
       if (validOptions.length < 2) {
-        alert('Please provide at least 2 poll options');
+        setError('Please provide at least 2 poll options');
+        setIsSubmitting(false);
         return;
       }
       postData.poll_options = validOptions.map(opt => opt.trim());
@@ -56,13 +62,21 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
       postData.body = body.trim(); // Optional description
     }
 
-    onSubmit(postData);
-    
-    // Reset form
-    setTitle('');
-    setBody('');
-    setPollOptions(['', '']);
-    setPollExpires('72');
+    try {
+      await onSubmit(postData);
+      
+      // Reset form on success
+      setTitle('');
+      setBody('');
+      setPollOptions(['', '']);
+      setPollExpires('72');
+      setError(null);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to create post. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const addPollOption = () => {
@@ -105,13 +119,29 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
         </button>
       </div>
 
+      {error && (
+        <div className="form-error" style={{
+          padding: '0.75rem',
+          marginBottom: '1rem',
+          backgroundColor: '#fee',
+          border: '1px solid #fcc',
+          borderRadius: '4px',
+          color: '#c33'
+        }}>
+          {error}
+        </div>
+      )}
+
       {!defaultCommunityId && (
         <div className="form-group">
           <label htmlFor="community-select">Choose a community</label>
           <select
             id="community-select"
             value={communityId}
-            onChange={(e) => setCommunityId(Number(e.target.value))}
+            onChange={(e) => {
+              setCommunityId(Number(e.target.value));
+              setError(null); // Clear error when changing community
+            }}
             className="community-select"
           >
             {communities.map((community) => (
@@ -258,8 +288,8 @@ function CreatePostForm({ communities, onSubmit, onCancel, defaultCommunityId }:
             Cancel
           </button>
         )}
-        <button type="submit" className="submit-btn" disabled={!title.trim()}>
-          Post
+        <button type="submit" className="submit-btn" disabled={!title.trim() || isSubmitting}>
+          {isSubmitting ? 'Posting...' : 'Post'}
         </button>
       </div>
     </form>

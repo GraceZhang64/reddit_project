@@ -11,13 +11,14 @@ async function authenticateToken(req, res, next) {
             return res.status(401).json({ error: 'Authentication required' });
         }
         const supabase = (0, supabase_1.getSupabaseClient)();
-        // First try to validate the current token
-        let { data: { user }, error } = await supabase.auth.getUser(token);
+        // Use Supabase's getUser which validates the token
+        // Supabase handles token validation internally
+        const { data: { user }, error } = await supabase.auth.getUser(token);
         // If token is expired or invalid, return specific error for client to handle refresh
         if (error || !user) {
-            console.log('Access token expired or invalid');
+            // Don't log as error - this is normal when tokens expire
             return res.status(401).json({
-                error: 'Token expired',
+                error: 'Token expired or invalid',
                 code: 'TOKEN_EXPIRED'
             });
         }
@@ -37,19 +38,30 @@ async function optionalAuth(req, res, next) {
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.split(' ')[1];
         if (token) {
-            const supabase = (0, supabase_1.getSupabaseClient)();
-            const { data: { user } } = await supabase.auth.getUser(token);
-            if (user) {
-                req.user = {
-                    id: user.id,
-                    email: user.email,
-                };
+            try {
+                const supabase = (0, supabase_1.getSupabaseClient)();
+                // Use getUser which handles token validation
+                // If token is expired, it will return error but we continue without auth
+                const { data: { user }, error } = await supabase.auth.getUser(token);
+                if (user && !error) {
+                    req.user = {
+                        id: user.id,
+                        email: user.email,
+                    };
+                }
+                // If error (expired/invalid token), just continue without setting req.user
+                // This allows public access to posts even with expired tokens
+            }
+            catch (authError) {
+                // Silently ignore auth errors - allow public access
+                // This ensures posts can be viewed even with invalid/expired tokens
             }
         }
         next();
     }
     catch (error) {
-        // Continue without auth if there's an error
+        // Always continue without auth if there's any error
+        // This ensures posts are always accessible
         next();
     }
 }

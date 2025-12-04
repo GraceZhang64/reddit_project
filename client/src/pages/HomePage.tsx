@@ -8,6 +8,7 @@ import { Post } from '../types';
 import './HomePage.css';
 
 type FeedType = 'all' | 'following';
+type FollowingFilter = 'all' | 'users' | 'communities';
 
 // Map API post to component Post type - moved outside to avoid recreation
 const mapApiPost = (apiPost: any): Post => ({
@@ -34,6 +35,7 @@ const getUserVoteFromPost = (apiPost: any): number => {
 
 function HomePage() {
   const [feed, setFeed] = useState<FeedType>('all');
+  const [followingFilter, setFollowingFilter] = useState<FollowingFilter>('all');
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +52,7 @@ function HomePage() {
       try {
         let response;
         if (feed === 'following') {
-          response = await followsApi.getFollowingFeed(1, 20);
+          response = await followsApi.getFollowingFeed(1, 20, followingFilter);
         } else {
           response = await postsApi.getAll(1, 20);
         }
@@ -68,7 +70,7 @@ function HomePage() {
         if (err.response?.status === 401) {
           setError('Authentication required. Please log in again.');
         } else if (feed === 'following' && err.response?.status === 404) {
-          setError('Follow some users to see their posts here!');
+          setError('Follow some users or join communities to see posts here!');
         } else {
           setError(err.response?.data?.error || 'Failed to load posts. Please try again.');
         }
@@ -77,7 +79,7 @@ function HomePage() {
       }
     };
     fetchPostsAndVotes();
-  }, [feed, searchQuery]);
+  }, [feed, followingFilter, searchQuery]);
 
   const handleFeedChange = (newFeed: FeedType) => {
     setFeed(newFeed);
@@ -200,6 +202,65 @@ function HomePage() {
             </button>
           </div>
 
+          {feed === 'following' && (
+            <div className="following-filter" style={{ 
+              display: 'flex', 
+              gap: '0.5rem', 
+              marginTop: '1rem',
+              marginBottom: '0.5rem',
+              justifyContent: 'center'
+            }}>
+              <button
+                className={`filter-btn ${followingFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setFollowingFilter('all')}
+                disabled={!!searchQuery}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '4px',
+                  border: '1px solid var(--blueit-border)',
+                  backgroundColor: followingFilter === 'all' ? 'var(--blueit-primary)' : 'transparent',
+                  color: followingFilter === 'all' ? 'white' : 'var(--blueit-text)',
+                  cursor: searchQuery ? 'not-allowed' : 'pointer',
+                  opacity: searchQuery ? 0.5 : 1
+                }}
+              >
+                All
+              </button>
+              <button
+                className={`filter-btn ${followingFilter === 'users' ? 'active' : ''}`}
+                onClick={() => setFollowingFilter('users')}
+                disabled={!!searchQuery}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '4px',
+                  border: '1px solid var(--blueit-border)',
+                  backgroundColor: followingFilter === 'users' ? 'var(--blueit-primary)' : 'transparent',
+                  color: followingFilter === 'users' ? 'white' : 'var(--blueit-text)',
+                  cursor: searchQuery ? 'not-allowed' : 'pointer',
+                  opacity: searchQuery ? 0.5 : 1
+                }}
+              >
+                Users
+              </button>
+              <button
+                className={`filter-btn ${followingFilter === 'communities' ? 'active' : ''}`}
+                onClick={() => setFollowingFilter('communities')}
+                disabled={!!searchQuery}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '4px',
+                  border: '1px solid var(--blueit-border)',
+                  backgroundColor: followingFilter === 'communities' ? 'var(--blueit-primary)' : 'transparent',
+                  color: followingFilter === 'communities' ? 'white' : 'var(--blueit-text)',
+                  cursor: searchQuery ? 'not-allowed' : 'pointer',
+                  opacity: searchQuery ? 0.5 : 1
+                }}
+              >
+                Communities
+              </button>
+            </div>
+          )}
+
           <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
             <SearchBar
               onSearch={handleSearch}
@@ -267,8 +328,22 @@ function HomePage() {
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--blueit-text-secondary)' }}>
               {feed === 'following' ? (
                 <>
+                  {followingFilter === 'users' ? (
+                <>
                   <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>👥 No posts from followed users yet</p>
                   <p style={{ fontSize: '0.9rem' }}>Follow some users to see their posts here!</p>
+                    </>
+                  ) : followingFilter === 'communities' ? (
+                    <>
+                      <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>🏘️ No posts from your communities yet</p>
+                      <p style={{ fontSize: '0.9rem' }}>Join some communities to see their posts here!</p>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>👥 No posts from followed users or communities yet</p>
+                      <p style={{ fontSize: '0.9rem' }}>Follow some users or join communities to see posts here!</p>
+                    </>
+                  )}
                   <Link to="/communities" style={{ 
                     display: 'inline-block',
                     marginTop: '1rem',

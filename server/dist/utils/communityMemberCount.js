@@ -6,15 +6,19 @@ const prisma = new client_1.PrismaClient();
 /**
  * Update community member count when a user first interacts with a community
  * (posts or comments). Only increments if this is the user's first interaction.
+ * @param excludePostId - Optional post ID to exclude from the check (for newly created posts)
+ * @param excludeCommentId - Optional comment ID to exclude from the check (for newly created comments)
  */
-async function updateCommunityMemberCount(communityId, userId) {
+async function updateCommunityMemberCount(communityId, userId, excludePostId, excludeCommentId) {
     try {
         // Check if user has ever posted or commented in this community before
+        // Exclude the current post/comment if provided
         const [hasPosted, hasCommented] = await Promise.all([
             prisma.post.findFirst({
                 where: {
                     communityId,
                     authorId: userId,
+                    ...(excludePostId ? { id: { not: excludePostId } } : {}),
                 },
                 select: { id: true },
             }),
@@ -22,6 +26,7 @@ async function updateCommunityMemberCount(communityId, userId) {
                 where: {
                     post: { communityId },
                     authorId: userId,
+                    ...(excludeCommentId ? { id: { not: excludeCommentId } } : {}),
                 },
                 select: { id: true },
             }),

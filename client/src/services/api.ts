@@ -69,6 +69,7 @@ export interface Post {
   };
   createdAt: string;
   ai_summary?: string | null;
+  ai_summary_error?: string;
 }
 
 export interface Community {
@@ -413,9 +414,9 @@ export const followsApi = {
     return response.data;
   },
 
-  async getFollowingFeed(page = 1, limit = 20): Promise<PaginationResponse<Post>> {
+  async getFollowingFeed(page = 1, limit = 20, filter: 'all' | 'users' | 'communities' = 'all'): Promise<PaginationResponse<Post>> {
     const response = await api.get('/follows/feed', {
-      params: { page, limit }
+      params: { page, limit, filter }
     });
     return response.data;
   }

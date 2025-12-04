@@ -37,7 +37,9 @@ const express_1 = require("express");
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const cache_1 = require("../lib/cache");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const requestValidator_1 = require("../middleware/requestValidator");
+const contentSanitizer_1 = require("../utils/contentSanitizer");
 const router = (0, express_1.Router)();
 /**
  * GET /api/comments/search
@@ -355,13 +357,22 @@ router.get('/:id', auth_1.authenticateToken, async (req, res) => {
  * POST /api/comments
  * Create a new comment or reply
  */
-router.post('/', auth_1.authenticateToken, requestValidator_1.validateCommentCreation, async (req, res) => {
+router.post('/', auth_1.authenticateToken, rateLimiter_1.contentCreationLimiter.middleware(), requestValidator_1.validateCommentCreation, async (req, res) => {
     try {
         const { body, postId, parentCommentId } = req.body;
         const authorId = req.user.id;
         if (!body || !postId) {
             return res.status(400).json({
                 error: 'Body and postId are required'
+            });
+        }
+        // Sanitize comment body to prevent XSS and injection attacks
+        const sanitizedBody = (0, contentSanitizer_1.sanitizeContentForStorage)(body);
+        // Check for suspicious content
+        const contentCheck = (0, contentSanitizer_1.detectSuspiciousContent)(sanitizedBody);
+        if (contentCheck.isSuspicious) {
+            return res.status(400).json({
+                error: 'Comment contains suspicious patterns and cannot be posted.'
             });
         }
         // Verify the author exists in the database
@@ -398,7 +409,7 @@ router.post('/', auth_1.authenticateToken, requestValidator_1.validateCommentCre
         // Create comment
         const comment = await prisma_1.prisma.comment.create({
             data: {
-                body,
+                body: sanitizedBody,
                 authorId,
                 postId: parseInt(postId),
                 parentCommentId: parentCommentId ? parseInt(parentCommentId) : null
@@ -414,8 +425,9 @@ router.post('/', auth_1.authenticateToken, requestValidator_1.validateCommentCre
             }
         });
         // Update community member count if this is user's first interaction
+        // Exclude the current comment from the check since it was just created
         const { updateCommunityMemberCount } = await Promise.resolve().then(() => __importStar(require('../utils/communityMemberCount')));
-        await updateCommunityMemberCount(post.communityId, authorId);
+        await updateCommunityMemberCount(post.communityId, authorId, undefined, comment.id);
         // Create mention notifications
         const { createMentionNotifications } = await Promise.resolve().then(() => __importStar(require('../utils/mentions')));
         await createMentionNotifications(body, authorId, parseInt(postId), comment.id);

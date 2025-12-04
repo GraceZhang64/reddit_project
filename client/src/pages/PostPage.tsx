@@ -13,6 +13,7 @@ import AISummaryContent from '../components/AISummaryContent';
 
 interface PostWithSummary extends Post {
   summary?: string;
+  summaryError?: string;
 }
 
 function PostPage() {
@@ -55,6 +56,7 @@ function PostPage() {
           commentCount: apiData.commentCount || apiData.comment_count || 0,
           createdAt: apiData.createdAt || apiData.created_at,
           summary: apiData.ai_summary || undefined,
+          summaryError: apiData.ai_summary_error || undefined,
         };
         
         // Recursive mapper for comments (handles nested replies)
@@ -199,7 +201,7 @@ function PostPage() {
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--blueit-primary)' }}>
             <p>{error || 'Post not found'}</p>
             <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
-              Make sure your backend server is running on port 5000 and you have added your OpenAI API key.
+              Make sure your backend server is running on port 5000.
             </p>
           </div>
         </div>
@@ -267,7 +269,7 @@ function PostPage() {
                   <AISummaryContent content={post.summary} />
                 ) : (
                   <p style={{ color: '#666', fontStyle: 'italic' }}>
-                    AI summary not available. Make sure your OpenAI API key is configured.
+                    {post.summaryError || 'AI Summary Unavailable'}
                   </p>
                 )}
               </div>

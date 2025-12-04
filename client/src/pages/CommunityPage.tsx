@@ -258,16 +258,11 @@ function CommunityPage() {
   const handleCreatePost = async (postData: PostData) => {
     if (!community) return;
     
-    try {
-      await postsApi.create(postData);
-      
-      // Refresh posts
-      await fetchCommunityData();
-      setShowCreatePost(false);
-    } catch (err: any) {
-      console.error('Error creating post:', err);
-      alert(err.response?.data?.error || 'Failed to create post. Please make sure you are logged in.');
-    }
+    await postsApi.create(postData);
+    
+    // Refresh posts
+    await fetchCommunityData();
+    setShowCreatePost(false);
   };
 
   const handleSortChange = (newSort: SortOption) => {

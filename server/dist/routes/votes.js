@@ -3,12 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
 /**
  * POST /api/votes
  * Cast or update a vote
  */
-router.post('/', auth_1.authenticateToken, async (req, res) => {
+router.post('/', auth_1.authenticateToken, rateLimiter_1.voteLimiter.middleware(), async (req, res) => {
     try {
         const { target_type, target_id, value } = req.body;
         const userId = req.user.id;
@@ -88,7 +89,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
  * DELETE /api/votes
  * Remove a vote
  */
-router.delete('/', auth_1.authenticateToken, async (req, res) => {
+router.delete('/', auth_1.authenticateToken, rateLimiter_1.voteLimiter.middleware(), async (req, res) => {
     try {
         const { target_type, target_id } = req.body;
         const userId = req.user.id;

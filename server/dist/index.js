@@ -41,7 +41,10 @@ app.get('/', (req, res) => {
                 list: 'GET /api/communities',
                 get: 'GET /api/communities/:slug',
                 create: 'POST /api/communities',
-                posts: 'GET /api/communities/:slug/posts'
+                posts: 'GET /api/communities/:slug/posts',
+                join: 'POST /api/communities/:slug/join',
+                leave: 'POST /api/communities/:slug/leave',
+                membership: 'GET /api/communities/:slug/membership'
             },
             posts: {
                 list: 'GET /api/posts',

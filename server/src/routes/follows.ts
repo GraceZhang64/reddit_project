@@ -236,7 +236,8 @@ router.get('/following/:username', async (req: Request, res: Response) => {
 
 /**
  * GET /api/follows/feed
- * Get posts from followed users
+ * Get posts from followed users and/or communities
+ * Query params: filter ('all' | 'users' | 'communities')
  */
 router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -244,26 +245,100 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
+    const filter = (req.query.filter as string) || 'all'; // 'all', 'users', or 'communities'
 
-    // Get followed user IDs
-    const following = await prisma.userFollow.findMany({
-      where: { followerId: userId },
-      select: { followingId: true },
-    });
+    // Build where conditions based on filter
+    let whereCondition: any = {};
 
-    const followedUserIds = following.map((f) => f.followingId);
-
-    if (followedUserIds.length === 0) {
-      return res.json({
-        posts: [],
-        pagination: { page, limit, total: 0, totalPages: 0 },
+    if (filter === 'users') {
+      // Only posts from followed users
+      const following = await prisma.userFollow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true },
       });
+      const followedUserIds = following.map((f) => f.followingId);
+      
+      if (followedUserIds.length === 0) {
+        return res.json({
+          posts: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+        });
+      }
+      
+      whereCondition = { authorId: { in: followedUserIds } };
+     } else if (filter === 'communities') {
+       // Only posts from communities user is a member of
+       try {
+         const memberships = await prisma.communityMembership.findMany({
+           where: { userId },
+           select: { communityId: true },
+         });
+         const communityIds = memberships.map((m) => m.communityId);
+         
+         console.log(`[Follows Feed] Filter: communities, User: ${userId}, Found ${memberships.length} memberships, Community IDs:`, communityIds);
+         
+         if (communityIds.length === 0) {
+           console.log(`[Follows Feed] No community memberships found for user ${userId}`);
+           return res.json({
+             posts: [],
+             pagination: { page, limit, total: 0, totalPages: 0 },
+           });
+         }
+         
+         whereCondition = { communityId: { in: communityIds } };
+       } catch (error: any) {
+         // If membership table doesn't exist or query fails, return empty
+         console.error('Error fetching community memberships:', error);
+         return res.json({
+           posts: [],
+           pagination: { page, limit, total: 0, totalPages: 0 },
+         });
+       }
+    } else {
+      // 'all' - posts from followed users OR communities user is a member of
+      const [following, membershipsResult] = await Promise.all([
+        prisma.userFollow.findMany({
+          where: { followerId: userId },
+          select: { followingId: true },
+        }),
+        prisma.communityMembership.findMany({
+          where: { userId },
+          select: { communityId: true },
+        }).catch((error: any) => {
+          // If membership table doesn't exist or query fails, return empty array
+          console.error('Error fetching community memberships:', error);
+          return [];
+        }),
+      ]);
+      
+      const followedUserIds = following.map((f) => f.followingId);
+      const communityIds = membershipsResult.map((m) => m.communityId);
+      
+      if (followedUserIds.length === 0 && communityIds.length === 0) {
+        return res.json({
+          posts: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+        });
+      }
+      
+      // Build OR condition for posts from followed users OR communities
+      const orConditions: any[] = [];
+      if (followedUserIds.length > 0) {
+        orConditions.push({ authorId: { in: followedUserIds } });
+      }
+      if (communityIds.length > 0) {
+        orConditions.push({ communityId: { in: communityIds } });
+      }
+      
+      whereCondition = { OR: orConditions };
     }
 
-    // Get posts from followed users
+    console.log(`[Follows Feed] Filter: ${filter}, Where condition:`, JSON.stringify(whereCondition, null, 2));
+
+    // Get posts based on filter
     const [posts, total] = await Promise.all([
       prisma.post.findMany({
-        where: { authorId: { in: followedUserIds } },
+        where: whereCondition,
         include: {
           author: {
             select: {
@@ -285,10 +360,12 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
         skip,
         take: limit,
       }),
-      prisma.post.count({ where: { authorId: { in: followedUserIds } } }),
-    ]);
+       prisma.post.count({ where: whereCondition }),
+     ]);
 
-    // Batch fetch vote counts, user votes, and comment counts for all posts
+     console.log(`[Follows Feed] Found ${posts.length} posts (total: ${total})`);
+
+     // Batch fetch vote counts, user votes, and comment counts for all posts
     const postIds = posts.map(p => p.id);
     
     const [voteCounts, userVotes, commentCounts] = await Promise.all([

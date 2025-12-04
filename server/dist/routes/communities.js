@@ -293,6 +293,259 @@ router.delete('/:slug', auth_1.authenticateToken, async (req, res) => {
     }
 });
 /**
+ * POST /api/communities/:slug/join
+ * Join a community (creates membership and increments member count)
+ */
+router.post('/:slug/join', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const userId = req.user.id;
+        // Find community
+        const community = await prisma_1.prisma.community.findUnique({
+            where: { slug }
+        });
+        if (!community) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+        // Check if already a member
+        const existingMembership = await prisma_1.prisma.communityMembership.findUnique({
+            where: {
+                userId_communityId: {
+                    userId,
+                    communityId: community.id
+                }
+            }
+        });
+        if (existingMembership) {
+            // Already have membership record, just return success
+            const updatedCommunity = await prisma_1.prisma.community.findUnique({
+                where: { id: community.id },
+                select: { memberCount: true }
+            });
+            return res.json({
+                success: true,
+                message: 'Already a member of this community',
+                memberCount: updatedCommunity?.memberCount || community.memberCount
+            });
+        }
+        // Create membership and increment member count in a transaction
+        try {
+            await prisma_1.prisma.$transaction([
+                prisma_1.prisma.communityMembership.create({
+                    data: {
+                        userId,
+                        communityId: community.id
+                    }
+                }),
+                prisma_1.prisma.community.update({
+                    where: { id: community.id },
+                    data: {
+                        memberCount: { increment: 1 }
+                    }
+                })
+            ]);
+            console.log(`[Community Join] Created membership for user ${userId} in community ${community.id} (${community.slug})`);
+        }
+        catch (error) {
+            console.error(`[Community Join] Error creating membership:`, error);
+            // If membership creation fails (e.g., duplicate key), check if it exists now
+            const checkMembership = await prisma_1.prisma.communityMembership.findUnique({
+                where: {
+                    userId_communityId: {
+                        userId,
+                        communityId: community.id
+                    }
+                }
+            });
+            if (checkMembership) {
+                // Membership was created, just return success
+                const updatedCommunity = await prisma_1.prisma.community.findUnique({
+                    where: { id: community.id },
+                    select: { memberCount: true }
+                });
+                return res.json({
+                    success: true,
+                    message: 'Successfully joined community',
+                    memberCount: updatedCommunity?.memberCount || community.memberCount
+                });
+            }
+            throw error;
+        }
+        // Get updated community with new member count
+        const updatedCommunity = await prisma_1.prisma.community.findUnique({
+            where: { id: community.id },
+            select: { memberCount: true }
+        });
+        res.json({
+            success: true,
+            message: 'Successfully joined community',
+            memberCount: updatedCommunity?.memberCount || community.memberCount + 1
+        });
+    }
+    catch (error) {
+        console.error('Error joining community:', error);
+        res.status(500).json({ error: 'Failed to join community' });
+    }
+});
+/**
+ * POST /api/communities/:slug/leave
+ * Leave a community (removes membership and decrements member count)
+ */
+router.post('/:slug/leave', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const userId = req.user.id;
+        // Find community
+        const community = await prisma_1.prisma.community.findUnique({
+            where: { slug }
+        });
+        if (!community) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+        // Check if a member
+        const existingMembership = await prisma_1.prisma.communityMembership.findUnique({
+            where: {
+                userId_communityId: {
+                    userId,
+                    communityId: community.id
+                }
+            }
+        });
+        if (!existingMembership) {
+            // Not in membership table, just decrement the count if needed
+            const updatedCommunity = await prisma_1.prisma.community.update({
+                where: { id: community.id },
+                data: {
+                    memberCount: community.memberCount > 0 ? { decrement: 1 } : { set: 0 }
+                },
+                select: { memberCount: true }
+            });
+            return res.json({
+                success: true,
+                message: 'Successfully left community',
+                memberCount: Math.max(0, updatedCommunity.memberCount)
+            });
+        }
+        // Delete membership and decrement member count in a transaction
+        await prisma_1.prisma.$transaction([
+            prisma_1.prisma.communityMembership.delete({
+                where: {
+                    userId_communityId: {
+                        userId,
+                        communityId: community.id
+                    }
+                }
+            }),
+            prisma_1.prisma.community.update({
+                where: { id: community.id },
+                data: {
+                    memberCount: community.memberCount > 0 ? { decrement: 1 } : { set: 0 }
+                }
+            })
+        ]);
+        // Get updated community with new member count
+        const updatedCommunity = await prisma_1.prisma.community.findUnique({
+            where: { id: community.id },
+            select: { memberCount: true }
+        });
+        res.json({
+            success: true,
+            message: 'Successfully left community',
+            memberCount: Math.max(0, updatedCommunity?.memberCount || community.memberCount - 1)
+        });
+    }
+    catch (error) {
+        console.error('Error leaving community:', error);
+        res.status(500).json({ error: 'Failed to leave community' });
+    }
+});
+/**
+ * GET /api/communities/:slug/membership
+ * Check if current user is a member of the community
+ */
+router.get('/:slug/membership', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const userId = req.user.id;
+        // Find community
+        const community = await prisma_1.prisma.community.findUnique({
+            where: { slug }
+        });
+        if (!community) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+        // Check membership
+        const membership = await prisma_1.prisma.communityMembership.findUnique({
+            where: {
+                userId_communityId: {
+                    userId,
+                    communityId: community.id
+                }
+            }
+        });
+        res.json({
+            isMember: !!membership,
+            joinedAt: membership?.joinedAt || null
+        });
+    }
+    catch (error) {
+        console.error('Error checking membership:', error);
+        res.status(500).json({ error: 'Failed to check membership' });
+    }
+});
+/**
+ * POST /api/communities/:slug/sync-membership
+ * Sync/create membership record for users who joined before the fix
+ * This is a one-time helper endpoint
+ */
+router.post('/:slug/sync-membership', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const userId = req.user.id;
+        // Find community
+        const community = await prisma_1.prisma.community.findUnique({
+            where: { slug }
+        });
+        if (!community) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+        // Check if membership already exists
+        const existingMembership = await prisma_1.prisma.communityMembership.findUnique({
+            where: {
+                userId_communityId: {
+                    userId,
+                    communityId: community.id
+                }
+            }
+        });
+        if (existingMembership) {
+            return res.json({
+                success: true,
+                message: 'Membership record already exists',
+                created: false
+            });
+        }
+        // Create membership record without incrementing count
+        // (assuming they already joined before, so count is already correct)
+        await prisma_1.prisma.communityMembership.create({
+            data: {
+                userId,
+                communityId: community.id
+            }
+        });
+        console.log(`[Sync Membership] Created membership for user ${userId} in community ${community.id} (${community.slug})`);
+        res.json({
+            success: true,
+            message: 'Membership record created successfully',
+            created: true
+        });
+    }
+    catch (error) {
+        console.error('Error syncing membership:', error);
+        res.status(500).json({ error: 'Failed to sync membership' });
+    }
+});
+/**
  * GET /api/communities/:slug/posts
  * Get all posts in a community
  */

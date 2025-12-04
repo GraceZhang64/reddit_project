@@ -42,6 +42,7 @@ const prisma_1 = require("../lib/prisma");
 const cache_1 = require("../lib/cache");
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const requestValidator_1 = require("../middleware/requestValidator");
+const contentSanitizer_1 = require("../utils/contentSanitizer");
 const router = (0, express_1.Router)();
 /**
  * GET /api/posts
@@ -147,6 +148,16 @@ router.get('/:idOrSlug/summary', auth_1.optionalAuth, async (req, res) => {
         const currentCommentCount = post.comment_count || 0;
         const cachedCommentCount = post.ai_summary_comment_count || 0;
         const newCommentsCount = currentCommentCount - cachedCommentCount;
+        // Only generate summaries if there are 4 or more comments
+        if (currentCommentCount < 4) {
+            return res.json({
+                ...post,
+                ai_summary: null,
+                ai_summary_error: currentCommentCount === 0
+                    ? 'Not enough comments yet. AI summaries require at least 4 comments.'
+                    : `Not enough comments yet. Need ${4 - currentCommentCount} more comment${4 - currentCommentCount === 1 ? '' : 's'} for AI summary.`
+            });
+        }
         // Smart cache invalidation: Regenerate if:
         // 1. No summary exists
         // 2. Summary is older than 24 hours
@@ -203,7 +214,8 @@ router.get('/:idOrSlug/summary', auth_1.optionalAuth, async (req, res) => {
             }
             catch (error) {
                 console.error('Failed to generate AI summary:', error);
-                // Continue without summary rather than failing the whole request
+                // Set error message but don't fail the request
+                summary = null;
             }
         }
         else {
@@ -211,7 +223,8 @@ router.get('/:idOrSlug/summary', auth_1.optionalAuth, async (req, res) => {
         }
         res.json({
             ...post,
-            ai_summary: summary
+            ai_summary: summary || null,
+            ai_summary_error: !summary && shouldRegenerate ? 'AI Summary Unavailable' : undefined
         });
     }
     catch (error) {
@@ -246,12 +259,25 @@ router.get('/:idOrSlug', auth_1.optionalAuth, async (req, res) => {
         }
         // Include ai_summary if it exists in the database (don't wait for generation)
         const actualPostId = post.id;
+        const currentCommentCount = post.comment_count || 0;
         const postWithSummary = await prisma_1.prisma.post.findUnique({
             where: { id: actualPostId },
             select: { ai_summary: true }
         });
-        // Trigger async AI summary generation if it doesn't exist (fire and forget)
+        // Determine error message if no summary
+        let aiSummaryError = undefined;
         if (!postWithSummary?.ai_summary) {
+            if (currentCommentCount < 4) {
+                aiSummaryError = currentCommentCount === 0
+                    ? 'Not enough comments yet. AI summaries require at least 4 comments.'
+                    : `Not enough comments yet. Need ${4 - currentCommentCount} more comment${4 - currentCommentCount === 1 ? '' : 's'} for AI summary.`;
+            }
+            else {
+                aiSummaryError = 'AI Summary Unavailable';
+            }
+        }
+        // Trigger async AI summary generation if it doesn't exist and has 4 or more comments (fire and forget)
+        if (!postWithSummary?.ai_summary && currentCommentCount >= 4) {
             // Don't await - let it generate in background
             generateAISummaryAsync(actualPostId, post).catch(err => {
                 console.error('Background AI summary generation failed:', err);
@@ -259,7 +285,8 @@ router.get('/:idOrSlug', auth_1.optionalAuth, async (req, res) => {
         }
         const result = {
             ...post,
-            ai_summary: postWithSummary?.ai_summary || null
+            ai_summary: postWithSummary?.ai_summary || null,
+            ai_summary_error: aiSummaryError
         };
         // Cache for 1 minute
         cache_1.cache.set(cacheKey, result, cache_1.CACHE_TTL.POST_DETAIL);
@@ -275,6 +302,10 @@ async function generateAISummaryAsync(postId, post) {
     try {
         const aiService = (0, aiService_1.getAIService)();
         const currentCommentCount = post.comment_count || 0;
+        // Only generate summaries if there are 4 or more comments
+        if (currentCommentCount < 4) {
+            return;
+        }
         // Prepare post data for AI summary
         const postData = {
             title: post.title,
@@ -312,43 +343,81 @@ async function generateAISummaryAsync(postId, post) {
     catch (error) {
         console.error('Background AI summary generation failed:', error);
         // Don't throw - this is fire and forget
+        // Error is logged but not exposed to user
     }
 }
 /**
  * POST /api/posts
  * Create a new post (supports text, link, poll)
  */
-router.post('/', auth_1.authenticateToken, rateLimiter_1.postCreationLimiter.middleware(), requestValidator_1.validatePostCreation, async (req, res) => {
+router.post('/', auth_1.authenticateToken, rateLimiter_1.contentCreationLimiter.middleware(), requestValidator_1.validatePostCreation, async (req, res) => {
     try {
-        const { title, body, post_type = 'text', link_url, community_id, poll_options, poll_expires_hours } = req.body;
+        const { title, body, post_type = 'text', community_id, poll_options, poll_expires_hours } = req.body;
         // Validation
         if (!title || !community_id) {
             return res.status(400).json({ error: 'Title and community_id are required' });
         }
         // Validate post type
-        const validTypes = ['text', 'link', 'poll'];
+        const validTypes = ['text', 'poll'];
         if (!validTypes.includes(post_type)) {
-            return res.status(400).json({ error: 'Invalid post_type. Allowed types: text, link, poll' });
+            return res.status(400).json({ error: 'Invalid post_type. Allowed types: text, poll' });
         }
         // Type-specific validation
-        if (post_type === 'link' && !link_url) {
-            return res.status(400).json({ error: 'link_url is required for link posts' });
-        }
         if (post_type === 'poll' && (!poll_options || poll_options.length < 2)) {
             return res.status(400).json({ error: 'At least 2 poll options are required for poll posts' });
         }
-        // URL validation
-        if (link_url && !isValidUrl(link_url)) {
-            return res.status(400).json({ error: 'Invalid link_url format' });
+        const userId = req.user.id;
+        const communityId = parseInt(community_id);
+        // Verify community exists and user is a member
+        const community = await prisma_1.prisma.community.findUnique({
+            where: { id: communityId },
+            select: { id: true, creator_id: true }
+        });
+        if (!community) {
+            return res.status(404).json({ error: 'Community not found' });
+        }
+        // Check if user is the creator (creators can always post)
+        const isCreator = community.creator_id === userId;
+        // Check if user is a member
+        const membership = await prisma_1.prisma.communityMembership.findUnique({
+            where: {
+                userId_communityId: {
+                    userId,
+                    communityId: community.id
+                }
+            }
+        });
+        if (!isCreator && !membership) {
+            return res.status(403).json({
+                error: 'You must join this community before posting. Please join the community first.'
+            });
+        }
+        // Sanitize input to prevent XSS and injection attacks
+        const sanitizedTitle = (0, contentSanitizer_1.sanitizeTitle)(title);
+        const sanitizedBody = body ? (0, contentSanitizer_1.sanitizeContentForStorage)(body) : null;
+        // Check for suspicious content
+        const titleCheck = (0, contentSanitizer_1.detectSuspiciousContent)(sanitizedTitle);
+        const bodyCheck = sanitizedBody ? (0, contentSanitizer_1.detectSuspiciousContent)(sanitizedBody) : { isSuspicious: false, reasons: [] };
+        if (titleCheck.isSuspicious || bodyCheck.isSuspicious) {
+            return res.status(400).json({
+                error: 'Content contains suspicious patterns and cannot be posted.'
+            });
+        }
+        // Sanitize poll options if present
+        let sanitizedPollOptions = null;
+        if (poll_options && Array.isArray(poll_options)) {
+            sanitizedPollOptions = poll_options.map(opt => (0, contentSanitizer_1.sanitizePollOption)(opt)).filter(opt => opt.length > 0);
+            if (sanitizedPollOptions.length < 2 && post_type === 'poll') {
+                return res.status(400).json({ error: 'At least 2 valid poll options are required' });
+            }
         }
         const post = await postService_1.postService.createPost({
-            title,
-            body: body || null,
+            title: sanitizedTitle,
+            body: sanitizedBody,
             post_type,
-            link_url: link_url || null,
             community_id: parseInt(community_id),
             author_id: req.user.id,
-            poll_options: poll_options || null,
+            poll_options: sanitizedPollOptions,
             poll_expires_hours: poll_expires_hours || null,
         });
         res.status(201).json(post);
@@ -434,7 +503,7 @@ exports.default = router;
  * Upvote, downvote, or remove vote for a post
  * Body: { value: 1 | -1 | 0 }
  */
-router.post('/:id/vote', auth_1.authenticateToken, async (req, res) => {
+router.post('/:id/vote', auth_1.authenticateToken, rateLimiter_1.voteLimiter.middleware(), async (req, res) => {
     try {
         const postId = parseInt(req.params.id);
         const userId = req.user?.id;

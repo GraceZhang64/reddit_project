@@ -7,6 +7,7 @@ import { contentCreationLimiter } from '../middleware/rateLimiter';
 import { validateCommentCreation } from '../middleware/requestValidator';
 import { updateCommunityMemberCount } from '../utils/communityMemberCount';
 import { createMentionNotifications } from '../utils/mentions';
+import { sanitizeContentForStorage, detectSuspiciousContent } from '../utils/contentSanitizer';
 
 const router = Router();
 
@@ -374,6 +375,17 @@ router.post('/', authenticateToken, contentCreationLimiter.middleware(), validat
       });
     }
 
+    // Sanitize comment body to prevent XSS and injection attacks
+    const sanitizedBody = sanitizeContentForStorage(body);
+    
+    // Check for suspicious content
+    const contentCheck = detectSuspiciousContent(sanitizedBody);
+    if (contentCheck.isSuspicious) {
+      return res.status(400).json({ 
+        error: 'Comment contains suspicious patterns and cannot be posted.' 
+      });
+    }
+
     // Verify the author exists in the database
     const author = await prisma.user.findUnique({
       where: { id: authorId }
@@ -415,7 +427,7 @@ router.post('/', authenticateToken, contentCreationLimiter.middleware(), validat
     // Create comment
     const comment = await prisma.comment.create({
       data: {
-        body,
+        body: sanitizedBody,
         authorId,
         postId: parseInt(postId),
         parentCommentId: parentCommentId ? parseInt(parentCommentId) : null
