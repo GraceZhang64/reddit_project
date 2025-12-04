@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Comment } from '../types';
 import VoteButtons from './VoteButtons';
-import { votesApi } from '../services/api';
+import { votesApi, commentsApi } from '../services/api';
 import { formatMentions } from '../utils/formatMentions';
 import './CommentItem.css';
 
@@ -11,15 +11,73 @@ interface CommentItemProps {
   depth?: number;
   maxDepth?: number;
   onReply?: (parentId: number, body: string) => void;
+  onDelete?: (commentId: number) => void;
   disabled?: boolean;
 }
 
-function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, disabled = false }: CommentItemProps) {
+function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, onDelete, disabled = false }: CommentItemProps) {
+  const currentUser = localStorage.getItem('username') || sessionStorage.getItem('username');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState('');
   const [userVote, setUserVote] = useState(comment.voteCount || 0);
   const [voteCount, setVoteCount] = useState(comment.voteCount || 0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
+  
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBody, setEditBody] = useState(comment.body);
+  const [displayBody, setDisplayBody] = useState(comment.body);
+  const [isEditSaving, setIsEditSaving] = useState(false);
+
+  const commentAuthor = typeof comment.author === 'string' 
+    ? comment.author 
+    : (comment.author as any)?.username || 'Unknown';
+  const isOwnComment = currentUser && currentUser === commentAuthor;
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    
+    setIsDeleting(true);
+    try {
+      await commentsApi.delete(comment.id);
+      setIsDeleted(true);
+      if (onDelete) {
+        onDelete(comment.id);
+      }
+    } catch (err: any) {
+      console.error('Error deleting comment:', err);
+      alert(err.response?.data?.error || 'Failed to delete comment');
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!editBody.trim()) return;
+    
+    setIsEditSaving(true);
+    try {
+      await commentsApi.update(comment.id, editBody.trim());
+      setDisplayBody(editBody.trim());
+      setIsEditing(false);
+    } catch (err: any) {
+      console.error('Error updating comment:', err);
+      alert(err.response?.data?.error || 'Failed to update comment');
+    } finally {
+      setIsEditSaving(false);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditBody(displayBody);
+    setIsEditing(false);
+  };
+
+  // Don't render if deleted
+  if (isDeleted) {
+    return null;
+  }
 
   const hasReplies = comment.replies && comment.replies.length > 0;
   const shouldShowContinueThread = depth >= maxDepth && hasReplies;
@@ -101,11 +159,38 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, disabled = fal
 
         {!isCollapsed && (
           <>
-            <div className="comment-body">
-              {formatMentions(comment.body).map((part, idx) => (
-                <span key={idx}>{part}</span>
-              ))}
-            </div>
+            {isEditing ? (
+              <div className="comment-edit-form">
+                <textarea
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  rows={3}
+                  autoFocus
+                />
+                <div className="comment-edit-actions">
+                  <button 
+                    className="comment-edit-save"
+                    onClick={handleEditSave}
+                    disabled={isEditSaving || !editBody.trim()}
+                  >
+                    {isEditSaving ? 'Saving...' : 'Save'}
+                  </button>
+                  <button 
+                    className="comment-edit-cancel"
+                    onClick={handleEditCancel}
+                    disabled={isEditSaving}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="comment-body">
+                {formatMentions(displayBody).map((part, idx) => (
+                  <span key={idx}>{part}</span>
+                ))}
+              </div>
+            )}
 
             <div className="comment-actions">
               <VoteButtons
@@ -120,6 +205,23 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, disabled = fal
               >
                 Reply
               </button>
+              {isOwnComment && !isEditing && (
+                <>
+                  <button 
+                    className="comment-action-btn"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    className="comment-action-btn comment-delete-btn"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                  </button>
+                </>
+              )}
             </div>
 
             {isReplying && (
@@ -152,6 +254,7 @@ function CommentItem({ comment, depth = 0, maxDepth = 3, onReply, disabled = fal
                     depth={depth + 1}
                     maxDepth={maxDepth}
                     onReply={onReply}
+                    onDelete={onDelete}
                   />
                 ))}
               </div>

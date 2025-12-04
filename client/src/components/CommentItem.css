@@ -144,6 +144,89 @@
   color: var(--blueit-text);
 }
 
+.comment-delete-btn {
+  color: #dc3545;
+}
+
+.comment-delete-btn:hover {
+  background: #dc3545;
+  color: white;
+}
+
+.comment-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Comment Edit Form */
+.comment-edit-form {
+  margin: 8px 0;
+}
+
+.comment-edit-form textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px;
+  border: 1px solid var(--blueit-border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  margin-bottom: 8px;
+  background: var(--blueit-input-bg);
+  color: var(--blueit-text);
+}
+
+.comment-edit-form textarea:focus {
+  outline: none;
+  border-color: var(--blueit-primary);
+}
+
+.comment-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.comment-edit-save {
+  background: var(--blueit-primary);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.comment-edit-save:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.comment-edit-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.comment-edit-cancel {
+  background: none;
+  border: 1px solid var(--blueit-border);
+  color: var(--blueit-text-muted);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.comment-edit-cancel:hover:not(:disabled) {
+  background: var(--blueit-hover);
+}
+
+.comment-edit-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Reply Form */
 .reply-form {
   margin-top: 8px;

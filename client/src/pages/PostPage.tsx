@@ -154,6 +154,25 @@ function PostPage() {
     }
   };
 
+  const handleCommentDelete = async (commentId: number) => {
+    if (!post) return;
+    
+    // Refresh comments after deletion
+    const result = await commentsApi.getByPost(post.id);
+    const mapApiComment = (c: any): Comment => ({
+      id: c.id,
+      body: c.body,
+      author: c.author?.username || 'Unknown',
+      postId: c.postId,
+      parentCommentId: c.parentCommentId,
+      voteCount: c.vote_count || 0,
+      createdAt: c.createdAt,
+      replies: Array.isArray(c.replies) ? c.replies.map(mapApiComment) : [],
+    });
+    setComments((result.comments || []).map(mapApiComment));
+    setPost({ ...post, commentCount: post.commentCount - 1 });
+  };
+
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!post || !commentBody.trim()) return;
@@ -424,7 +443,7 @@ function PostPage() {
 
           <div className="comments-list">
             {comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
+              <CommentItem key={comment.id} comment={comment} onReply={handleReply} onDelete={handleCommentDelete} />
             ))}
           </div>
         </div>
